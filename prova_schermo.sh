@@ -7,10 +7,14 @@
 # Uso:
 #   sh prova_schermo.sh [configurazione] [note]   una prova (passi, tempi e controlli dal file .conf)
 #   sh prova_schermo.sh --seq T2 [nome] [note]     una prova subito con la sequenza del file seq_T2.conf
-#   sh prova_schermo.sh --alle HH:MM[,HH:MM] [--giorni N] [--nome NOME] [--note TESTO] [SEQ ...]
-#                                                  piano senza installare nulla: a ogni orario esegue le sequenze
-#                                                  in fila (es. T1 T2), ripetuto per N giorni (predefinito 1 = una volta)
-#   sh prova_schermo.sh --tra MINUTI [...]         come --alle, primo avvio tra N minuti
+#   sh prova_schermo.sh --subito | --tra MIN | --alle HH:MM[,HH:MM]  [opzioni]  SEQUENZA [SEQUENZA ...]
+#       piano senza installare nulla: a ogni avvio esegue le sequenze in fila.
+#       SEQUENZA = "T2=rif:300 carica:300 misura:480 recupero:900 carica:300 misura:480"
+#                  (ruoli rif carica misura ventola recupero; ruolo:secondi:riscaldatore:ventola per forzare le uscite)
+#                  oppure il nome di un file seq_NOME.conf accanto allo script.
+#       opzioni: --giorni N (ripete ogni giorno, predefinito 1), --nome NOME, --note TESTO,
+#                --scala X (tempi × X, es. 0.1 per una prova corta), --pausa MIN tra sequenze,
+#                --base MIN di base stabile (0 = non aspetta), --prova (pausa e base 0, dati in collaudo/)
 #   sh prova_schermo.sh --annulla                  annulla il piano (la prova in corso finisce; per fermarla --ferma)
 #   sh prova_schermo.sh --controlli [minuti]       solo lettura di temperature, flag e ping: non comanda nulla
 #   sh prova_schermo.sh --ferma                    ferma la prova in corso (con ripristino)
@@ -30,6 +34,7 @@
 VERSIONE="2.0.1"
 CONF="${CONF:-$(cd "$(dirname "$0")" 2>/dev/null && pwd)/prova_schermo.conf}"
 [ -f "$CONF" ] && . "$CONF"
+BASE="${DIR:-/home/root/test}"       # blocco, segnali e piano stanno qui anche se una sequenza sposta i dati altrove
 
 # ---------------- sequenze: file seq_NOME.conf accanto allo script (passi ed eventuali altri parametri)
 seq_file() {                         # percorso completo del file della sequenza ("" se non c'è)
@@ -42,8 +47,8 @@ seq_total() {                        # secondi di passi di una sequenza ("-" = q
     if [ "$1" = - ]; then echo "$TOTAL"; return; fi
     ( STEPS=""; . "$1"; echo "$STEPS" | awk -F';' 'NF >= 3 && $1 !~ /^#/ { t += $3 } END { print t + 0 }' )
 }
-if [ "$1" = "--seq" ]; then          # una sequenza subito: sh prova_schermo.sh --seq T2 [nome] [note]
-    SEQ=$(seq_file "$2"); [ -z "$SEQ" ] && { echo "Sequenza non trovata: $2"; exit 1; }; shift 2
+if [ "$1" = "--seq" ]; then          # una sequenza subito, in primo piano: sh prova_schermo.sh --seq T2 [nome] [note]
+    SEQ=$(seq_file "$2"); [ -z "$SEQ" ] && { echo "Sequenza non trovata: $2 (per scriverla nel comando usa --subito)"; exit 1; }; shift 2
 fi
 SEQNAME=""
 if [ -n "$SEQ" ]; then [ -f "$SEQ" ] || { echo "File di sequenza non trovato: $SEQ"; exit 1; }
@@ -80,7 +85,8 @@ Misura 2;misura;300;0;1
 : "${CONFIG_DEFAULT:=campo}"
 : "${LATE_MAX_MIN:=30}"
 
-LOCK="$DIR/.lock"; MARK="$DIR/.tc_disattivo"; LAST="$DIR/.ultima_prova"; GLOG="$DIR/guardia.log"; SCHED="$DIR/.programmata"
+LOCK="$BASE/.lock"; MARK="$BASE/.tc_disattivo"; LAST="$DIR/.ultima_prova"; GLOG="$BASE/guardia.log"; SCHED="$BASE/.programmata"
+INC="$BASE/.prova_in_corso"; mkdir -p "$BASE" || exit 1
 mkdir -p "$DIR" || exit 1
 now() { date +%s; }
 ts()  { date '+%Y-%m-%dT%H:%M:%S%z'; }
@@ -106,8 +112,8 @@ tc_read() {                          # stampa il valore di TempContEn letto nel 
     echo ""
 }
 wd_stop() {
-    [ -f "$DIR/.wd_pid" ] && kill "$(cat "$DIR/.wd_pid")" 2>/dev/null
-    rm -f "$DIR/.wd_pid"
+    [ -f "$BASE/.wd_pid" ] && kill "$(cat "$BASE/.wd_pid")" 2>/dev/null
+    rm -f "$BASE/.wd_pid"
 }
 restore() {                          # uscite spente, TempContEn = 1, verifica; fino a 3 tentativi
     v=""
@@ -216,9 +222,9 @@ case "$1" in
     if [ -f "$MARK" ] || [ -d "$LOCK" ]; then
         glog "guardia: prova non attiva ma controllo termico ancora disattivato o blocco rimasto: ripristino"
         RUNLOG="$GLOG"; restore; rm -rf "$LOCK"
-        [ -f "$DIR/.prova_in_corso" ] && { . "$DIR/.prova_in_corso"
-            echo "$(date '+%Y-%m-%d %H:%M');$CUID;$CONFIG;$SLOT;interrotta;;;;;;;;;;;;;;;prova rimasta a metà (riavvio, blocco o arresto) chiusa dalla guardia;$NOTE;$(basename "$CSV")" >> "$DIR/risultati.csv"
-            rm -f "$DIR/.prova_in_corso"; }
+        [ -f "$INC" ] && { . "$INC"
+            echo "$(date '+%Y-%m-%d %H:%M');$CUID;$CONFIG;$SLOT;interrotta;;;;;;;;;;;;;;;prova rimasta a metà (riavvio, blocco o arresto) chiusa dalla guardia;$NOTE;$(basename "$CSV")" >> "$(dirname "$CSV")/risultati.csv"
+            rm -f "$INC"; }
     fi
     exit 0;;
 --ferma)
@@ -231,30 +237,87 @@ case "$1" in
     echo "Passi: $NS, durata $((TOTAL / 60)) min. Prova attiva: ${p:-no}"
     q=$(sched_pid); [ -n "$q" ] && { echo "Piano programmato: sequenze [$(sed -n 's/^SEQUENZE=//p' "$SCHED")], nome $(sed -n 's/^NOME=//p' "$SCHED"); avvii:"
         sed -n 's/^AVVIO=/  /p' "$SCHED"; }
-    [ -f "$DIR/.prova_in_corso" ] && cat "$DIR/.prova_in_corso"
+    [ -f "$INC" ] && cat "$INC"
     [ -f "$MARK" ] && echo "Segnale: controllo termico disattivato da una prova ($(cat "$MARK"))"
     echo "TempContEn letto: $(tc_read)"
     [ -f "$DIR/risultati.csv" ] && { echo "Ultime prove:"; tail -n 5 "$DIR/risultati.csv"; }
     df -k "$DIR" | tail -n 1
     exit 0;;
---alle|--tra)
-    # Piano senza installare nulla: uno o più orari, una o più sequenze in fila, ripetuto per N giorni.
-    # Il processo in attesa sparisce a fine piano, con --annulla o se la colonnina si riavvia.
-    MODE="$1"; WHEN="$2"; shift 2 2>/dev/null || { echo "Uso: --alle HH:MM[,HH:MM] [--giorni N] [--nome NOME] [--note TESTO] [SEQUENZE...]"; exit 1; }
-    GIORNI=1; NOME="$CONFIG_DEFAULT"; NT=""; SEQS=""
+--alle|--tra|--subito)
+    # Piano senza installare nulla: uno o più orari, una o più sequenze in fila (con i tempi scritti nel comando
+    # o in file seq_NOME.conf), ripetuto per N giorni. Il processo in attesa sparisce a fine piano,
+    # con --annulla o se la colonnina si riavvia.
+    USO="Uso: --subito | --tra MINUTI | --alle HH:MM[,HH:MM]  [--giorni N] [--nome NOME] [--note TESTO]
+          [--scala X] [--pausa MIN] [--base MIN] [--prova]  SEQUENZA [SEQUENZA ...]
+  SEQUENZA = \"NOME=ruolo:secondi ruolo:secondi ...\"  (ruoli: rif carica misura ventola recupero)
+             oppure il nome di un file seq_NOME.conf accanto allo script"
+    MODE="$1"; shift
+    if [ "$MODE" = "--subito" ]; then MODE="--tra"; WHEN=0
+    else WHEN="$1"; [ -z "$WHEN" ] && { echo "$USO"; exit 1; }; shift; fi
+    p=$(sched_pid); [ -n "$p" ] && { echo "C'è già un piano programmato (vedi --stato). Annullalo con --annulla."; exit 1; }
+    GIORNI=1; NOME="$CONFIG_DEFAULT"; NT=""; SCALA=1; O_PAUSA=""; O_BASE=""; PROVA=0; NSQ=0
+    PIANO="$BASE/.piano"; rm -rf "$PIANO"; mkdir -p "$PIANO"
     while [ $# -gt 0 ]; do
         case "$1" in
             --giorni) GIORNI="$2"; shift 2;;
             --nome)   NOME="$2"; shift 2;;
             --note)   NT="$2"; shift 2;;
-            *) f=$(seq_file "$1"); [ -z "$f" ] && { echo "Sequenza non trovata: $1 (serve il file seq_$1.conf accanto allo script)"; exit 1; }
-               SEQS="$SEQS $f"; shift;;
+            --scala)  SCALA="$2"; shift 2;;
+            --pausa)  O_PAUSA="$2"; shift 2;;
+            --base)   O_BASE="$2"; shift 2;;
+            --prova)  PROVA=1; shift;;
+            -*) echo "Opzione sconosciuta: $1"; echo "$USO"; exit 1;;
+            *)  NSQ=$((NSQ + 1)); eval "SQ_$NSQ=\"\$1\""; shift;;
         esac
     done
     case "$GIORNI" in ''|*[!0-9]*|0) echo "--giorni vuole un numero da 1 in su"; exit 1;; esac
-    [ -z "$SEQS" ] && SEQS=" -"                            # nessuna sequenza indicata: quella del file .conf
+    echo "$SCALA" | grep -q -E '^[0-9]*\.?[0-9]+$' || { echo "--scala vuole un numero (es. 0.1 = tempi a un decimo)"; exit 1; }
+    if [ "$PROVA" = 1 ]; then              # prova di funzionamento: subito pronta, dati a parte
+        RDIR="$BASE/collaudo"; [ -z "$O_PAUSA" ] && O_PAUSA=0; [ -z "$O_BASE" ] && O_BASE=0
+    else RDIR="$BASE"; fi
+    [ "$NSQ" = 0 ] && { NSQ=1; SQ_1="-"; }   # nessuna sequenza: quella del file .conf
+    # ogni sequenza diventa un file in .piano/N/seq_NOME.conf (tempi scalati, eventuali opzioni del comando)
+    SEQS=""; TOT=0; LIST=""; i=1
+    while [ "$i" -le "$NSQ" ]; do
+        eval "A=\$SQ_$i"; D="$PIANO/$i"; mkdir -p "$D"
+        case "$A" in
+            -)  SNAME="conf"; SRC="$CONF"; RAW="$STEPS";;
+            *=*|*:*)                            # sequenza scritta nel comando
+                SNAME="${A%%=*}"; [ "$SNAME" = "$A" ] && SNAME="S$i"; SPEC="${A#*=}"; SRC=""
+                RAW=$(echo "$SPEC" | tr ', ' '\n\n' | awk -F':' -v sn="$SNAME" '
+                    NF == 0 || $0 == "" { next }
+                    { r = tolower($1); s = $2 + 0
+                      if (NF < 2 || s <= 0) { print "ERR " $0; exit }
+                      if (r == "rif" || r == "riferimento") { role = "rif"; h = 0; f = 0; nm = "Riferimento" }
+                      else if (r == "carica" || r == "risc" || r == "riscaldatore") { role = "carica"; h = 1; f = 0; nm = "Carica" }
+                      else if (r == "misura") { role = "misura"; h = 0; f = 1; nm = "Misura" }
+                      else if (r == "ventola") { role = "ventola"; h = 0; f = 1; nm = "Ventola" }
+                      else if (r == "recupero" || r == "riposo") { role = "recupero"; h = 0; f = 0; nm = "Recupero" }
+                      else { print "ERR " $0; exit }
+                      if (NF >= 4) { h = $3 + 0; f = $4 + 0 }
+                      c[nm]++; printf "%s %d;%s;%d;%d;%d\n", nm, c[nm], role, s, h, f }')
+                case "$RAW" in *ERR*|"") echo "Sequenza non valida: $A"; echo "  passo non riconosciuto:$(echo "$RAW" | sed -n 's/^ERR//p')"; echo "$USO"; exit 1;; esac;;
+            *)  F=$(seq_file "$A"); [ -z "$F" ] && { echo "Sequenza non trovata: $A (né scritta come NOME=ruolo:secondi, né file seq_$A.conf)"; exit 1; }
+                SNAME=$(basename "$F" .conf | sed 's/^seq_//'); SRC="$F"; RAW=$( STEPS=""; . "$F"; echo "$STEPS" );;
+        esac
+        SCALED=$(echo "$RAW" | awk -F';' -v k="$SCALA" -v mn="$((INTERVAL * 2))" 'NF >= 5 && $1 !~ /^#/ { s = int($3 * k + 0.5); if (s < mn) s = mn; print $1 ";" $2 ";" s ";" $4 ";" $5 }')
+        { [ -n "$SRC" ] && [ -f "$SRC" ] && echo ". \"$SRC\""
+          echo "STEPS=\"
+$SCALED
+\""
+          echo "DIR=\"$RDIR\""
+          [ -n "$O_BASE" ] && echo "STABLE_MIN=$O_BASE"
+          [ -n "$O_PAUSA" ] && echo "REST_MIN=$O_PAUSA"
+          [ "$PROVA" = 1 ] && echo "MIN_UPTIME_H=0"
+          :; } > "$D/seq_$SNAME.conf"
+        T=$(echo "$SCALED" | awk -F';' '{ t += $3 } END { print t + 0 }'); TOT=$((TOT + T))
+        SEQS="$SEQS $D/seq_$SNAME.conf"
+        LIST="$LIST
+  $i. $SNAME ($((T / 60)) min $((T % 60)) s): $(echo "$SCALED" | awk -F';' '{ printf "%s%s %ds", (NR > 1 ? " → " : ""), $1, $3 }')"
+        i=$((i + 1))
+    done
     if [ "$MODE" = "--tra" ]; then
-        case "$WHEN" in ''|*[!0-9]*) echo "Uso: --tra MINUTI ..."; exit 1;; esac
+        case "$WHEN" in ''|*[!0-9]*) echo "$USO"; exit 1;; esac
         FIRST="$(( $(now) + WHEN * 60 ))"
     else
         FIRST=$(echo "$WHEN" | tr ',' ' ' | awk -v n="$(now)" -v hms="$(date '+%H %M %S')" '
@@ -264,11 +327,11 @@ case "$1" in
                 w = a[1] * 3600 + a[2] * 60 - sod; if (w <= 0) w += 86400; printf "%d ", n + w } }')
         case "$FIRST" in *ERR*|"") echo "Orari non validi: $WHEN (usa HH:MM, più orari separati da virgola, es. 21:00,01:00)"; exit 1;; esac
     fi
-    p=$(sched_pid); [ -n "$p" ] && { echo "C'è già un piano programmato (vedi --stato). Annullalo con --annulla."; exit 1; }
-    # elenco degli avvii in ordine di tempo
+    p=$(running_pid); [ -n "$p" ] && [ "$WHEN" = 0 ] && { echo "Una prova è in corso (PID $p): aspetta che finisca o fermala con --ferma."; exit 1; }
     EVENTS=$(for e in $FIRST; do d=0; while [ "$d" -lt "$GIORNI" ]; do echo $((e + d * 86400)); d=$((d + 1)); done; done | sort -n | tr '\n' ' ')
     SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
-    export CONF DIR
+    PAUSA="${O_PAUSA:-$REST_MIN}"; RLAST="$RDIR/.ultima_prova"; mkdir -p "$RDIR"
+    export CONF
     ( trap '' HUP INT
       for ev in $EVENTS; do
           while [ "$(now)" -lt "$ev" ]; do
@@ -283,26 +346,25 @@ case "$1" in
           fi
           for sq in $SEQS; do
               [ -f "$SCHED" ] || exit 0
-              # pausa minima dalla prova precedente, poi la sequenza
-              if [ -f "$LAST" ] && [ "$REST_MIN" -gt 0 ]; then
-                  W=$(( REST_MIN * 60 - ($(now) - $(cat "$LAST")) ))
+              if [ -f "$RLAST" ] && [ "$PAUSA" -gt 0 ]; then
+                  W=$(( PAUSA * 60 - ($(now) - $(cat "$RLAST")) ))
                   [ "$W" -gt 0 ] && { echo "$(date '+%Y-%m-%d %H:%M:%S') pausa di $((W / 60)) min prima della prossima sequenza"; sleep "$W"; }
               fi
               [ -f "$SCHED" ] || exit 0
-              echo "$(date '+%Y-%m-%d %H:%M:%S') avvio: sequenza $( [ "$sq" = - ] && echo 'del file .conf' || basename "$sq" .conf | sed 's/^seq_//'), nome $NOME"
-              if [ "$sq" = - ]; then sh "$SELF" "$NOME" "$NT"; else SEQ="$sq" sh "$SELF" "$NOME" "$NT"; fi
+              echo "$(date '+%Y-%m-%d %H:%M:%S') avvio: sequenza $(basename "$sq" .conf | sed 's/^seq_//'), nome $NOME"
+              SEQ="$sq" sh "$SELF" "$NOME" "$NT"
           done
       done
-      rm -f "$SCHED"; echo "$(date '+%Y-%m-%d %H:%M:%S') piano finito" ) </dev/null >>"$DIR/programmata.log" 2>&1 &
-    { echo "PID=$!"; echo "NOME=$NOME"; echo "SEQUENZE=$(for sq in $SEQS; do [ "$sq" = - ] && printf 'conf ' || printf '%s ' "$(basename "$sq" .conf | sed 's/^seq_//')"; done)"
+      rm -f "$SCHED"; echo "$(date '+%Y-%m-%d %H:%M:%S') piano finito" ) </dev/null >>"$BASE/programmata.log" 2>&1 &
+    { echo "PID=$!"; echo "NOME=$NOME"; echo "SEQUENZE=$(for sq in $SEQS; do printf '%s ' "$(basename "$sq" .conf | sed 's/^seq_//')"; done)"
       for ev in $EVENTS; do echo "AVVIO=$(date -d "@$ev" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "$ev")"; done; } > "$SCHED"
-    echo "Ora sulla colonnina: $(date '+%Y-%m-%d %H:%M %Z')"
-    echo "Piano: sequenze [$(sed -n 's/^SEQUENZE=//p' "$SCHED")] in fila, nome \"$NOME\", agli avvii:"
-    sed -n 's/^AVVIO=/  /p' "$SCHED"
-    TOT=0; for sq in $SEQS; do TOT=$((TOT + $(seq_total "$sq"))); done
-    echo "Durata di ogni avvio: $((TOT / 60)) min di passi, più le pause tra sequenze ($REST_MIN min) e l'eventuale attesa della base stabile."
+    echo "Ora sulla colonnina: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+    echo "Sequenze in fila$( [ "$SCALA" != 1 ] && echo " (tempi × $SCALA)"):$LIST"
+    echo "Nome \"$NOME\"; pausa tra sequenze $PAUSA min; base stabile ${O_BASE:-$STABLE_MIN} min$( [ "$PROVA" = 1 ] && echo "; PROVA: dati in $RDIR")."
+    echo "Avvii:"; sed -n 's/^AVVIO=/  /p' "$SCHED"
+    echo "Durata di ogni avvio: $((TOT / 60)) min di passi, più pause e attesa della base stabile."
     echo "Nulla è installato: se la colonnina si riavvia il piano si perde. Annulla: sh $SELF --annulla"
-    echo "Messaggi in $DIR/programmata.log, esiti in $DIR/risultati.csv"
+    echo "Segui: tail -f $BASE/programmata.log   ·   esiti in $RDIR/risultati.csv"
     exit 0;;
 --annulla)
     p=$(sched_pid)
@@ -431,7 +493,7 @@ finish() {
     rm -rf "$LOCK"
     [ "$CONTROLLI" = 1 ] && { summary_controlli; return; }
     [ "$STARTED" = 1 ] || return
-    rm -f "$DIR/.prova_in_corso"; now > "$LAST"
+    rm -f "$INC"; now > "$LAST"
     [ "$RESULT" = "completata" ] && analyse || ROW="interrotta;;;;;;;;;;;;;;;$REASON"
     [ -f "$DIR/risultati.csv" ] || echo "data;cuid;configurazione;fascia;esito;regole;I1;I2;I_medio;C;deriva;S_medio;calo60;Q;base_n;display_ok_pct;psg_ok_pct;ping_ok_pct;ping_ms;validita;note;file" > "$DIR/risultati.csv"
     echo "$(date '+%Y-%m-%d %H:%M');$CUID;$CONFIG;$SLOT;$ROW;$NOTE;$(basename "$CSV")" >> "$DIR/risultati.csv"
@@ -490,11 +552,11 @@ fi
 # ---------------- prova: guardiano, controllo termico sospeso, passi agganciati all'orario T0
 SAFETY=1; STARTED=1
 T0=$(now)
-{ echo "T0=$T0"; echo "CUID='$CUID'"; echo "CONFIG='$SAFE_CFG'"; echo "SLOT='$SLOT'"; echo "NOTE=''"; echo "CSV='$CSV'"; } > "$DIR/.prova_in_corso"
+{ echo "T0=$T0"; echo "CUID='$CUID'"; echo "CONFIG='$SAFE_CFG'"; echo "SLOT='$SLOT'"; echo "NOTE=''"; echo "CSV='$CSV'"; } > "$INC"
 WDS=$((TOTAL + WATCHDOG_MARGIN_MIN * 60))
 ( trap '' HUP; sleep "$WDS"; printf '07;00;00;01;00;01\n' > "$CMD"; sleep 3; printf '05;00;TempContEn;1\n' > "$CMD"
   echo "$(date '+%Y-%m-%d %H:%M:%S') guardiano a tempo: ripristino dopo $WDS s (prova non chiusa)" >> "$GLOG" ) </dev/null >/dev/null 2>&1 &
-echo $! > "$DIR/.wd_pid"
+echo $! > "$BASE/.wd_pid"
 log "Guardiano a tempo: ripristino automatico tra $((WDS / 60)) min se la prova non si chiude."
 echo "$(date '+%Y-%m-%d %H:%M') $CUID" > "$MARK"; DISABLED=1
 send "05;00;TempContEn;0"; sleep 2

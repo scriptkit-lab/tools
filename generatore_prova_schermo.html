@@ -1,0 +1,974 @@
+<title>Generatore prova schermo</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: due colonne, impostazioni a sinistra e file generati a destra (fissi in vista); una colonna sotto 980px */
+:root{
+  --bg:#F3F5F6; --panel:#FFFFFF; --ink:#1B2328; --muted:#5D6A72; --line:#D7DDE1; --sunk:#E9EDEF;
+  --accent:#0E6E6A; --accent-ink:#FFFFFF; --warn:#9A5B00; --warn-bg:#FFF2DC; --err:#B3261E; --ok:#1F7A3E;
+  --heat:#C2410C; --fan:#1D5FB8;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12171A; --panel:#1A2125; --ink:#E4EAED; --muted:#93A1A9; --line:#2D383E; --sunk:#151B1E;
+  --accent:#3FB8B0; --accent-ink:#06201E; --warn:#F0B35A; --warn-bg:#3A2B12; --err:#F2827A; --ok:#6BD08C;
+  --heat:#F08A55; --fan:#6FA6F2; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12171A; --panel:#1A2125; --ink:#E4EAED; --muted:#93A1A9; --line:#2D383E; --sunk:#151B1E;
+  --accent:#3FB8B0; --accent-ink:#06201E; --warn:#F0B35A; --warn-bg:#3A2B12; --err:#F2827A; --ok:#6BD08C;
+  --heat:#F08A55; --fan:#6FA6F2; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+h1{font-size:26px;font-weight:600;letter-spacing:.01em}
+h2{font-size:17px;font-weight:600}
+.wrap{max-width:1360px;margin:0 auto;display:grid;gap:16px}
+.head{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:end;justify-content:space-between}
+.head p{margin:2px 0 0;color:var(--muted);max-width:70ch}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:980px){.grid{grid-template-columns:1fr}}
+.col{display:grid;gap:14px;min-width:0}
+.sec{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;gap:10px;min-width:0}
+.sec>header{display:flex;gap:10px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+.sec>header small{color:var(--muted)}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+label.f{display:grid;gap:3px;font-size:12.5px;color:var(--muted);min-width:0}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0;width:100%}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input[type=checkbox]{width:auto}
+.mono{font-family:var(--mono)}
+button{font:500 13px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 11px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.presets button[aria-pressed=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.hint{font-size:12.5px;color:var(--muted)}
+/* passi */
+.steps{display:grid;gap:6px}
+.step{display:grid;grid-template-columns:22px minmax(0,1.4fr) minmax(0,1fr) 78px 64px 64px 96px;gap:6px;align-items:center}
+.ph{display:none;font-style:normal;font-size:12px;color:var(--muted)}
+.step.h{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.step .n{font:500 12px var(--mono);color:var(--muted);text-align:right}
+.tog{display:flex;justify-content:center}
+.acts{display:flex;gap:2px}.acts button{padding:3px 7px}
+@media (max-width:560px){.step{grid-template-columns:repeat(3,minmax(0,1fr));padding-bottom:8px;border-bottom:1px solid var(--line)}.step.h,.step .n{display:none}.step input[data-k="0"]{grid-column:1/-1}.ph{display:inline}.tog{justify-content:flex-start;gap:6px;align-items:center}.step .acts{justify-content:flex-end}}
+/* barra della sequenza, in scala */
+.bar{display:flex;height:26px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.bar i{display:flex;align-items:center;justify-content:center;font:500 10.5px var(--mono);color:var(--muted);border-right:1px solid var(--line);min-width:2px;overflow:hidden;white-space:nowrap}
+.bar i:last-child{border-right:0}
+.bar i.h{background:color-mix(in srgb,var(--heat) 22%,transparent);color:var(--ink)}
+.bar i.f{background:color-mix(in srgb,var(--fan) 22%,transparent);color:var(--ink)}
+.kpis{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px}
+.kpis b{font:600 15px var(--display);font-variant-numeric:tabular-nums}
+.rules{display:grid;gap:6px}
+.rule{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start;padding:7px 9px;border:1px solid var(--line);border-radius:8px}
+.rule b{font-weight:600}
+.warns{display:grid;gap:6px}
+.w{background:var(--warn-bg);color:var(--ink);border-left:3px solid var(--warn);padding:6px 10px;border-radius:4px;font-size:12.5px}
+.w.e{border-left-color:var(--err)}
+/* uscita */
+.out{position:sticky;top:max(12px,env(safe-area-inset-top,0px))}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tabs button[aria-selected=true]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+pre.code{margin:0;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:12px/1.45 var(--mono);max-height:56vh;overflow:auto;white-space:pre}
+.steps-guide{margin:0;padding-left:20px;display:grid;gap:4px;font-size:13px}
+code{font:12.5px var(--mono);background:var(--sunk);padding:1px 4px;border-radius:4px}
+.toast{min-height:18px;font-size:12.5px;color:var(--ok)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>Generatore prova schermo</h1>
+      <p>Imposta passi, orari, controlli e regole: il generatore prepara un unico file da copiare sulla colonnina, che installa lo script di acquisizione, le impostazioni e gli orari con la rete di sicurezza sul controllo termico.</p>
+    </div>
+    <div class="row presets" id="presets" aria-label="Modelli">
+      <button type="button" data-p="classica">Classica 31 min</button>
+      <button type="button" data-p="v3">Breve 21 min</button>
+      <button type="button" data-p="caratt">Caratterizzazione 3 h 20</button>
+      <button type="button" data-p="controlli">Solo controlli</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <section class="sec" aria-labelledby="h-seq">
+        <header><h2 id="h-seq">Sequenza</h2><small id="seqInfo"></small></header>
+        <div class="fields">
+          <label class="f">Tipo di prova<select id="mode"><option value="termica">prova termica (riscaldatore e ventola)</option><option value="controlli">solo controlli (non comanda nulla)</option></select></label>
+          <label class="f">Nome della configurazione<input id="CONFIG_DEFAULT" class="mono"></label>
+          <label class="f">Campione ogni (s)<input id="INTERVAL" type="number" min="1" step="1"></label>
+          <label class="f" id="ctrlBox">Durata dei controlli (min)<input id="CTRL_MIN" type="number" min="1" step="1"></label>
+        </div>
+        <div id="stepsBox" class="steps"></div>
+        <div class="row" id="stepsActs"><button type="button" id="addStep">+ Passo</button><span class="hint">Ruoli: <b>misura</b> dopo una <b>carica</b> produce un indice; il primo <b>riferimento</b> serve a misurare la deriva della base (ultimi 3 min).</span></div>
+        <div class="bar" id="bar" aria-hidden="true"></div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-or">
+        <header><h2 id="h-or">Orari</h2><small>timer di systemd sulla colonnina</small></header>
+        <div class="fields">
+          <label class="f" style="grid-column:1/-1">Orari fissi (HH:MM, separati da spazio o virgola)<input id="TIMES" class="mono" placeholder="02:00 06:00 12:00 18:00 22:00"></label>
+          <label class="f">…oppure ogni N ore (0 = no)<input id="EVERY_H" type="number" min="0" max="12" step="1"></label>
+          <label class="f">…a partire dalle (HH:MM)<input id="EVERY_FROM" class="mono" placeholder="00:30"></label>
+        </div>
+        <div class="hint" id="slotInfo"></div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-cond">
+        <header><h2 id="h-cond">Condizioni per partire</h2><small>se non sono rispettate la prova non parte e lo scrive</small></header>
+        <div class="fields">
+          <label class="f">Accesa da almeno (h)<input id="MIN_UPTIME_H" type="number" min="0" step="0.5"></label>
+          <label class="f">Pausa minima dalla prova precedente (min)<input id="REST_MIN" type="number" min="0"></label>
+          <label class="f">Base stabile per (min, 0 = no)<input id="STABLE_MIN" type="number" min="0"></label>
+          <label class="f">…entro (°C)<input id="STABLE_TOL" type="number" min="0" step="0.05"></label>
+          <label class="f">Attesa massima della base (min)<input id="PRE_WAIT_MIN" type="number" min="0"></label>
+          <label class="f">USER STATUS richiesto<input id="USER_OK" class="mono"></label>
+          <label class="f">Ricarica in corso se (regex)<input id="CHARGE_RX" class="mono" placeholder="es. CHARG"></label>
+        </div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-sic">
+        <header><h2 id="h-sic">Sicurezza</h2><small>controllo termico sempre riattivato</small></header>
+        <div class="fields">
+          <label class="f">Interrompi se AUX TEMPERATURE oltre (°C)<input id="AUX_MAX" type="number" step="1"></label>
+          <label class="f">Interrompi se TEMPERATURE oltre (°C)<input id="TEMP_MAX" type="number" step="1"></label>
+          <label class="f">Guardiano: margine oltre la durata (min)<input id="WATCHDOG_MARGIN_MIN" type="number" min="1"></label>
+          <label class="f">Controllo di guardia ogni (min)<input id="GUARD_MIN" type="number" min="2"></label>
+        </div>
+        <ol class="steps-guide">
+          <li>A fine prova, e su arresto o errore, uscite spente e <code>TempContEn = 1</code>, poi riletto dal log di PS4GAux (tre tentativi).</li>
+          <li>Guardiano a tempo sulla colonnina: se la prova si blocca, ripristina dopo durata + margine.</li>
+          <li>systemd: tempo massimo del servizio e ripristino quando il servizio termina.</li>
+          <li>Controllo di guardia periodico e all'accensione: se trova il controllo termico ancora disattivato da una prova non più attiva, lo riattiva.</li>
+          <li>Interruzione immediata per soglie, FAULT, ricarica, pagina muta oltre 30 s.</li>
+        </ol>
+      </section>
+
+      <section class="sec" aria-labelledby="h-ctl">
+        <header><h2 id="h-ctl">Controlli su display e PSG4X</h2><small>registrati in ogni campione</small></header>
+        <div class="fields">
+          <label class="f">Flag display: nome sulla pagina<input id="DISPLAY_FLAG" class="mono"></label>
+          <label class="f">…valore se connesso (regex)<input id="DISPLAY_OK" class="mono"></label>
+          <label class="f">Flag PSG4X: nome sulla pagina<input id="PSG_FLAG" class="mono"></label>
+          <label class="f">…valore se connesso (regex)<input id="PSG_OK" class="mono"></label>
+          <label class="f">IP del display per il ping (vuoto = no)<input id="DISPLAY_IP" class="mono" placeholder="es. 192.168.10.20"></label>
+          <label class="f">Ping ogni N campioni<input id="PING_EVERY" type="number" min="1"></label>
+        </div>
+        <div class="hint">Nomi provvisori: la prima prova salva tutta la pagina in <code>…_pagina.txt</code>, da cui leggere i nomi esatti dei due flag.</div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-reg">
+        <header><h2 id="h-reg">Esito: regole in OR</h2><small>sospetto se almeno una scatta</small></header>
+        <div class="rules" id="rules"></div>
+        <div class="fields">
+          <label class="f">Prove di riferimento per fascia oraria<input id="BASELINE_N" type="number" min="1"></label>
+          <label class="f">Attaccato se Q ≤<input id="Q_LOW" type="number" step="0.05"></label>
+          <label class="f">Coerenza C massima<input id="C_MAX" type="number" step="0.05"></label>
+          <label class="f">Deriva massima della base (°C/min)<input id="DRIFT_MAX" type="number" step="0.01"></label>
+          <label class="f">Tolleranza durata riscaldatore (s)<input id="HEATER_TOL_S" type="number" min="1"></label>
+        </div>
+        <div class="hint">Il riferimento si costruisce da solo: le prime prove valide di ogni colonnina in ogni fascia oraria (es. tutte quelle delle 02) diventano il suo “com'è oggi”; le successive si confrontano con quelle con Q = Ī / mediana del riferimento.</div>
+      </section>
+
+      <section class="sec" aria-labelledby="h-path">
+        <header><h2 id="h-path">Percorsi sulla colonnina</h2><small>di solito non vanno cambiati</small></header>
+        <div class="fields">
+          <label class="f">Cartella dei dati<input id="DIR" class="mono"></label>
+          <label class="f">Pagina web<input id="URL" class="mono"></label>
+          <label class="f">File comando<input id="CMD" class="mono"></label>
+          <label class="f">Log di PS4GAux<input id="AUXLOG" class="mono"></label>
+          <label class="f">Spazio libero minimo (kB)<input id="MIN_FREE_KB" type="number" min="0"></label>
+          <label class="f">Salva la pagina a ogni prova<select id="PAGE_SNAPSHOT"><option value="1">sì</option><option value="0">no</option></select></label>
+        </div>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="sec out" aria-labelledby="h-out">
+        <header><h2 id="h-out">File per la colonnina</h2><small id="genDate"></small></header>
+        <div class="kpis" id="kpis"></div>
+        <div class="warns" id="warns"></div>
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="inst" aria-selected="true">installa_prova_schermo.sh</button>
+          <button type="button" role="tab" data-tab="conf" aria-selected="false">prova_schermo.conf</button>
+          <button type="button" role="tab" data-tab="json" aria-selected="false">impostazioni (JSON)</button>
+          <button type="button" role="tab" data-tab="how" aria-selected="false">Istruzioni</button>
+        </div>
+        <pre class="code" id="code" tabindex="0"></pre>
+        <div id="how" hidden>
+          <ol class="steps-guide">
+            <li>Salva il file <code>installa_prova_schermo.sh</code> (pulsante Scarica, oppure Copia e incolla in un file di testo con fine riga Unix).</li>
+            <li>Copialo sulla colonnina, ad esempio in <code>/home/root/</code> (WinSCP).</li>
+            <li>Da SSH: <code>sh /home/root/installa_prova_schermo.sh</code>. Installa script, impostazioni, orari e guardia, e mostra lo stato.</li>
+            <li>Controllo manuale: <code>sh /home/root/test/prova_schermo.sh --controlli 5</code> (5 minuti di sola lettura), poi apri il file <code>…_pagina.txt</code> per i nomi dei flag.</li>
+            <li>Raccolta dati: <code>sh /home/root/test/prova_schermo.sh --archivio</code> crea un unico <code>.tar.gz</code> da prelevare. I CSV si importano in PoleDesk (Prove registrate → Importa).</li>
+            <li>Per togliere gli orari: <code>sh /home/root/installa_prova_schermo.sh --rimuovi</code> (dati e script restano). Ripristino immediato: <code>sh /home/root/test/prova_schermo.sh --ripristina</code>.</li>
+          </ol>
+          <p class="hint">Se <code>/etc/systemd/system</code> è in sola lettura, l'installatore copia comunque script e impostazioni e lo dice: le prove si avviano a mano e la guardia va concordata con chi gestisce il firmware.</p>
+        </div>
+        <div id="jsonIn" hidden>
+          <label class="f">Incolla qui impostazioni JSON (da un altro strumento o da un'esportazione) e premi Applica<textarea id="jsonText" rows="5" class="mono"></textarea></label>
+          <div class="row"><button type="button" id="applyJson">Applica</button></div>
+        </div>
+        <div class="row"><button type="button" class="pri" id="copy">Copia</button><button type="button" id="download">Scarica</button><span class="toast" id="toast" role="status"></span></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script type="text/plain" id="tpl">#!/bin/sh
+# prova_schermo.sh 2.0.1 — acquisizione dati per il rilevamento del distacco dello schermo, sulla colonnina.
+#
+# Tutti i parametri stanno in prova_schermo.conf (creato dal generatore). Senza file valgono i valori qui sotto.
+# Un altro file di impostazioni: CONF=/percorso/altro.conf sh prova_schermo.sh ...
+#
+# Uso:
+#   sh prova_schermo.sh [configurazione] [note]   una prova (passi, tempi e controlli dal file .conf)
+#   sh prova_schermo.sh --seq T2 [nome] [note]     una prova subito con la sequenza del file seq_T2.conf
+#   sh prova_schermo.sh --subito | --tra MIN | --alle HH:MM[,HH:MM]  [opzioni]  SEQUENZA [SEQUENZA ...]
+#       piano senza installare nulla: a ogni avvio esegue le sequenze in fila.
+#       SEQUENZA = "T2=rif:300 carica:300 misura:480 recupero:900 carica:300 misura:480"
+#                  (ruoli rif carica misura ventola recupero; ruolo:secondi:riscaldatore:ventola per forzare le uscite)
+#                  oppure il nome di un file seq_NOME.conf accanto allo script.
+#       opzioni: --giorni N (ripete ogni giorno, predefinito 1), --nome NOME, --note TESTO,
+#                --scala X (tempi × X, es. 0.1 per una prova corta), --pausa MIN tra sequenze,
+#                --base MIN di base stabile (0 = non aspetta), --prova (pausa e base 0, dati in collaudo/)
+#   sh prova_schermo.sh --annulla                  annulla il piano (la prova in corso finisce; per fermarla --ferma)
+#   sh prova_schermo.sh --controlli [minuti]       solo lettura di temperature, flag e ping: non comanda nulla
+#   sh prova_schermo.sh --ferma                    ferma la prova in corso (con ripristino)
+#   sh prova_schermo.sh --ripristina               uscite spente e controllo termico riattivato, verificato
+#   sh prova_schermo.sh --guardia                  (timer e avvio) ripristina se una prova è rimasta a metà
+#   sh prova_schermo.sh --stato                    stato, ultime prove, valore di TempContEn
+#   sh prova_schermo.sh --archivio                 un unico file .tar.gz con tutti i dati, da prelevare
+#
+# Sicurezza: il controllo termico automatico (TempContEn) torna sempre a 1, con cinque livelli:
+#   1. a fine prova e su Ctrl+C / kill (trap), con verifica rileggendo TempContEn;
+#   2. guardiano a tempo lanciato a inizio prova: se lo script si blocca, ripristina dopo durata + margine;
+#   3. systemd: ExecStopPost e TimeoutStartSec sul servizio della prova;
+#   4. timer di guardia ogni 10 min e all'avvio della colonnina: se c'è il segnale ".tc_disattivo"
+#      e nessuna prova attiva, ripristina;
+#   5. soglie di sicurezza, ricarica, FAULT e pagina muta interrompono subito la prova.
+
+VERSIONE="2.0.1"
+CONF="${CONF:-$(cd "$(dirname "$0")" 2>/dev/null && pwd)/prova_schermo.conf}"
+[ -f "$CONF" ] && . "$CONF"
+BASE="${DIR:-/home/root/test}"       # blocco, segnali e piano stanno qui anche se una sequenza sposta i dati altrove
+
+# ---------------- sequenze: file seq_NOME.conf accanto allo script (passi ed eventuali altri parametri)
+seq_file() {                         # percorso completo del file della sequenza ("" se non c'è)
+    sd=$(cd "$(dirname "$0")" 2>/dev/null && pwd)
+    for f in "$1" "$sd/seq_$1.conf" "$sd/$1.conf" "${DIR:-/home/root/test}/seq_$1.conf"; do
+        [ -f "$f" ] && { echo "$(cd "$(dirname "$f")" && pwd)/$(basename "$f")"; return; }
+    done
+}
+seq_total() {                        # secondi di passi di una sequenza ("-" = quella del file .conf)
+    if [ "$1" = - ]; then echo "$TOTAL"; return; fi
+    ( STEPS=""; . "$1"; echo "$STEPS" | awk -F';' 'NF >= 3 && $1 !~ /^#/ { t += $3 } END { print t + 0 }' )
+}
+if [ "$1" = "--seq" ]; then          # una sequenza subito, in primo piano: sh prova_schermo.sh --seq T2 [nome] [note]
+    SEQ=$(seq_file "$2"); [ -z "$SEQ" ] && { echo "Sequenza non trovata: $2 (per scriverla nel comando usa --subito)"; exit 1; }; shift 2
+fi
+SEQNAME=""
+if [ -n "$SEQ" ]; then [ -f "$SEQ" ] || { echo "File di sequenza non trovato: $SEQ"; exit 1; }
+    . "$SEQ"; SEQNAME=$(basename "$SEQ" .conf | sed 's/^seq_//'); fi
+
+# ---------------- valori predefiniti (sovrascritti dal file .conf)
+: "${DIR:=/home/root/test}"
+: "${URL:=http://127.0.0.1/}"
+: "${CMD:=/crve/command}"
+: "${AUXLOG:=/crve/log/PS4GAux.log}"
+: "${INTERVAL:=5}"
+: "${STEPS:=
+Riferimento;rif;300;0;0
+Carica 1;carica;180;1;0
+Misura 1;misura;300;0;1
+Recupero;recupero;600;0;0
+Carica 2;carica;180;1;0
+Misura 2;misura;300;0;1
+}"
+: "${AUX_MAX:=60}"; : "${TEMP_MAX:=60}"
+: "${MIN_UPTIME_H:=3}"; : "${USER_OK:=IDLE}"; : "${CHARGE_RX:=}"
+: "${REST_MIN:=60}"
+: "${STABLE_MIN:=30}"; : "${STABLE_TOL:=0.3}"; : "${PRE_WAIT_MIN:=60}"
+: "${DRIFT_MAX:=0.03}"; : "${HEATER_TOL_S:=15}"
+: "${WATCHDOG_MARGIN_MIN:=15}"
+: "${DISPLAY_FLAG:=DISPLAY CONNECTED}"; : "${DISPLAY_OK:=^(CONNECTED|ON|OK|TRUE|YES|1)$}"
+: "${PSG_FLAG:=PSG4X CONNECTED}"; : "${PSG_OK:=^(CONNECTED|ON|OK|TRUE|YES|1)$}"
+: "${DISPLAY_IP:=}"; : "${PING_EVERY:=1}"
+: "${BASELINE_N:=3}"; : "${Q_LOW:=1.25}"; : "${Q_HIGH:=1.5}"
+: "${A_HIGH:=}"; : "${C_MAX:=0.30}"
+: "${FLAG_MIN_PCT:=50}"; : "${PING_FAIL_MAX:=50}"
+: "${RULES:=Q DISPLAY PSG PING}"
+: "${PAGE_SNAPSHOT:=1}"; : "${MIN_FREE_KB:=5000}"
+: "${CONFIG_DEFAULT:=campo}"
+: "${LATE_MAX_MIN:=30}"
+
+LOCK="$BASE/.lock"; MARK="$BASE/.tc_disattivo"; LAST="$DIR/.ultima_prova"; GLOG="$BASE/guardia.log"; SCHED="$BASE/.programmata"
+INC="$BASE/.prova_in_corso"; mkdir -p "$BASE" || exit 1
+mkdir -p "$DIR" || exit 1
+now() { date +%s; }
+ts()  { date '+%Y-%m-%dT%H:%M:%S%z'; }
+glog() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$GLOG"; }
+RUNLOG="$GLOG"
+log() { echo "$(date '+%H:%M:%S') $*" >> "$RUNLOG"; echo "$*"; }
+
+# ---------------- comandi PS4GAux e verifica di TempContEn
+send() { printf '%s\n' "$1" > "$CMD"; echo "$(date '+%H:%M:%S') comando $1" >> "$RUNLOG"; }
+tc_read() {                          # stampa il valore di TempContEn letto nel log di PS4GAux ("" se non risponde)
+    [ -f "$AUXLOG" ] || { echo ""; return; }
+    off=$(wc -c < "$AUXLOG" 2>/dev/null); off=${off:-0}
+    printf '04;00;TempContEn\n' > "$CMD"
+    i=0
+    while [ "$i" -lt 8 ]; do
+        sleep 1
+        sz=$(wc -c < "$AUXLOG" 2>/dev/null); sz=${sz:-0}
+        [ "$sz" -lt "$off" ] && off=0
+        v=$(tail -c +"$((off + 1))" "$AUXLOG" 2>/dev/null | sed -n 's/.*Value=\([^ ,;]*\).*/\1/p' | tail -n 1)
+        [ -n "$v" ] && { echo "$v"; return; }
+        i=$((i + 1))
+    done
+    echo ""
+}
+wd_stop() {
+    [ -f "$BASE/.wd_pid" ] && kill "$(cat "$BASE/.wd_pid")" 2>/dev/null
+    rm -f "$BASE/.wd_pid"
+}
+restore() {                          # uscite spente, TempContEn = 1, verifica; fino a 3 tentativi
+    v=""
+    k=1
+    while [ "$k" -le 3 ]; do
+        send "07;00;00;01;00;01"; sleep 2
+        send "05;00;TempContEn;1"; sleep 2
+        v=$(tc_read)
+        [ "$v" = "1" ] && break
+        [ -z "$v" ] && break         # log non disponibile: non verificabile
+        k=$((k + 1))
+    done
+    if [ "$v" = "1" ]; then
+        rm -f "$MARK"; wd_stop; log "Ripristino verificato: uscite spente, TempContEn = 1."
+    elif [ -z "$v" ]; then
+        rm -f "$MARK"; wd_stop; log "Ripristino inviato (uscite spente, TempContEn = 1); verifica non possibile: nessuna risposta nel log."
+    else
+        log "ATTENZIONE: TempContEn letto = $v dopo 3 tentativi. Il timer di guardia riproverà."; glog "TempContEn = $v dopo il ripristino"
+    fi
+}
+running_pid() {                     # PID della prova attiva (non zombie, ed è davvero questo script)
+    [ -f "$LOCK/pid" ] || return 0
+    p=$(cat "$LOCK/pid"); [ -n "$p" ] && [ -d "/proc/$p" ] || return 0
+    [ "$(awk '{ print $3 }' "/proc/$p/stat" 2>/dev/null)" = "Z" ] && return 0
+    tr '\0' ' ' < "/proc/$p/cmdline" 2>/dev/null | grep -q prova_schermo && echo "$p"
+    return 0
+}
+sched_pid() {                       # PID del processo che attende una prova programmata con --alle / --tra
+    [ -f "$SCHED" ] || return 0
+    p=$(sed -n 's/^PID=//p' "$SCHED"); [ -n "$p" ] && [ -d "/proc/$p" ] && echo "$p"
+    return 0
+}
+
+# ---------------- lettura della pagina
+read_page() {
+    PAGE="$(wget -q -T 5 -O- "$URL" 2>/dev/null)"
+    LINES="$(echo "$PAGE" | sed 's/<[^>]*>/\n/g' | sed '/^[[:space:]]*$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+}
+get_value() {                        # riga uguale al nome (con o senza ":"), valore nella riga dopo
+    v="$(echo "$LINES" | grep -x -F -A1 "$1" | sed -n '2p')"
+    [ -z "$v" ] && v="$(echo "$LINES" | grep -x -F -A1 "$1:" | sed -n '2p')"
+    echo "$v"
+}
+num() { echo "$1" | awk '{ gsub(",", "."); if ($1 ~ /^-?[0-9.]+$/) print $1; else print "" }'; }
+gt() { awk -v a="$1" -v b="$2" 'BEGIN { exit !(a != "" && b != "" && a + 0 > b + 0) }'; }
+flag_ok() {                          # 1 se il valore corrisponde all'espressione "ok", 0 se no, vuoto se il flag non c'è
+    [ -z "$1" ] && { echo ""; return; }
+    echo "$1" | grep -q -i -E "$2" && echo 1 || echo 0
+}
+ping_ms() {
+    [ -z "$DISPLAY_IP" ] && { echo ""; return; }
+    r=$(ping -c 1 -W 1 "$DISPLAY_IP" 2>/dev/null | sed -n 's/.*time[=<]\([0-9.]*\).*/\1/p' | head -n 1)
+    [ -n "$r" ] && echo "$r" || echo "ko"
+}
+
+HEADER="epoch;timestamp;cuid;passo;nome_passo;cmd_riscaldatore;cmd_ventola;aux_heater_power;aux_fan_power;aux_temperature;temperature;cpu_temperature;aux_leds_current;aux_lux;main_power_voltage;aux_supply_12v;user_status;aux_fault;antitamper;evse_task_0;evse_task_1;ok;display_flag;display_ok;psg_flag;psg_ok;ping_ms"
+SN=0
+sample() {                           # una riga nel CSV; controlli di sicurezza solo durante la prova (SAFETY=1)
+    read_page
+    NOW=$(now); SN=$((SN + 1))
+    P=""; [ $((SN % PING_EVERY)) -eq 0 ] && P=$(ping_ms)
+    if [ -z "$PAGE" ]; then
+        echo "$NOW;$(ts);;$PH;$PHNAME;$CH;$CF;;;;;;;;;;;;;;;0;;;;;$P" >> "$CSV"
+        LOST=$((LOST + INTERVAL))
+        if [ "$SAFETY" = 1 ] && [ "$LOST" -gt 30 ]; then RESULT="interrotta"; REASON="pagina non leggibile da più di 30 s"; exit 3; fi
+        return
+    fi
+    LOST=0
+    CUID="$(get_value "CUID")"
+    AUXT="$(num "$(get_value "AUX TEMPERATURE")")"; TEMP="$(num "$(get_value "TEMPERATURE")")"
+    USERST="$(get_value "USER STATUS")"; EVSE0="$(get_value "EVSE TASK 0 STATUS")"; EVSE1="$(get_value "EVSE TASK 1 STATUS")"
+    DF="$(get_value "$DISPLAY_FLAG")"; PF="$(get_value "$PSG_FLAG")"
+    echo "$NOW;$(ts);$CUID;$PH;$PHNAME;$CH;$CF;$(get_value "AUX HEATER POWER");$(get_value "AUX FAN POWER");$AUXT;$TEMP;$(num "$(get_value "CPU-TEMPERATURE")");$(num "$(get_value "AUX LEDS CURRENT")");$(num "$(get_value "AUX LUX")");$(num "$(get_value "MAIN POWER VOLTAGE")");$(num "$(get_value "AUX SUPPLY 12V")");$USERST;$(get_value "AUX FAULT");$(get_value "ANTITAMPER OK STATUS");$EVSE0;$EVSE1;1;$DF;$(flag_ok "$DF" "$DISPLAY_OK");$PF;$(flag_ok "$PF" "$PSG_OK");$P" >> "$CSV"
+    [ "$SAFETY" = 1 ] || return
+    if gt "$AUXT" "$AUX_MAX"; then RESULT="interrotta"; REASON="AUX TEMPERATURE $AUXT oltre $AUX_MAX"; exit 4; fi
+    if gt "$TEMP" "$TEMP_MAX"; then RESULT="interrotta"; REASON="TEMPERATURE $TEMP oltre $TEMP_MAX"; exit 4; fi
+    case "$USERST" in *FAULT*) RESULT="interrotta"; REASON="USER STATUS = $USERST"; exit 5;; esac
+    if [ -n "$CHARGE_RX" ] && echo "$EVSE0 $EVSE1" | grep -q -E "$CHARGE_RX"; then RESULT="interrotta"; REASON="inizio di una ricarica"; exit 6; fi
+}
+pace() {                             # attende il prossimo campione agganciato a $1 (inizio) senza superare $2 (fine)
+    K=$((K + 1)); NEXT=$(($1 + K * INTERVAL)); NOW=$(now)
+    while [ "$NEXT" -le "$NOW" ]; do K=$((K + 1)); NEXT=$(($1 + K * INTERVAL)); done
+    [ -n "$2" ] && [ "$NEXT" -gt "$2" ] && NEXT=$2
+    W=$((NEXT - $(now))); [ "$W" -gt 0 ] && sleep "$W"
+}
+
+# ---------------- passi dal file .conf: "nome;ruolo;secondi;riscaldatore;ventola"
+NS=0; TOTAL=0
+while IFS=';' read -r n r s h f; do
+    [ -z "$n" ] && continue
+    case "$n" in \#*) continue;; esac
+    NS=$((NS + 1))
+    eval "SN_$NS=\"\$n\"; SR_$NS=\"\$r\"; SS_$NS=\$((s + 0)); SH_$NS=\$((h + 0)); SF_$NS=\$((f + 0))"
+    TOTAL=$((TOTAL + s))
+done <<EOF_STEPS
+$STEPS
+EOF_STEPS
+
+# ================= modi di servizio =================
+case "$1" in
+--ripristina)
+    log "Ripristino manuale."; restore; exit 0;;
+--guardia)
+    p=$(running_pid)
+    if [ -n "$p" ]; then exit 0; fi
+    if [ -f "$MARK" ] || [ -d "$LOCK" ]; then
+        glog "guardia: prova non attiva ma controllo termico ancora disattivato o blocco rimasto: ripristino"
+        RUNLOG="$GLOG"; restore; rm -rf "$LOCK"
+        [ -f "$INC" ] && { . "$INC"
+            echo "$(date '+%Y-%m-%d %H:%M');$CUID;$CONFIG;$SLOT;interrotta;;;;;;;;;;;;;;;prova rimasta a metà (riavvio, blocco o arresto) chiusa dalla guardia;$NOTE;$(basename "$CSV")" >> "$(dirname "$CSV")/risultati.csv"
+            rm -f "$INC"; }
+    fi
+    exit 0;;
+--ferma)
+    p=$(running_pid)
+    if [ -n "$p" ]; then kill -TERM "$p"; echo "Arresto richiesto (PID $p): la prova si chiude con il ripristino."; else echo "Nessuna prova attiva."; restore; fi
+    exit 0;;
+--stato)
+    p=$(running_pid)
+    echo "prova_schermo $VERSIONE, file di impostazioni: $CONF $( [ -f "$CONF" ] && echo trovato || echo 'NON trovato: valori predefiniti')"
+    echo "Passi: $NS, durata $((TOTAL / 60)) min. Prova attiva: ${p:-no}"
+    q=$(sched_pid); [ -n "$q" ] && { echo "Piano programmato: sequenze [$(sed -n 's/^SEQUENZE=//p' "$SCHED")], nome $(sed -n 's/^NOME=//p' "$SCHED"); avvii:"
+        sed -n 's/^AVVIO=/  /p' "$SCHED"; }
+    [ -f "$INC" ] && cat "$INC"
+    [ -f "$MARK" ] && echo "Segnale: controllo termico disattivato da una prova ($(cat "$MARK"))"
+    echo "TempContEn letto: $(tc_read)"
+    [ -f "$DIR/risultati.csv" ] && { echo "Ultime prove:"; tail -n 5 "$DIR/risultati.csv"; }
+    df -k "$DIR" | tail -n 1
+    exit 0;;
+--alle|--tra|--subito)
+    # Piano senza installare nulla: uno o più orari, una o più sequenze in fila (con i tempi scritti nel comando
+    # o in file seq_NOME.conf), ripetuto per N giorni. Il processo in attesa sparisce a fine piano,
+    # con --annulla o se la colonnina si riavvia.
+    USO="Uso: --subito | --tra MINUTI | --alle HH:MM[,HH:MM]  [--giorni N] [--nome NOME] [--note TESTO]
+          [--scala X] [--pausa MIN] [--base MIN] [--prova]  SEQUENZA [SEQUENZA ...]
+  SEQUENZA = \"NOME=ruolo:secondi ruolo:secondi ...\"  (ruoli: rif carica misura ventola recupero)
+             oppure il nome di un file seq_NOME.conf accanto allo script"
+    MODE="$1"; shift
+    if [ "$MODE" = "--subito" ]; then MODE="--tra"; WHEN=0
+    else WHEN="$1"; [ -z "$WHEN" ] && { echo "$USO"; exit 1; }; shift; fi
+    p=$(sched_pid); [ -n "$p" ] && { echo "C'è già un piano programmato (vedi --stato). Annullalo con --annulla."; exit 1; }
+    GIORNI=1; NOME="$CONFIG_DEFAULT"; NT=""; SCALA=1; O_PAUSA=""; O_BASE=""; PROVA=0; NSQ=0
+    PIANO="$BASE/.piano"; rm -rf "$PIANO"; mkdir -p "$PIANO"
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --giorni) GIORNI="$2"; shift 2;;
+            --nome)   NOME="$2"; shift 2;;
+            --note)   NT="$2"; shift 2;;
+            --scala)  SCALA="$2"; shift 2;;
+            --pausa)  O_PAUSA="$2"; shift 2;;
+            --base)   O_BASE="$2"; shift 2;;
+            --prova)  PROVA=1; shift;;
+            -*) echo "Opzione sconosciuta: $1"; echo "$USO"; exit 1;;
+            *)  NSQ=$((NSQ + 1)); eval "SQ_$NSQ=\"\$1\""; shift;;
+        esac
+    done
+    case "$GIORNI" in ''|*[!0-9]*|0) echo "--giorni vuole un numero da 1 in su"; exit 1;; esac
+    echo "$SCALA" | grep -q -E '^[0-9]*\.?[0-9]+$' || { echo "--scala vuole un numero (es. 0.1 = tempi a un decimo)"; exit 1; }
+    if [ "$PROVA" = 1 ]; then              # prova di funzionamento: subito pronta, dati a parte
+        RDIR="$BASE/collaudo"; [ -z "$O_PAUSA" ] && O_PAUSA=0; [ -z "$O_BASE" ] && O_BASE=0
+    else RDIR="$BASE"; fi
+    [ "$NSQ" = 0 ] && { NSQ=1; SQ_1="-"; }   # nessuna sequenza: quella del file .conf
+    # ogni sequenza diventa un file in .piano/N/seq_NOME.conf (tempi scalati, eventuali opzioni del comando)
+    SEQS=""; TOT=0; LIST=""; i=1
+    while [ "$i" -le "$NSQ" ]; do
+        eval "A=\$SQ_$i"; D="$PIANO/$i"; mkdir -p "$D"
+        case "$A" in
+            -)  SNAME="conf"; SRC="$CONF"; RAW="$STEPS";;
+            *=*|*:*)                            # sequenza scritta nel comando
+                SNAME="${A%%=*}"; [ "$SNAME" = "$A" ] && SNAME="S$i"; SPEC="${A#*=}"; SRC=""
+                RAW=$(echo "$SPEC" | tr ', ' '\n\n' | awk -F':' -v sn="$SNAME" '
+                    NF == 0 || $0 == "" { next }
+                    { r = tolower($1); s = $2 + 0
+                      if (NF < 2 || s <= 0) { print "ERR " $0; exit }
+                      if (r == "rif" || r == "riferimento") { role = "rif"; h = 0; f = 0; nm = "Riferimento" }
+                      else if (r == "carica" || r == "risc" || r == "riscaldatore") { role = "carica"; h = 1; f = 0; nm = "Carica" }
+                      else if (r == "misura") { role = "misura"; h = 0; f = 1; nm = "Misura" }
+                      else if (r == "ventola") { role = "ventola"; h = 0; f = 1; nm = "Ventola" }
+                      else if (r == "recupero" || r == "riposo") { role = "recupero"; h = 0; f = 0; nm = "Recupero" }
+                      else { print "ERR " $0; exit }
+                      if (NF >= 4) { h = $3 + 0; f = $4 + 0 }
+                      c[nm]++; printf "%s %d;%s;%d;%d;%d\n", nm, c[nm], role, s, h, f }')
+                case "$RAW" in *ERR*|"") echo "Sequenza non valida: $A"; echo "  passo non riconosciuto:$(echo "$RAW" | sed -n 's/^ERR//p')"; echo "$USO"; exit 1;; esac;;
+            *)  F=$(seq_file "$A"); [ -z "$F" ] && { echo "Sequenza non trovata: $A (né scritta come NOME=ruolo:secondi, né file seq_$A.conf)"; exit 1; }
+                SNAME=$(basename "$F" .conf | sed 's/^seq_//'); SRC="$F"; RAW=$( STEPS=""; . "$F"; echo "$STEPS" );;
+        esac
+        SCALED=$(echo "$RAW" | awk -F';' -v k="$SCALA" -v mn="$((INTERVAL * 2))" 'NF >= 5 && $1 !~ /^#/ { s = int($3 * k + 0.5); if (s < mn) s = mn; print $1 ";" $2 ";" s ";" $4 ";" $5 }')
+        { [ -n "$SRC" ] && [ -f "$SRC" ] && echo ". \"$SRC\""
+          echo "STEPS=\"
+$SCALED
+\""
+          echo "DIR=\"$RDIR\""
+          [ -n "$O_BASE" ] && echo "STABLE_MIN=$O_BASE"
+          [ -n "$O_PAUSA" ] && echo "REST_MIN=$O_PAUSA"
+          [ "$PROVA" = 1 ] && echo "MIN_UPTIME_H=0"
+          :; } > "$D/seq_$SNAME.conf"
+        T=$(echo "$SCALED" | awk -F';' '{ t += $3 } END { print t + 0 }'); TOT=$((TOT + T))
+        SEQS="$SEQS $D/seq_$SNAME.conf"
+        LIST="$LIST
+  $i. $SNAME ($((T / 60)) min $((T % 60)) s): $(echo "$SCALED" | awk -F';' '{ printf "%s%s %ds", (NR > 1 ? " → " : ""), $1, $3 }')"
+        i=$((i + 1))
+    done
+    if [ "$MODE" = "--tra" ]; then
+        case "$WHEN" in ''|*[!0-9]*) echo "$USO"; exit 1;; esac
+        FIRST="$(( $(now) + WHEN * 60 ))"
+    else
+        FIRST=$(echo "$WHEN" | tr ',' ' ' | awk -v n="$(now)" -v hms="$(date '+%H %M %S')" '
+            BEGIN { split(hms, c, " "); sod = c[1] * 3600 + c[2] * 60 + c[3] }
+            { for (i = 1; i <= NF; i++) { if ($i !~ /^[0-9]?[0-9]:[0-5][0-9]$/) { print "ERR"; exit }
+                split($i, a, ":"); if (a[1] > 23) { print "ERR"; exit }
+                w = a[1] * 3600 + a[2] * 60 - sod; if (w <= 0) w += 86400; printf "%d ", n + w } }')
+        case "$FIRST" in *ERR*|"") echo "Orari non validi: $WHEN (usa HH:MM, più orari separati da virgola, es. 21:00,01:00)"; exit 1;; esac
+    fi
+    p=$(running_pid); [ -n "$p" ] && [ "$WHEN" = 0 ] && { echo "Una prova è in corso (PID $p): aspetta che finisca o fermala con --ferma."; exit 1; }
+    EVENTS=$(for e in $FIRST; do d=0; while [ "$d" -lt "$GIORNI" ]; do echo $((e + d * 86400)); d=$((d + 1)); done; done | sort -n | tr '\n' ' ')
+    SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+    PAUSA="${O_PAUSA:-$REST_MIN}"; RLAST="$RDIR/.ultima_prova"; mkdir -p "$RDIR"
+    export CONF
+    ( trap '' HUP INT
+      for ev in $EVENTS; do
+          while [ "$(now)" -lt "$ev" ]; do
+              [ -f "$SCHED" ] || exit 0
+              R=$((ev - $(now))); [ "$R" -gt 60 ] && R=60; [ "$R" -gt 0 ] && sleep "$R"
+          done
+          [ -f "$SCHED" ] || exit 0
+          LATE=$(( ($(now) - ev) / 60 ))
+          if [ "$LATE" -gt "$LATE_MAX_MIN" ]; then
+              echo "$(date '+%Y-%m-%d %H:%M:%S') avvio delle $(date -d "@$ev" '+%H:%M' 2>/dev/null) saltato: in ritardo di $LATE min (la sequenza precedente era ancora in corso)"
+              continue
+          fi
+          for sq in $SEQS; do
+              [ -f "$SCHED" ] || exit 0
+              if [ -f "$RLAST" ] && [ "$PAUSA" -gt 0 ]; then
+                  W=$(( PAUSA * 60 - ($(now) - $(cat "$RLAST")) ))
+                  [ "$W" -gt 0 ] && { echo "$(date '+%Y-%m-%d %H:%M:%S') pausa di $((W / 60)) min prima della prossima sequenza"; sleep "$W"; }
+              fi
+              [ -f "$SCHED" ] || exit 0
+              echo "$(date '+%Y-%m-%d %H:%M:%S') avvio: sequenza $(basename "$sq" .conf | sed 's/^seq_//'), nome $NOME"
+              SEQ="$sq" sh "$SELF" "$NOME" "$NT"
+          done
+      done
+      rm -f "$SCHED"; echo "$(date '+%Y-%m-%d %H:%M:%S') piano finito" ) </dev/null >>"$BASE/programmata.log" 2>&1 &
+    { echo "PID=$!"; echo "NOME=$NOME"; echo "SEQUENZE=$(for sq in $SEQS; do printf '%s ' "$(basename "$sq" .conf | sed 's/^seq_//')"; done)"
+      for ev in $EVENTS; do echo "AVVIO=$(date -d "@$ev" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "$ev")"; done; } > "$SCHED"
+    echo "Ora sulla colonnina: $(date '+%Y-%m-%d %H:%M:%S %Z')"
+    echo "Sequenze in fila$( [ "$SCALA" != 1 ] && echo " (tempi × $SCALA)"):$LIST"
+    echo "Nome \"$NOME\"; pausa tra sequenze $PAUSA min; base stabile ${O_BASE:-$STABLE_MIN} min$( [ "$PROVA" = 1 ] && echo "; PROVA: dati in $RDIR")."
+    echo "Avvii:"; sed -n 's/^AVVIO=/  /p' "$SCHED"
+    echo "Durata di ogni avvio: $((TOT / 60)) min di passi, più pause e attesa della base stabile."
+    echo "Nulla è installato: se la colonnina si riavvia il piano si perde. Annulla: sh $SELF --annulla"
+    echo "Segui: tail -f $BASE/programmata.log   ·   esiti in $RDIR/risultati.csv"
+    exit 0;;
+--annulla)
+    p=$(sched_pid)
+    if [ -n "$p" ]; then rm -f "$SCHED"; kill "$p" 2>/dev/null; echo "Piano annullato: nessun nuovo avvio."
+    else rm -f "$SCHED"; echo "Nessun piano programmato."; fi
+    p=$(running_pid); [ -n "$p" ] && echo "Una prova è in corso (PID $p) e continua fino alla fine. Per fermarla subito: --ferma"
+    exit 0;;
+--archivio)
+    read_page; CU="$(get_value "CUID")"
+    A="$DIR/archivio_${CU:-colonnina}_$(date '+%Y%m%d_%H%M').tar.gz"
+    (cd "$DIR" && tar czf "$A" --exclude='archivio_*' ./*.csv ./*.log ./*.txt ./*.conf 2>/dev/null || tar czf "$A" ./*.csv ./*.log 2>/dev/null)
+    echo "Archivio pronto: $A"; exit 0;;
+esac
+
+# ---------------- indici della prova e regole (chiamata a fine prova)
+analyse() {
+    ROLES=""; i=1
+    while [ "$i" -le "$NS" ]; do eval "ROLES=\"\$ROLES \$i:\$SR_$i:\$SS_$i\""; i=$((i + 1)); done
+    A=$(awk -F';' -v roles="$ROLES" -v htol="$HEATER_TOL_S" -v dmax="$DRIFT_MAX" '
+    function on(v) { v = toupper(v); if (v ~ /^(ON|TRUE|YES)/) return 1; if (v ~ /^OFF/) return 0; return (v + 0 > 0) }
+    function slope(a, b,   k, c, sx, sy, mx, my, nu, de) { c = 0; sx = 0; sy = 0
+        for (k = 1; k <= n; k++) if (t[k] >= a && t[k] < b) { sx += t[k]; sy += T[k]; c++ }
+        if (c < 3) return ""; mx = sx / c; my = sy / c; nu = 0; de = 0
+        for (k = 1; k <= n; k++) if (t[k] >= a && t[k] < b) { nu += (t[k] - mx) * (T[k] - my); de += (t[k] - mx) ^ 2 }
+        return de > 0 ? 60 * nu / de : "" }
+    function near(x,   k, b, bd) { b = ""; for (k = 1; k <= n; k++) if (bd == "" || (t[k] - x) ^ 2 < bd) { bd = (t[k] - x) ^ 2; b = T[k] } return b }
+    BEGIN { m = split(roles, rr, " "); for (k = 1; k <= m; k++) { split(rr[k], q, ":"); role[q[1]] = q[2]; dur[q[1]] = q[3]; ns = q[1] } }
+    NR > 1 && $4 >= 1 {
+        if ($24 != "") { dn++; dd += $24 } if ($26 != "") { pn++; pp += $26 }
+        if ($27 != "") { gn++; if ($27 != "ko") { g++; gm += $27 } }
+        if ($22 != 1 || $10 == "" || $10 == 0) next
+        n++; t[n] = $1; T[n] = $10; p[n] = $4; h[n] = on($8); f[n] = on($9); if (!(p[n] in st)) st[p[n]] = t[n] }
+    END {
+        why = ""; valid = 1; d = ""
+        for (k = 1; k <= ns; k++) if (role[k] == "rif") { e = (k + 1 in st) ? st[k + 1] : st[k] + dur[k]; d = slope(e - 180, e); break }
+        if (d == "") why = why " deriva non misurata (manca il riferimento);"
+        else if (d > dmax || d < -dmax) { valid = 0; why = why sprintf(" base in deriva %+.3f °C/min;", d) }
+        dc = (d == "") ? 0 : d
+        mi = 0
+        for (k = 2; k <= ns; k++) {
+            if (role[k] != "misura" || role[k - 1] != "carica" || !(k in st)) continue
+            mi++; c = k - 1; hon = ""; hoff = ""; ton = ""
+            for (i = 1; i <= n; i++) {
+                if (p[i] == c && h[i] && hon == "") hon = t[i]
+                if (hon != "" && (p[i] == c || p[i] == k) && !h[i] && hoff == "" && t[i] > hon) hoff = t[i]
+                if (p[i] == k && f[i] && ton == "") ton = t[i]
+            }
+            if (ton == "") { valid = 0; why = why " misura " mi ": ventola mai letta accesa;"; ton = st[k] }
+            if (hon != "" && hoff != "") { du = hoff - hon; if (du < dur[c] - htol || du > dur[c] + htol) { valid = 0; why = why " misura " mi ": riscaldatore " du " s invece di " dur[c] ";" } }
+            best = ""
+            for (i = 1; i <= n; i++) {
+                if (t[i] < ton || t[i] > ton + 45) continue
+                D = slope(t[i] - 15, t[i] + 15.001); if (D != "" && (best == "" || D < best)) best = D }
+            I[mi] = (best == "") ? "" : -best + dc
+            a0 = near(ton); a60 = near(ton + 60); cl[mi] = a0 - (a60 - dc)
+            sl = slope(st[c], st[k]); S[mi] = (sl == "") ? "" : sl - dc
+        }
+        if (mi < 2 || I[1] == "" || I[2] == "") { valid = 0; why = why " indice non calcolabile su due misure;" }
+        Im = (I[1] != "" && I[2] != "") ? (I[1] + I[2]) / 2 : ""
+        C = (Im != "" && Im != 0) ? ((I[1] > I[2] ? I[1] - I[2] : I[2] - I[1]) / Im) : ""
+        Sm = (S[1] != "" && S[2] != "") ? (S[1] + S[2]) / 2 : ""
+        cm = (mi >= 2) ? (cl[1] + cl[2]) / 2 : ""
+        f3 = "%.3f"; gsub(";", ",", why)
+        printf "%d;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s\n", valid, why,
+            I[1] == "" ? "" : sprintf(f3, I[1]), I[2] == "" ? "" : sprintf(f3, I[2]), Im == "" ? "" : sprintf(f3, Im), C == "" ? "" : sprintf(f3, C),
+            d == "" ? "" : sprintf("%.4f", d), Sm == "" ? "" : sprintf(f3, Sm), cm == "" ? "" : sprintf(f3, cm),
+            dn ? int(100 * dd / dn) : "", pn ? int(100 * pp / pn) : "", gn ? int(100 * g / gn) : "", g ? sprintf("%.1f", gm / g) : "" }' "$CSV")
+    VALID=$(echo "$A" | cut -d';' -f1); WHY=$(echo "$A" | cut -d';' -f2); I1=$(echo "$A" | cut -d';' -f3); I2=$(echo "$A" | cut -d';' -f4)
+    IM=$(echo "$A" | cut -d';' -f5); CC=$(echo "$A" | cut -d';' -f6); DR=$(echo "$A" | cut -d';' -f7); SM=$(echo "$A" | cut -d';' -f8); CL=$(echo "$A" | cut -d';' -f9)
+    DP=$(echo "$A" | cut -d';' -f10); PP=$(echo "$A" | cut -d';' -f11); GP=$(echo "$A" | cut -d';' -f12); GM=$(echo "$A" | cut -d';' -f13)
+    # riferimento della colonnina nella stessa fascia oraria (mediana delle prime BASELINE_N prove valide)
+    B="$DIR/baseline.csv"; [ -f "$B" ] || echo "cuid;fascia;I_medio;data;file" > "$B"
+    BN=$(awk -F';' -v c="$CUID" -v s="$BKEY" '$1 == c && $2 == s' "$B" | wc -l)
+    BM=$(awk -F';' -v c="$CUID" -v s="$BKEY" '$1 == c && $2 == s { print $3 }' "$B" | sort -n | awk '{ v[NR] = $1 } END { if (NR) print (NR % 2) ? v[(NR + 1) / 2] : (v[NR / 2] + v[NR / 2 + 1]) / 2 }')
+    Q=""; [ -n "$BM" ] && [ -n "$IM" ] && [ "$BN" -ge "$BASELINE_N" ] && Q=$(awk -v a="$IM" -v b="$BM" 'BEGIN { if (b > 0) printf "%.3f", a / b }')
+    FIRED=""
+    for r in $RULES; do
+        case "$r" in
+            Q)       [ -n "$Q" ] && ! gt "$Q_HIGH" "$Q" && FIRED="$FIRED Q=$Q≥$Q_HIGH";;
+            DISPLAY) [ -n "$DP" ] && gt "$FLAG_MIN_PCT" "$DP" && FIRED="$FIRED display_ok=$DP%";;
+            PSG)     [ -n "$PP" ] && gt "$FLAG_MIN_PCT" "$PP" && FIRED="$FIRED psg_ok=$PP%";;
+            PING)    [ -n "$GP" ] && gt "$((100 - GP))" "$PING_FAIL_MAX" && FIRED="$FIRED ping_ko=$((100 - GP))%";;
+            ABS)     [ -n "$A_HIGH" ] && [ -n "$IM" ] && ! gt "$A_HIGH" "$IM" && FIRED="$FIRED Ī=$IM≥$A_HIGH";;
+        esac
+    done
+    FIRED=$(echo "$FIRED" | sed 's/^ //')
+    if [ -n "$FIRED" ]; then ES="sospetto distacco"
+    elif [ "$VALID" != 1 ]; then ES="non valida"
+    elif [ "$BN" -lt "$BASELINE_N" ]; then
+        echo "$CUID;$BKEY;$IM;$(date '+%Y-%m-%d %H:%M');$(basename "$CSV")" >> "$B"; BN=$((BN + 1)); ES="riferimento $BN/$BASELINE_N"
+    elif [ -n "$CC" ] && gt "$CC" "$C_MAX"; then ES="incerto"
+    elif [ -n "$Q" ] && ! gt "$Q" "$Q_LOW"; then ES="attaccato"
+    else ES="incerto"; fi
+    [ "$VALID" = 1 ] && V="valida" || V="non valida:$WHY"
+    ROW="$ES;$FIRED;$I1;$I2;$IM;$CC;$DR;$SM;$CL;$Q;$BN;$DP;$PP;$GP;$GM;$V"
+}
+
+# ================= una prova o i soli controlli =================
+CONTROLLI=0
+if [ "$1" = "--controlli" ]; then CONTROLLI=1; DURATA_C=$(( ${2:-10} * 60 )); CONFIG="controlli"; NOTE=""; else
+    CONFIG="${1:-$CONFIG_DEFAULT}"; NOTE="${2:-}"; fi
+
+if ! mkdir "$LOCK" 2>/dev/null; then
+    p=$(running_pid)
+    if [ -n "$p" ]; then echo "Una prova è già in corso (PID $p)."; exit 1; fi
+    rm -rf "$LOCK"; mkdir "$LOCK" || exit 1           # blocco rimasto da un arresto brusco
+fi
+echo $$ > "$LOCK/pid"
+
+FREE=$(df -k "$DIR" | awk 'NR == 2 { print $4 }')
+read_page
+CUID="$(get_value "CUID")"; [ -z "$CUID" ] && CUID="sconosciuto"
+STAMP="$(date '+%Y%m%d_%H%M')"; SLOT="$(date '+%H')"
+[ -n "$SEQNAME" ] && [ "$CONTROLLI" = 0 ] && CONFIG="$SEQNAME-$CONFIG"
+BKEY="${SEQNAME:+$SEQNAME@}$SLOT"     # riferimento separato per sequenza e fascia oraria
+SAFE_CFG="$(printf '%s' "$CONFIG" | tr -c 'A-Za-z0-9_-' '-')"
+CSV="$DIR/${CUID}_${SAFE_CFG}_${STAMP}.csv"; RUNLOG="$DIR/${CUID}_${SAFE_CFG}_${STAMP}.log"
+echo "$HEADER" > "$CSV"
+[ "$PAGE_SNAPSHOT" = 1 ] && [ -n "$PAGE" ] && echo "$LINES" > "$DIR/${CUID}_${SAFE_CFG}_${STAMP}_pagina.txt"
+RESULT="completata"; REASON=""; LOST=0; SAFETY=0; PH=0; PHNAME="Attesa"; CH=0; CF=0
+DISABLED=0
+log "prova_schermo $VERSIONE: $CONFIG su $CUID, fascia oraria $SLOT, file $(basename "$CSV")"
+
+finish() {
+    if [ "$DISABLED" = 1 ]; then restore; fi
+    rm -rf "$LOCK"
+    [ "$CONTROLLI" = 1 ] && { summary_controlli; return; }
+    [ "$STARTED" = 1 ] || return
+    rm -f "$INC"; now > "$LAST"
+    [ "$RESULT" = "completata" ] && analyse || ROW="interrotta;;;;;;;;;;;;;;;$REASON"
+    [ -f "$DIR/risultati.csv" ] || echo "data;cuid;configurazione;fascia;esito;regole;I1;I2;I_medio;C;deriva;S_medio;calo60;Q;base_n;display_ok_pct;psg_ok_pct;ping_ok_pct;ping_ms;validita;note;file" > "$DIR/risultati.csv"
+    echo "$(date '+%Y-%m-%d %H:%M');$CUID;$CONFIG;$SLOT;$ROW;$NOTE;$(basename "$CSV")" >> "$DIR/risultati.csv"
+    log "Esito: $ROW"
+}
+STARTED=0
+trap 'finish' EXIT
+trap '' HUP
+trap 'RESULT="interrotta"; REASON="arresto manuale"; exit 2' INT TERM
+
+# ---------------- solo controlli: nessun comando, solo lettura
+summary_controlli() {
+    awk -F';' 'NR > 1 { n++; if ($22 == 1) ok++; if ($24 != "") { dn++; d += $24 } if ($26 != "") { pn++; p += $26 }
+                         if ($27 != "") { gn++; if ($27 != "ko") { g++; gm += $27 } } if ($10 != "") { a = $10; if (amin == "" || a < amin) amin = a; if (amax == "" || a > amax) amax = a } }
+        END { printf "campioni %d; pagina ok %d%%; display ok %s; PSG ok %s; ping ok %s (%s ms); AUX %s–%s\n", n, n ? 100 * ok / n : 0,
+              dn ? int(100 * d / dn) "%" : "flag non trovato", pn ? int(100 * p / pn) "%" : "flag non trovato",
+              gn ? int(100 * g / gn) "%" : "non configurato", g ? sprintf("%.1f", gm / g) : "-", amin, amax }' "$CSV" > "$DIR/.controlli_tmp"
+    [ -f "$DIR/controlli.csv" ] || echo "data;cuid;riepilogo;file" > "$DIR/controlli.csv"
+    echo "$(date '+%Y-%m-%d %H:%M');$CUID;$(cat "$DIR/.controlli_tmp");$(basename "$CSV")" >> "$DIR/controlli.csv"
+    log "Controlli: $(cat "$DIR/.controlli_tmp")"; rm -f "$DIR/.controlli_tmp"
+}
+if [ "$CONTROLLI" = 1 ]; then
+    PH=0; PHNAME="Controlli"; T1=$(now); K=0
+    while [ "$(now)" -lt $((T1 + DURATA_C)) ]; do sample; pace "$T1" $((T1 + DURATA_C)); done
+    exit 0
+fi
+
+# ---------------- condizioni per partire
+fail_start() { log "Non parte: $1"; [ -f "$DIR/risultati.csv" ] || echo "data;cuid;configurazione;fascia;esito;regole;I1;I2;I_medio;C;deriva;S_medio;calo60;Q;base_n;display_ok_pct;psg_ok_pct;ping_ok_pct;ping_ms;validita;note;file" > "$DIR/risultati.csv"
+    echo "$(date '+%Y-%m-%d %H:%M');$CUID;$CONFIG;$SLOT;non partita;;;;;;;;;;;;;;;$1;$NOTE;$(basename "$CSV")" >> "$DIR/risultati.csv"; exit 0; }
+[ -z "$PAGE" ] && fail_start "pagina web non leggibile"
+[ "${FREE:-0}" -lt "$MIN_FREE_KB" ] && fail_start "spazio libero insufficiente (${FREE} kB)"
+UPT=$(awk '{ printf "%d", $1 / 3600 }' /proc/uptime)
+[ "$UPT" -lt "$MIN_UPTIME_H" ] && fail_start "colonnina accesa da $UPT h (servono $MIN_UPTIME_H h)"
+if [ -f "$LAST" ] && [ "$REST_MIN" -gt 0 ]; then
+    AGO=$(( ($(now) - $(cat "$LAST")) / 60 )); [ "$AGO" -lt "$REST_MIN" ] && fail_start "prova precedente finita $AGO min fa (pausa minima $REST_MIN)"
+fi
+USERST="$(get_value "USER STATUS")"
+[ -n "$USER_OK" ] && [ "$USERST" != "$USER_OK" ] && fail_start "USER STATUS = $USERST invece di $USER_OK"
+[ "$NS" -lt 1 ] && fail_start "nessun passo nel file di impostazioni"
+
+# base stabile: AUX entro STABLE_TOL per STABLE_MIN minuti, attesa massima PRE_WAIT_MIN (campioni con passo 0)
+if [ "$STABLE_MIN" -gt 0 ]; then
+    T1=$(now); K=0; WIN=$((STABLE_MIN * 60)); OKW=0
+    log "Attendo la base stabile: AUX entro $STABLE_TOL °C per $STABLE_MIN min (massimo $PRE_WAIT_MIN min)"
+    while [ "$(now)" -lt $((T1 + PRE_WAIT_MIN * 60)) ]; do
+        sample
+        OKW=$(awk -F';' -v w="$WIN" -v tol="$STABLE_TOL" -v t="$(now)" 'NR > 1 && $10 != "" && $1 >= t - w { if (f == "") f = $1; if (lo == "" || $10 < lo) lo = $10; if (hi == "" || $10 > hi) hi = $10 }
+            END { print (f != "" && t - f >= w * 0.95 && hi - lo <= tol) ? 1 : 0 }' "$CSV")
+        [ "$OKW" = 1 ] && break
+        pace "$T1" ""
+    done
+    [ "$OKW" = 1 ] || fail_start "base non stabile dopo $PRE_WAIT_MIN min (AUX oltre ±$STABLE_TOL °C in $STABLE_MIN min)"
+fi
+
+# ---------------- prova: guardiano, controllo termico sospeso, passi agganciati all'orario T0
+SAFETY=1; STARTED=1
+T0=$(now)
+{ echo "T0=$T0"; echo "CUID='$CUID'"; echo "CONFIG='$SAFE_CFG'"; echo "SLOT='$SLOT'"; echo "NOTE=''"; echo "CSV='$CSV'"; } > "$INC"
+WDS=$((TOTAL + WATCHDOG_MARGIN_MIN * 60))
+( trap '' HUP; sleep "$WDS"; printf '07;00;00;01;00;01\n' > "$CMD"; sleep 3; printf '05;00;TempContEn;1\n' > "$CMD"
+  echo "$(date '+%Y-%m-%d %H:%M:%S') guardiano a tempo: ripristino dopo $WDS s (prova non chiusa)" >> "$GLOG" ) </dev/null >/dev/null 2>&1 &
+echo $! > "$BASE/.wd_pid"
+log "Guardiano a tempo: ripristino automatico tra $((WDS / 60)) min se la prova non si chiude."
+echo "$(date '+%Y-%m-%d %H:%M') $CUID" > "$MARK"; DISABLED=1
+send "05;00;TempContEn;0"; sleep 2
+log "Passi: $NS, durata $((TOTAL / 60)) min, fine prevista alle $(date -d "@$((T0 + TOTAL))" '+%H:%M' 2>/dev/null)"
+S=$T0
+i=1
+while [ "$i" -le "$NS" ]; do
+    eval "PHNAME=\$SN_$i; PDUR=\$SS_$i; CH=\$SH_$i; CF=\$SF_$i"
+    PH=$i; E=$((S + PDUR))
+    send "07;0$CF;0$CH;01;00;01"
+    K=0
+    while [ "$(now)" -lt "$E" ]; do sample; pace "$S" "$E"; done
+    S=$E; i=$((i + 1))
+done
+exit 0
+</script>
+<script>
+const $=s=>document.querySelector(s);
+const ROLES=[["rif","riferimento"],["carica","carica"],["misura","misura"],["recupero","recupero"],["altro","altro"]];
+const RULE_DEF=[["Q","Cambiamento rispetto a com'è oggi","Q = Ī / riferimento della stessa colonnina nella stessa fascia oraria ≥","Q_HIGH"],
+  ["DISPLAY","Display non connesso","flag del display connesso in meno del","FLAG_MIN_PCT","% dei campioni"],
+  ["PSG","PSG4X non connessa","flag PSG4X connessa in meno del","FLAG_MIN_PCT","% dei campioni"],
+  ["PING","Display non risponde al ping","ping falliti oltre il","PING_FAIL_MAX","% dei tentativi"],
+  ["ABS","Indice assoluto alto (soglia fissa)","Ī ≥","A_HIGH","°C/min (vale solo nelle stesse condizioni in cui è stata ricavata)"]];
+const DEF={CONFIG_DEFAULT:"campo",mode:"termica",CTRL_MIN:10,INTERVAL:5,TIMES:"02:00",EVERY_H:0,EVERY_FROM:"00:30",
+  MIN_UPTIME_H:3,REST_MIN:60,STABLE_MIN:30,STABLE_TOL:0.3,PRE_WAIT_MIN:60,USER_OK:"IDLE",CHARGE_RX:"",
+  AUX_MAX:60,TEMP_MAX:60,WATCHDOG_MARGIN_MIN:15,GUARD_MIN:10,
+  DISPLAY_FLAG:"DISPLAY CONNECTED",DISPLAY_OK:"^(CONNECTED|ON|OK|TRUE|YES|1)$",PSG_FLAG:"PSG4X CONNECTED",PSG_OK:"^(CONNECTED|ON|OK|TRUE|YES|1)$",DISPLAY_IP:"",PING_EVERY:1,
+  RULES:["Q","DISPLAY","PSG","PING"],BASELINE_N:3,Q_LOW:1.25,Q_HIGH:1.5,FLAG_MIN_PCT:50,PING_FAIL_MAX:50,A_HIGH:"",C_MAX:0.3,DRIFT_MAX:0.03,HEATER_TOL_S:15,
+  DIR:"/home/root/test",URL:"http://127.0.0.1/",CMD:"/crve/command",AUXLOG:"/crve/log/PS4GAux.log",MIN_FREE_KB:5000,PAGE_SNAPSHOT:1,
+  STEPS:[["Riferimento","rif",300,0,0],["Carica 1","carica",180,1,0],["Misura 1","misura",300,0,1],["Recupero","recupero",600,0,0],["Carica 2","carica",180,1,0],["Misura 2","misura",300,0,1]]};
+const PRESETS={
+  classica:{mode:"termica",STEPS:DEF.STEPS},
+  v3:{mode:"termica",STEPS:[["Riferimento","rif",300,0,0],["Carica 1","carica",180,1,0],["Misura 1","misura",120,0,1],["Recupero","recupero",300,0,0],["Carica 2","carica",180,1,0],["Misura 2","misura",120,0,1]]},
+  caratt:{mode:"termica",STABLE_MIN:30,AUX_MAX:55,TEMP_MAX:55,STEPS:[["Riferimento","rif",1800,0,0],["Ventola","misura",2400,0,1],["Recupero 1","recupero",3600,0,0],["Carica","carica",600,1,0],["Recupero 2","recupero",3600,0,0]]},
+  controlli:{mode:"controlli",CTRL_MIN:10}};
+let C=JSON.parse(JSON.stringify(DEF));
+try{const s=localStorage.getItem("gen_prova_schermo");if(s)C={...C,...JSON.parse(s)}}catch(e){}
+const FIELDS=Object.keys(DEF).filter(k=>!["STEPS","RULES"].includes(k));
+function fill(){FIELDS.forEach(k=>{const el=document.getElementById(k);if(el)el.value=C[k]??""});renderSteps();renderRules()}
+function read(){FIELDS.forEach(k=>{const el=document.getElementById(k);if(!el)return;C[k]=el.type==="number"?(el.value===""?"":+el.value):el.value})}
+function renderSteps(){const b=$("#stepsBox");
+  b.innerHTML=`<div class="step h"><span></span><span>nome</span><span>ruolo</span><span>secondi</span><span>riscald.</span><span>ventola</span><span></span></div>`+
+  C.STEPS.map((s,i)=>`<div class="step" data-i="${i}"><span class="n">${i+1}</span><input data-k="0" value="${esc(s[0])}" aria-label="Nome del passo ${i+1}">
+   <select data-k="1" aria-label="Ruolo del passo ${i+1}">${ROLES.map(([v,l])=>`<option value="${v}" ${s[1]===v?"selected":""}>${l}</option>`).join("")}</select>
+   <input data-k="2" type="number" min="1" value="${s[2]}" aria-label="Secondi del passo ${i+1}">
+   <label class="tog"><input type="checkbox" data-k="3" ${s[3]?"checked":""} aria-label="Riscaldatore acceso nel passo ${i+1}"><em class="ph">riscaldatore</em></label>
+   <label class="tog"><input type="checkbox" data-k="4" ${s[4]?"checked":""} aria-label="Ventola accesa nel passo ${i+1}"><em class="ph">ventola</em></label>
+   <span class="acts"><button type="button" data-m="-1" aria-label="Sposta su">↑</button><button type="button" data-m="1" aria-label="Sposta giù">↓</button><button type="button" data-r aria-label="Togli">✕</button></span></div>`).join("")}
+function renderRules(){$("#rules").innerHTML=RULE_DEF.map(([k,t,d,p,u])=>`<label class="rule"><input type="checkbox" data-rule="${k}" ${C.RULES.includes(k)?"checked":""}>
+  <span><b>${t}</b><br><span class="hint">${d} <input data-rp="${p}" value="${C[p]??""}" style="width:76px;padding:2px 6px" aria-label="${t}: soglia"> ${u||""}</span></span></label>`).join("")}
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const q=v=>"'"+String(v??"").replace(/'/g,"'\\''")+"'";
+const total=()=>C.STEPS.reduce((a,s)=>a+(+s[2]||0),0);
+const fmtMin=s=>s>=3600?`${Math.floor(s/3600)} h ${Math.round(s%3600/60)} min`:`${Math.round(s/60)} min`;
+function times(){const t=String(C.TIMES||"").split(/[\s,;]+/).filter(x=>/^([01]?\d|2[0-3]):[0-5]\d$/.test(x)).map(x=>x.padStart(5,"0"));
+  const out=[...t];if(+C.EVERY_H>0){const [h,m]=(/^\d{1,2}:\d{2}$/.test(C.EVERY_FROM)?C.EVERY_FROM:"00:00").split(":").map(Number);for(let x=h;x<24;x+=+C.EVERY_H)out.push(`${String(x).padStart(2,"0")}:${String(m).padStart(2,"0")}`)}
+  return [...new Set(out)].sort()}
+function onCal(){const l=String(C.TIMES||"").split(/[\s,;]+/).filter(x=>/^([01]?\d|2[0-3]):[0-5]\d$/.test(x)).map(x=>`OnCalendar=*-*-* ${x.padStart(5,"0")}:00`);
+  if(+C.EVERY_H>0){const [h,m]=(/^\d{1,2}:\d{2}$/.test(C.EVERY_FROM)?C.EVERY_FROM:"00:00").split(":");l.push(`OnCalendar=*-*-* ${h.padStart(2,"0")}/${+C.EVERY_H}:${m}:00`)}return l}
+function conf(){const ctrl=C.mode==="controlli";
+  const L=["# prova_schermo.conf — generato il "+new Date().toLocaleString("it-IT")+" dal Generatore prova schermo","# formato shell: NOME='valore'"];
+  const put=(k,v)=>L.push(`${k}=${q(v)}`);
+  ["DIR","URL","CMD","AUXLOG","INTERVAL"].forEach(k=>put(k,C[k]));
+  L.push("# passi: nome;ruolo;secondi;riscaldatore;ventola");
+  L.push("STEPS='\n"+C.STEPS.map(s=>`${String(s[0]).replace(/[;'\n]/g," ")};${s[1]};${+s[2]||0};${s[3]?1:0};${s[4]?1:0}`).join("\n")+"\n'");
+  ["AUX_MAX","TEMP_MAX","MIN_UPTIME_H","USER_OK","CHARGE_RX","REST_MIN","STABLE_MIN","STABLE_TOL","PRE_WAIT_MIN","DRIFT_MAX","HEATER_TOL_S","WATCHDOG_MARGIN_MIN",
+   "DISPLAY_FLAG","DISPLAY_OK","PSG_FLAG","PSG_OK","DISPLAY_IP","PING_EVERY","BASELINE_N","Q_LOW","Q_HIGH","A_HIGH","C_MAX","FLAG_MIN_PCT","PING_FAIL_MAX",
+   "PAGE_SNAPSHOT","MIN_FREE_KB","CONFIG_DEFAULT"].forEach(k=>put(k,C[k]));
+  put("RULES",C.RULES.join(" "));
+  L.push(`# modo: ${ctrl?"solo controlli, "+C.CTRL_MIN+" min":"prova termica"}`);return L.join("\n")+"\n"}
+function installer(){const ctrl=C.mode==="controlli",d=C.DIR.replace(/\/$/,"");
+  const exec=ctrl?`/bin/sh ${d}/prova_schermo.sh --controlli ${+C.CTRL_MIN||10}`:`/bin/sh ${d}/prova_schermo.sh ${String(C.CONFIG_DEFAULT||"campo").replace(/[^A-Za-z0-9_-]/g,"-")}`;
+  const tmo=Math.ceil((ctrl?(+C.CTRL_MIN||10)*60:total()+(+C.PRE_WAIT_MIN||0)*60)/60)+(+C.WATCHDOG_MARGIN_MIN||15)+5;
+  const cal=onCal();
+  return `#!/bin/sh
+# installa_prova_schermo.sh — generato il ${new Date().toLocaleString("it-IT")} dal Generatore prova schermo
+# ${ctrl?`Solo controlli, ${C.CTRL_MIN} min`:`Prova termica: ${C.STEPS.length} passi, ${fmtMin(total())}`}; orari: ${times().join(" ")||"nessuno (solo a mano)"}
+# Uso: sh installa_prova_schermo.sh            installa o aggiorna, attiva orari e guardia
+#      sh installa_prova_schermo.sh --rimuovi  ferma e toglie orari e guardia (script e dati restano)
+DIR=${q(d)}
+U=/etc/systemd/system
+mkdir -p "$DIR" || { echo "Impossibile creare $DIR"; exit 1; }
+if [ "$1" = "--rimuovi" ]; then
+    systemctl disable --now prova-schermo.timer prova-schermo-guardia.timer 2>/dev/null
+    sh "$DIR/prova_schermo.sh" --ripristina
+    rm -f "$U/prova-schermo.service" "$U/prova-schermo.timer" "$U/prova-schermo-guardia.service" "$U/prova-schermo-guardia.timer"
+    systemctl daemon-reload 2>/dev/null; echo "Orari e guardia rimossi."; exit 0
+fi
+[ -f "$DIR/.lock/pid" ] && kill -0 "$(cat "$DIR/.lock/pid")" 2>/dev/null && { echo "Una prova è in corso: riprova dopo, oppure fermala con sh $DIR/prova_schermo.sh --ferma"; exit 1; }
+cat > "$DIR/prova_schermo.sh" <<'__PS_SCRIPT__'
+${$("#tpl").textContent.replace(/^\n/,"")}
+__PS_SCRIPT__
+cat > "$DIR/prova_schermo.conf" <<'__PS_CONF__'
+${conf()}__PS_CONF__
+chmod +x "$DIR/prova_schermo.sh"
+echo "Script e impostazioni in $DIR"
+if [ -w "$U" ] && command -v systemctl >/dev/null 2>&1; then
+cat > "$U/prova-schermo.service" <<'__EOF__'
+[Unit]
+Description=Prova distacco schermo (acquisizione)
+[Service]
+Type=oneshot
+ExecStart=${exec}
+ExecStopPost=/bin/sh ${d}/prova_schermo.sh --guardia
+TimeoutStartSec=${tmo}min
+__EOF__
+cat > "$U/prova-schermo.timer" <<'__EOF__'
+[Unit]
+Description=Orari della prova distacco schermo
+[Timer]
+${cal.join("\n")||"# nessun orario impostato"}
+Persistent=false
+[Install]
+WantedBy=timers.target
+__EOF__
+cat > "$U/prova-schermo-guardia.service" <<'__EOF__'
+[Unit]
+Description=Guardia: riattiva il controllo termico se una prova è rimasta a metà
+[Service]
+Type=oneshot
+ExecStart=/bin/sh ${d}/prova_schermo.sh --guardia
+__EOF__
+cat > "$U/prova-schermo-guardia.timer" <<'__EOF__'
+[Unit]
+Description=Guardia della prova distacco schermo
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=${+C.GUARD_MIN||10}min
+[Install]
+WantedBy=timers.target
+__EOF__
+    systemctl daemon-reload
+    systemctl enable --now prova-schermo-guardia.timer
+    ${cal.length?"systemctl enable --now prova-schermo.timer":"systemctl disable --now prova-schermo.timer 2>/dev/null"}
+    echo "Orari e guardia attivi:"; systemctl list-timers --all 2>/dev/null | grep prova-schermo
+else
+    echo "ATTENZIONE: $U non scrivibile o systemd assente: orari e guardia NON installati."
+    echo "Avvia le prove a mano con: sh $DIR/prova_schermo.sh"
+fi
+sh "$DIR/prova_schermo.sh" --stato
+`}
+function warns(){const w=[],ctrl=C.mode==="controlli",tt=total(),ts=times();
+  if(!ctrl){
+    if(!C.STEPS.length)w.push(["e","Nessun passo nella sequenza."]);
+    const r0=C.STEPS[0];if(!r0||r0[1]!=="rif")w.push(["","La sequenza non inizia con un riferimento: la deriva della base non si misura."]);
+    else if(+r0[2]<180)w.push(["","Riferimento sotto i 180 s: la deriva si misura sugli ultimi 3 minuti."]);
+    if(!C.STEPS.some((s,i)=>s[1]==="misura"&&C.STEPS[i-1]?.[1]==="carica"))w.push(["","Nessuna misura dopo una carica: Ī non si calcola (i campioni vengono comunque registrati)."]);
+    C.STEPS.forEach((s,i)=>{if(s[3]&&s[4])w.push(["","Passo "+(i+1)+": riscaldatore e ventola insieme."]);if(s[3]&&+s[2]>600)w.push(["e","Passo "+(i+1)+": riscaldatore acceso "+fmtMin(+s[2])+". Tieni basse le soglie di sicurezza."]);
+      if(s[1]==="carica"&&!s[3])w.push(["","Passo "+(i+1)+": ruolo carica ma riscaldatore spento."]);if(s[1]==="misura"&&!s[4])w.push(["","Passo "+(i+1)+": ruolo misura ma ventola spenta."])});
+  }
+  if(+C.AUX_MAX>65||+C.TEMP_MAX>65)w.push(["e","Soglie di sicurezza sopra 65 °C."]);
+  if(!C.RULES.length)w.push(["","Nessuna regola attiva: l'esito sarà solo riferimento, attaccato o incerto."]);
+  if(C.RULES.includes("PING")&&!C.DISPLAY_IP)w.push(["","Regola del ping attiva ma IP del display vuoto: il ping non viene fatto."]);
+  const need=(ctrl?(+C.CTRL_MIN||10)*60:tt+(+C.PRE_WAIT_MIN||0)*60+(+C.REST_MIN||0)*60)/60;
+  for(let i=0;i<ts.length;i++){const a=ts[i],b=ts[(i+1)%ts.length];const m=x=>+x.slice(0,2)*60+ +x.slice(3);let g=(m(b)-m(a)+1440)%1440;if(ts.length===1)g=1440;
+    if(g<need){w.push(["","Tra le "+a+" e le "+b+" ci sono "+g+" min: con attesa della base e pausa minima ne servono fino a "+Math.ceil(need)+". Le prove troppo vicine non partono."]);break}}
+  if(!ts.length)w.push(["","Nessun orario: le prove si avviano solo a mano."]);
+  return w}
+function render(){const ctrl=C.mode==="controlli",tt=total();
+  $("#ctrlBox").hidden=!ctrl;$("#stepsBox").hidden=ctrl;$("#stepsActs").hidden=ctrl;$("#bar").hidden=ctrl;
+  $("#seqInfo").textContent=ctrl?`${C.CTRL_MIN} min di sola lettura`:`${C.STEPS.length} passi · ${fmtMin(tt)}`;
+  $("#bar").innerHTML=C.STEPS.map(s=>`<i class="${s[3]?"h":s[4]?"f":""}" style="flex:${+s[2]||1}" title="${esc(s[0])}: ${s[2]} s">${+s[2]/tt>0.08?esc(s[0]):""}</i>`).join("");
+  const ts=times();$("#slotInfo").textContent=ts.length?`${ts.length} prove al giorno: ${ts.join(" · ")}. Ogni orario è una fascia con il suo riferimento.`:"Nessun orario: solo avvio manuale.";
+  const heat=C.STEPS.filter(s=>s[3]).reduce((a,s)=>a+(+s[2]||0),0);
+  $("#kpis").innerHTML=`<span>Durata <b>${ctrl?C.CTRL_MIN+" min":fmtMin(tt)}</b></span><span>Prove al giorno <b>${ts.length}</b></span>${ctrl?"":`<span>Riscaldatore <b>${fmtMin(heat)}</b> a prova</span>`}<span>Regole <b>${C.RULES.length}</b> in OR</span>`;
+  $("#warns").innerHTML=warns().map(([c,t])=>`<div class="w ${c==="e"?"e":""}">${esc(t)}</div>`).join("");
+  $("#genDate").textContent="si aggiorna mentre modifichi";
+  showTab();try{localStorage.setItem("gen_prova_schermo",JSON.stringify(C))}catch(e){}}
+let TAB="inst";
+function showTab(){const how=TAB==="how";$("#code").hidden=how;$("#how").hidden=!how;$("#jsonIn").hidden=TAB!=="json";
+  $("#code").textContent=TAB==="inst"?installer():TAB==="conf"?conf():TAB==="json"?JSON.stringify(C,null,2):"";
+  $("#copy").hidden=how;$("#download").hidden=how}
+document.querySelector(".tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;TAB=b.dataset.tab;document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",String(x===b)));showTab()});
+document.addEventListener("input",e=>{const t=e.target;
+  const st=t.closest(".step");if(st&&t.dataset.k!=null){const i=+st.dataset.i,k=+t.dataset.k;C.STEPS[i][k]=t.type==="checkbox"?(t.checked?1:0):k===2?(+t.value||0):t.value;render();return}
+  if(t.dataset.rule){C.RULES=[...document.querySelectorAll("[data-rule]")].filter(x=>x.checked).map(x=>x.dataset.rule);render();return}
+  if(t.dataset.rp){C[t.dataset.rp]=t.value===""?"":+String(t.value).replace(",",".");document.querySelectorAll(`[data-rp="${t.dataset.rp}"]`).forEach(x=>{if(x!==t)x.value=t.value});render();return}
+  if(FIELDS.includes(t.id)){read();render()}});
+document.addEventListener("change",e=>{if(e.target.closest(".step")||e.target.dataset.rule)document.dispatchEvent(new Event("input"))});
+$("#stepsBox").addEventListener("click",e=>{const st=e.target.closest(".step");if(!st||!e.target.closest("button"))return;const i=+st.dataset.i,b=e.target.closest("button");
+  if(b.dataset.m){const j=i+ +b.dataset.m;if(j<0||j>=C.STEPS.length)return;[C.STEPS[i],C.STEPS[j]]=[C.STEPS[j],C.STEPS[i]]}else if(b.hasAttribute("data-r"))C.STEPS.splice(i,1);renderSteps();render()});
+$("#addStep").onclick=()=>{C.STEPS.push(["Nuovo passo","altro",60,0,0]);renderSteps();render()};
+$("#presets").addEventListener("click",e=>{const p=e.target.dataset.p;if(!p)return;C={...C,...JSON.parse(JSON.stringify(PRESETS[p]))};
+  document.querySelectorAll("#presets button").forEach(b=>b.setAttribute("aria-pressed",String(b===e.target)));fill();render();toast("Modello applicato: "+e.target.textContent)});
+$("#applyJson").onclick=()=>{try{const j=JSON.parse($("#jsonText").value);C={...JSON.parse(JSON.stringify(DEF)),...j};fill();render();toast("Impostazioni applicate")}catch(err){toast("JSON non valido: "+err.message,true)}};
+function toast(t,bad){const el=$("#toast");el.textContent=t;el.style.color=bad?"var(--err)":"var(--ok)";clearTimeout(toast.t);toast.t=setTimeout(()=>el.textContent="",4000)}
+const curName=()=>TAB==="conf"?"prova_schermo.conf":TAB==="json"?"impostazioni_prova_schermo.json":"installa_prova_schermo.sh";
+$("#copy").onclick=()=>{const txt=$("#code").textContent;navigator.clipboard.writeText(txt).then(()=>toast("Copiato: incollalo in un file "+curName())).catch(()=>{const r=document.createRange();r.selectNodeContents($("#code"));const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Testo selezionato: premi Ctrl+C")})};
+$("#download").onclick=()=>{const blob=new Blob([$("#code").textContent],{type:"text/plain"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=curName();document.body.appendChild(a);a.click();a.remove();
+  toast("Se il download non parte (pagina aperta in un visualizzatore web), usa Copia oppure apri il file HTML dal PC.")};
+fill();render();
+</script>

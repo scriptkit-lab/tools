@@ -6,7 +6,7 @@ Acquisizione dati per il rilevamento del distacco dello schermo, eseguita dirett
 
 - `generatore_prova_schermo.html`: si apre con il browser. Si scelgono passi, tempi, orari, controlli e regole; produce **un unico file** `installa_prova_schermo.sh` da dare al collega.
 - `prova_schermo.sh`: lo script (è già dentro l'installatore; si può anche usare da solo, vedi sotto).
-- `seq_T1.conf`, `seq_T2.conf`, `seq_collaudo.conf`: sequenze pronte (T1 caratterizzazione 3 h 20, T2 taratura 46 min, collaudo 5 min).
+- `seq_T1.conf`, `seq_T2.conf`: esempi modificabili (T1 caratterizzazione 3 h 20, T2 taratura 46 min); le sequenze si possono anche scrivere direttamente nel comando.
 
 ## Sul posto
 
@@ -17,28 +17,41 @@ Acquisizione dati per il rilevamento del distacco dello schermo, eseguita dirett
 
 Altri comandi: `--stato`, `--ferma`, `--ripristina`. Per togliere orari e guardia: `sh installa_prova_schermo.sh --rimuovi`.
 
-## Senza installare nulla (one shot o piano ripetuto)
+## Senza installare nulla: sequenze con i tempi scritti nel comando
 
-Copiare in `/home/root/test/` solo `prova_schermo.sh` e i file `seq_*.conf` che servono (più `prova_schermo.conf` se si vogliono impostazioni diverse dalle predefinite). Nessun timer, nessun file di sistema: il piano è un processo in attesa che sparisce a fine piano, con `--annulla` o al riavvio della colonnina.
+Copiare in `/home/root/test/` solo `prova_schermo.sh` (e, se comodi, i file `seq_*.conf`). Nessun timer, nessun file di sistema: il piano è un processo in attesa che sparisce a fine piano, con `--annulla` o al riavvio della colonnina. Un solo piano alla volta.
 
-| Cosa | Comando (`cd /home/root/test` prima) |
-|---|---|
-| Collaudo, subito (5 min) | `sh prova_schermo.sh --seq collaudo` |
-| Una sequenza subito | `sh prova_schermo.sh --seq T2 attaccato` |
-| Una sequenza, una volta, alle 21 | `sh prova_schermo.sh --alle 21:00 --nome attaccato T2` |
-| T1 e poi T2 in fila, una volta | `sh prova_schermo.sh --alle 21:00 --nome attaccato T1 T2` |
-| T2 alle 21 e all'1 per 3 notti | `sh prova_schermo.sh --alle 21:00,01:00 --giorni 3 --nome attaccato T2` |
-| Prova tra N minuti | `sh prova_schermo.sh --tra 2 --nome attaccato T2` |
-| Vedere il piano | `sh prova_schermo.sh --stato` |
-| Annullare il piano | `sh prova_schermo.sh --annulla` (la prova in corso finisce; per fermarla `--ferma`) |
+**Sequenza** = `"NOME=ruolo:secondi ruolo:secondi ..."`, ruoli `rif` (tutto spento), `carica` (riscaldatore), `misura` (ventola dopo una carica), `ventola` (ventola), `recupero` (tutto spento). Più sequenze nel comando = eseguite in fila. Al posto della sequenza scritta si può dare il nome di un file `seq_NOME.conf` (es. `T1`, `T2`): i tempi stanno dentro e si modificano.
 
-- Senza sequenze nel comando si usa quella del file `.conf` (o la Classica 31 min).
-- Tra una sequenza e la successiva si aspetta la pausa minima (`REST_MIN`, 60 min) e, all'inizio di ognuna, la base stabile (30 min, al massimo 60).
+**Quando:** `--subito`, `--tra MINUTI`, `--alle HH:MM` (più orari: `--alle 21:00,01:00`).
+
+**Opzioni:** `--giorni N` ripete ogni giorno (predefinito 1 = una volta) · `--nome attaccato|tolto` · `--note "testo"` · `--scala X` moltiplica tutti i tempi (0.1 = un decimo) · `--pausa MIN` tra sequenze (predefinito 60) · `--base MIN` di base stabile prima di ogni sequenza (predefinito 30, 0 = non aspetta) · `--prova` pausa e base a 0, nessun vincolo di accensione, dati in `collaudo/`.
+
+```
+cd /home/root/test
+# prova di funzionamento ADESSO, T1 e T2 corte in fila (circa 2 min)
+sh prova_schermo.sh --subito --prova --nome attaccato "T1=rif:20 ventola:20 recupero:20 carica:20 recupero:20" "T2=rif:20 carica:20 misura:30 recupero:20 carica:20 misura:30"
+
+# le stesse dai file, tempi a un centesimo (T1 circa 2 min, T2 circa 1 min: nessun passo scende sotto 10 s)
+sh prova_schermo.sh --subito --prova --scala 0.01 --nome attaccato T1 T2
+
+# vere: T1 e poi T2, una volta, stasera alle 21
+sh prova_schermo.sh --alle 21:00 --nome attaccato "T1=rif:1800 ventola:2400 recupero:3600 carica:600 recupero:3600" "T2=rif:300 carica:300 misura:480 recupero:900 carica:300 misura:480"
+
+# vere: T2 alle 21 e all'1 per 3 notti
+sh prova_schermo.sh --alle 21:00,01:00 --giorni 3 --nome attaccato T2
+
+sh prova_schermo.sh --stato        # piano e avvii
+tail -f programmata.log            # segue il piano (Ctrl+C esce dalla lettura, il piano continua)
+sh prova_schermo.sh --annulla      # niente più avvii (la prova in corso finisce)
+sh prova_schermo.sh --ferma        # ferma la prova in corso, con ripristino
+```
+
+- Il comando mostra subito l'elenco dei passi con i tempi e l'ora della colonnina: controllare che sia ora italiana.
 - Un avvio in ritardo di oltre 30 min (`LATE_MAX_MIN`) perché la sequenza precedente è ancora in corso viene saltato e scritto in `programmata.log`.
-- Gli orari sono quelli dell'orologio della colonnina: il comando li mostra (`Ora sulla colonnina`), verificare che sia ora italiana.
-- La configurazione nei risultati diventa `T2-attaccato`; il riferimento (Q) è separato per sequenza e fascia oraria (`T2@21`).
+- Nei risultati la configurazione diventa `T2-attaccato`; il riferimento (Q) è separato per sequenza e fascia oraria (`T2@21`). Con `--prova` tutto resta in `collaudo/` e non tocca i riferimenti veri.
 - T1 non ha due coppie carica/misura: in `risultati.csv` risulta «non valida» per gli indici; i dati si analizzano in PoleDesk.
-- Sicurezza senza installazione: restano il ripristino a fine prova o su arresto, il guardiano a tempo e le soglie (T1: 55 °C). Mancano systemd e il timer di guardia: dopo un riavvio a metà prova lanciare `sh prova_schermo.sh --ripristina`.
+- Sicurezza senza installazione: ripristino a fine prova o su arresto, guardiano a tempo, soglie. Mancano systemd e il timer di guardia: dopo un riavvio a metà prova lanciare `sh prova_schermo.sh --ripristina`.
 
 ## Cosa registra
 
