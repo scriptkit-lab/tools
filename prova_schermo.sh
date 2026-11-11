@@ -17,7 +17,7 @@
 #                --base MIN di base stabile (0 = non aspetta), --prova (pausa e base 0, dati in collaudo/)
 #   sh prova_schermo.sh --annulla                  annulla il piano (la prova in corso finisce; per fermarla --ferma)
 #   sh prova_schermo.sh --controlli [minuti]       solo lettura di temperature, flag e ping: non comanda nulla
-#   sh prova_schermo.sh --ferma                    ferma la prova in corso (con ripristino)
+#   sh prova_schermo.sh --ferma                    annulla il piano e ferma la prova in corso (con ripristino)
 #   sh prova_schermo.sh --ripristina               uscite spente e controllo termico riattivato, verificato
 #   sh prova_schermo.sh --guardia                  (timer e avvio) ripristina se una prova è rimasta a metà
 #   sh prova_schermo.sh --stato                    stato, ultime prove, valore di TempContEn
@@ -228,6 +228,8 @@ case "$1" in
     fi
     exit 0;;
 --ferma)
+    # ferma tutto: prima il piano (altrimenti partirebbe la sequenza successiva), poi la prova in corso
+    q=$(sched_pid); if [ -n "$q" ] || [ -f "$SCHED" ]; then rm -f "$SCHED"; [ -n "$q" ] && kill "$q" 2>/dev/null; echo "Piano annullato: nessun nuovo avvio."; fi
     p=$(running_pid)
     if [ -n "$p" ]; then kill -TERM "$p"; echo "Arresto richiesto (PID $p): la prova si chiude con il ripristino."; else echo "Nessuna prova attiva."; restore; fi
     exit 0;;
