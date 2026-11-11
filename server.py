@@ -3,7 +3,9 @@
 Avvio:  python server.py   (poi apri http://127.0.0.1:8765)
 Dati:   cartella ./data (anagrafica, azioni, sonde, impostazioni, registro, serie)
 """
+import base64
 import csv
+import hashlib
 import os
 import io
 import json
@@ -13,12 +15,14 @@ import shutil
 import socket
 import stat
 import sys
+import tarfile
 import threading
 import time
 import uuid
 import math
 import urllib.request
 import webbrowser
+import zipfile
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -32,7 +36,7 @@ import paramiko
 PARAMIKO_VER = getattr(paramiko, "__version__", "?")
 
 APP_NAME = "PoleDesk"
-VERSION = "1.16.2"
+VERSION = "1.17.0"
 
 FROZEN = getattr(sys, "frozen", False)          # True quando gira come PoleDesk.exe
 UPDATED = os.environ.get("POLEDESK_UPDATED") == "1"
@@ -3723,6 +3727,450 @@ def export_csv():
     return buf.getvalue()
 
 
+# ---------------------------------------------------------------- distribuzione: pacchetti di file e comandi su molte colonnine
+
+DIST_DIR = DATA / "distribuzione"
+DIST_FILES, DIST_RUNS, DIST_OUT = DIST_DIR / "file", DIST_DIR / "esecuzioni", DIST_DIR / "raccolte"
+for _d in (DIST_DIR, DIST_FILES, DIST_RUNS, DIST_OUT):
+    _d.mkdir(parents=True, exist_ok=True)
+F_PKGS = DIST_DIR / "pacchetti.json"
+MAX_FETCH = 200_000_000          # byte massimi scaricati per file
+_PKG_FILE_RX = re.compile(r"[A-Za-z0-9._+-]{1,120}")
+_GLOB_RX = re.compile(r"[A-Za-z0-9._*?\[\]/+-]{1,200}")
+DISTRUNS, DISTCTRL = {}, {}
+
+_PS = "cd {{dir}} && sh prova_schermo.sh"
+DEFAULT_PKGS = [
+    {"id": "ps-installa", "name": "Prova schermo · copia lo script e controlla", "dir": "/home/root/test", "files": [],
+     "params": [],
+     "steps": [{"type": "invia"},
+               {"type": "comando", "command": _PS + " --stato", "timeout": 60, "expect": "TempContEn letto: 1"}],
+     "note": "Aggiungi prova_schermo.sh (e se vuoi prova_schermo.conf e i seq_*.conf) con «Aggiungi file»."},
+    {"id": "ps-piano", "name": "Prova schermo · lancia un piano", "dir": "/home/root/test", "files": [],
+     "params": [{"name": "quando", "default": "--subito --prova", "descr": "--subito | --tra MIN | --alle HH:MM[,HH:MM] [--giorni N] [--prova] [--scala X]"},
+                {"name": "stato_schermo", "default": "", "descr": "attaccato / tolto; vuoto = variabile stato_schermo della colonnina"},
+                {"name": "sequenze", "default": "\"T1=rif:20 ventola:20 recupero:20 carica:20 recupero:20\" \"T2=rif:20 carica:20 misura:30 recupero:20 carica:20 misura:30\"",
+                 "descr": "una o più sequenze \"NOME=ruolo:secondi ...\" oppure nomi di file seq_NOME.conf"}],
+     "steps": [{"type": "comando", "command": _PS + " {{quando}} --nome {{stato_schermo}} {{sequenze}}", "timeout": 60, "expect": "Avvii:"}]},
+    {"id": "ps-stato", "name": "Prova schermo · stato", "dir": "/home/root/test", "files": [], "params": [],
+     "steps": [{"type": "comando", "command": _PS + " --stato; tail -n 5 programmata.log 2>/dev/null", "timeout": 60}]},
+    {"id": "ps-ferma", "name": "Prova schermo · annulla il piano e ferma la prova", "dir": "/home/root/test", "files": [], "params": [],
+     "steps": [{"type": "comando", "command": _PS + " --annulla; sh prova_schermo.sh --ferma", "timeout": 60},
+               {"type": "comando", "command": "sleep 20; " + _PS + " --stato", "timeout": 90, "expect": "TempContEn letto: 1"}]},
+    {"id": "ps-raccogli", "name": "Prova schermo · raccogli i dati", "dir": "/home/root/test", "files": [], "params": [],
+     "steps": [{"type": "comando", "command": _PS + " --archivio", "timeout": 120, "expect": "Archivio pronto"},
+               {"type": "scarica", "pattern": "archivio_*.tar.gz", "newest": True, "delete": True, "import": True}]},
+]
+
+
+def packages():
+    p = load(F_PKGS, None)
+    if p is None:
+        save(F_PKGS, DEFAULT_PKGS)
+        return json.loads(json.dumps(DEFAULT_PKGS))
+    return p
+
+
+def _pkg(pid):
+    p = next((x for x in packages() if x["id"] == pid), None)
+    if not p:
+        raise KeyError("pacchetto non trovato")
+    return p
+
+
+def _clean_pkg(p):
+    steps = []
+    for s in p.get("steps") or []:
+        t = s.get("type")
+        if t == "invia":
+            steps.append({"type": "invia", "only": [f for f in (s.get("only") or []) if f]})
+        elif t == "comando":
+            if not (s.get("command") or "").strip():
+                raise ValueError("un passo comando è vuoto")
+            steps.append({"type": "comando", "command": s["command"], "timeout": int(s.get("timeout") or 60),
+                          "expect": s.get("expect") or "", "continue": bool(s.get("continue"))})
+        elif t == "scarica":
+            pat = (s.get("pattern") or "").strip()
+            if not _GLOB_RX.fullmatch(pat) or ".." in pat:
+                raise ValueError(f"file da scaricare non valido: {pat!r} (lettere, numeri, . _ - / e i caratteri jolly * ?)")
+            steps.append({"type": "scarica", "pattern": pat, "newest": bool(s.get("newest")), "delete": bool(s.get("delete")),
+                          "import": bool(s.get("import"))})
+        elif t == "attendi":
+            steps.append({"type": "attendi", "seconds": max(1, int(s.get("seconds") or 10))})
+    d = (p.get("dir") or "").strip()
+    if not d.startswith("/") or not re.fullmatch(r"[A-Za-z0-9._/+-]+", d):
+        raise ValueError("cartella sulla colonnina non valida (percorso assoluto, es. /home/root/test)")
+    params = [{"name": x["name"].strip(), "default": x.get("default", ""), "descr": x.get("descr", "")}
+              for x in p.get("params") or [] if re.fullmatch(r"\w+", (x.get("name") or "").strip())]
+    return {"id": p.get("id") or uuid.uuid4().hex[:8], "name": (p.get("name") or "senza nome").strip(), "dir": d.rstrip("/") or "/",
+            "files": [f for f in p.get("files") or [] if _PKG_FILE_RX.fullmatch(f.get("name", ""))],
+            "params": params, "steps": steps, "note": p.get("note", "")}
+
+
+def pkg_save(body):
+    with LOCK:
+        pk = packages()
+        if body.get("delete"):
+            pid = body["delete"]
+            pk = [x for x in pk if x["id"] != pid]
+            shutil.rmtree(DIST_FILES / pid, ignore_errors=True)
+        elif body.get("import"):
+            for x in body["import"] if isinstance(body["import"], list) else [body["import"]]:
+                files = x.get("files") or []
+                c = _clean_pkg({**x, "id": uuid.uuid4().hex[:8], "files": []})
+                for f in files:                        # i file viaggiano nel JSON esportato (base64)
+                    if f.get("data") and _PKG_FILE_RX.fullmatch(f.get("name", "")):
+                        c["files"].append(_store_file(c["id"], f["name"], base64.b64decode(f["data"]), f.get("exec")))
+                pk.append(c)
+        else:
+            c = _clean_pkg(body["package"])
+            old = next((x for x in pk if x["id"] == c["id"]), None)
+            if old:   # i file si aggiungono e tolgono con le loro chiamate: qui conta solo l'elenco (con exec)
+                names = {f["name"]: f for f in old.get("files", [])}
+                c["files"] = [{**names[f["name"]], "exec": bool(f.get("exec"))} for f in c["files"] if f["name"] in names]
+                pk = [c if x["id"] == c["id"] else x for x in pk]
+            else:
+                c["files"] = []
+                pk.append(c)
+        save(F_PKGS, pk)
+        return pk
+
+
+def _store_file(pid, name, data, exe=None):
+    d = DIST_FILES / pid
+    d.mkdir(parents=True, exist_ok=True)
+    (d / name).write_bytes(data)
+    return {"name": name, "size": len(data), "md5": hashlib.md5(data).hexdigest(),
+            "exec": bool(exe) if exe is not None else name.endswith(".sh"), "added": datetime.now().isoformat(timespec="seconds")}
+
+
+def pkg_file(body):
+    """Aggiunge (contenuto base64 dal browser) o toglie un file di un pacchetto."""
+    pid, name = body["id"], os.path.basename(body.get("name") or "")
+    if not _PKG_FILE_RX.fullmatch(name):
+        raise ValueError("nome di file non valido (lettere, numeri, . _ - +)")
+    with LOCK:
+        pk = packages()
+        p = next((x for x in pk if x["id"] == pid), None)
+        if not p:
+            raise KeyError("pacchetto non trovato")
+        p["files"] = [f for f in p.get("files", []) if f["name"] != name]
+        if body.get("remove"):
+            (DIST_FILES / pid / name).unlink(missing_ok=True)
+        else:
+            data = base64.b64decode(body.get("data") or "")
+            if name.endswith((".sh", ".conf")) and b"\r\n" in data:
+                data = data.replace(b"\r\n", b"\n")    # file salvati su Windows: sulla colonnina servono a capo Unix
+            p["files"].append(_store_file(pid, name, data))
+        save(F_PKGS, pk)
+        return p
+
+
+def pkg_export(pid):
+    p = _pkg(pid)
+    out = {**p, "files": [{**f, "data": base64.b64encode((DIST_FILES / pid / f["name"]).read_bytes()).decode()}
+                          for f in p.get("files", []) if (DIST_FILES / pid / f["name"]).exists()]}
+    out.pop("id", None)
+    return out
+
+
+def ssh_raw(st, cmd, timeout=60, max_bytes=MAX_FETCH):
+    """Come ssh_exec ma restituisce lo stdout in byte (file binari) e non tronca fino a max_bytes."""
+    for attempt in (0, 1):
+        try:
+            c = POOL.get(st)
+            chan = c.get_transport().open_session(timeout=10)
+            chan.settimeout(1.0)
+            chan.exec_command(cmd)
+            out, err, deadline = bytearray(), bytearray(), time.time() + timeout
+            while True:
+                if chan.recv_ready():
+                    out += chan.recv(262144)
+                    deadline = max(deadline, time.time() + 30)      # finché arrivano dati non scade
+                elif chan.recv_stderr_ready():
+                    err += chan.recv_stderr(65536)
+                elif chan.exit_status_ready():
+                    break
+                elif time.time() > deadline:
+                    chan.close()
+                    raise CommandTimeout(f"trasferimento non terminato entro {timeout} s", "", err.decode("utf-8", "replace"))
+                else:
+                    time.sleep(0.01)
+                if len(out) > max_bytes:
+                    chan.close()
+                    raise OSError(f"file più grande di {max_bytes // 1_000_000} MB")
+            while chan.recv_ready():
+                out += chan.recv(262144)
+            code = chan.recv_exit_status()
+            chan.close()
+            return code, bytes(out), err.decode("utf-8", "replace")
+        except TimeoutError:
+            raise
+        except (paramiko.SSHException, OSError, EOFError) as e:
+            POOL.drop(st["id"])
+            if attempt or isinstance(e, ConnectionError) and "nuovo tentativo" in str(e):
+                raise
+
+
+def _md5_remote(st, path):
+    code, out, _ = ssh_exec(st, f"md5sum -- {shlex.quote(path)} 2>/dev/null || wc -c < {shlex.quote(path)}", timeout=60)
+    v = out.strip().split()
+    return (v[0] if v else ""), code
+
+
+def _put(st, local, remote, exe, log):
+    data = local.read_bytes()
+    q, tmp = shlex.quote(remote), shlex.quote(remote + ".tmp-poledesk")
+    sent = False
+    sftp = _sftp(st)
+    if sftp:
+        try:
+            with sftp.open(remote + ".tmp-poledesk", "wb") as f:
+                f.set_pipelined(True)
+                f.write(data)
+            sent = True
+        except Exception:
+            sent = False
+        finally:
+            sftp.close()
+    if not sent:
+        code, _, err = ssh_exec(st, f"cat > {tmp}", timeout=max(60, len(data) // 20000), stdin_data=data)
+        if code:
+            raise OSError(err.strip() or f"scrittura di {remote} non riuscita")
+    code, _, err = ssh_exec(st, f"mv -f -- {tmp} {q}" + (f" && chmod +x -- {q}" if exe else ""))
+    if code:
+        raise OSError(err.strip() or f"spostamento di {remote} non riuscito")
+    h, _ = _md5_remote(st, remote)
+    want = hashlib.md5(data).hexdigest()
+    if h == want:
+        log(f"inviato {remote} ({len(data)} byte), verificato md5")
+    elif h == str(len(data)):
+        log(f"inviato {remote} ({len(data)} byte), verificata la dimensione (md5sum assente)")
+    else:
+        raise OSError(f"{remote}: verifica non riuscita (atteso {want}, letto {h or 'niente'})")
+
+
+def _get(st, remote, local):
+    data = None
+    sftp = _sftp(st)
+    if sftp:
+        try:
+            buf = io.BytesIO()
+            sftp.getfo(remote, buf)
+            data = buf.getvalue()
+        except Exception:
+            data = None
+        finally:
+            sftp.close()
+    if data is None:
+        code, data, err = ssh_raw(st, f"cat -- {shlex.quote(remote)}", timeout=120)
+        if code:
+            raise OSError(err.strip() or f"lettura di {remote} non riuscita")
+    h, _ = _md5_remote(st, remote)
+    if h and h != hashlib.md5(data).hexdigest() and h != str(len(data)):
+        raise OSError(f"{remote}: il file scaricato non corrisponde a quello sulla colonnina")
+    local.parent.mkdir(parents=True, exist_ok=True)
+    local.write_bytes(data)
+    return len(data)
+
+
+def _import_tests(st, path, log):
+    """Importa in Profilo termico i CSV delle prove contenuti in un CSV o in un archivio .tar.gz scaricato."""
+    texts = []
+    if path.name.endswith((".tar.gz", ".tgz")):
+        with tarfile.open(path, "r:gz") as tf:
+            for m in tf.getmembers():
+                if m.isfile() and m.name.endswith(".csv") and not os.path.basename(m.name).startswith(("risultati", "baseline", "controlli")):
+                    texts.append((os.path.basename(m.name), tf.extractfile(m).read().decode("utf-8", "replace")))
+    elif path.suffix == ".csv":
+        texts.append((path.name, path.read_text(encoding="utf-8", errors="replace")))
+    n = 0
+    for name, text in texts:
+        try:
+            profile_import({"name": name, "content": text, "info": {"station": st.get("name", "")}})
+            n += 1
+        except Exception as e:
+            if "già importata" not in str(e) and "non è il CSV" not in str(e):
+                log(f"  {name}: non importato ({e})")
+    if texts:
+        log(f"importate in Profilo termico {n} prove su {len(texts)} file CSV")
+    return n
+
+
+def _dist_one(rid, st):
+    run, ctrl = DISTRUNS[rid], DISTCTRL[rid]
+    r = run["stations"][st["id"]]
+    r.update(state="in corso", started=time.time())
+
+    def log(msg):
+        with LOCK:
+            r["log"].append(f"{datetime.now():%H:%M:%S} {msg}")
+
+    p = run["package"]
+    vals = {"dir": p["dir"], **{k: v for k, v in run["params"].items() if v != ""}}
+    try:
+        for i, s in enumerate(p["steps"], 1):
+            if ctrl["stop"].is_set():
+                raise Aborted("fermata dall'operatore")
+            r["step"] = f"{i}/{len(p['steps'])} {s['type']}"
+            if s["type"] == "invia":
+                ssh_exec(st, f"mkdir -p -- {shlex.quote(p['dir'])}")
+                files = [f for f in p["files"] if not s.get("only") or f["name"] in s["only"]]
+                if not files:
+                    log("nessun file da inviare nel pacchetto")
+                for f in files:
+                    _put(st, DIST_FILES / run["package_id"] / f["name"], f"{p['dir']}/{f['name']}", f.get("exec"), log)
+                audit(st, "distribuzione: invio", f"{p['name']}: {', '.join(f['name'] for f in files)}", True)
+            elif s["type"] == "comando":
+                try:
+                    cmd = render(s["command"], {**st, "vars": {**(st.get("vars") or {}), **vals}})
+                except ValueError as e:
+                    raise ValueError(f"{e} (parametro vuoto e variabile non definita nell'anagrafica della colonnina)") from e
+                log(f"$ {cmd}")
+                try:
+                    code, out, err = ssh_exec(st, cmd, timeout=s.get("timeout") or 60)
+                except CommandTimeout as e:
+                    code, out, err = None, e.out, (e.err + "\n" if e.err else "") + describe_error(e)
+                for line in (out + ("\n" + err if err.strip() else "")).strip().splitlines()[-200:]:
+                    log("  " + line)
+                ok = code == 0 and (not s.get("expect") or re.search(s["expect"], out + err) is not None)
+                audit(st, "distribuzione: comando", cmd, ok, f"exit {code}")
+                r["last"] = (out.strip().splitlines() or err.strip().splitlines() or [""])[-1][:200]
+                if not ok:
+                    why = f"exit {code}" if code != 0 else f"nell'uscita manca «{s['expect']}»"
+                    if s.get("continue"):
+                        log(f"passo {i} non riuscito ({why}), si continua")
+                    else:
+                        raise RuntimeError(f"passo {i} non riuscito ({why})")
+            elif s["type"] == "scarica":
+                pat = s["pattern"] if s["pattern"].startswith("/") else f"{p['dir']}/{s['pattern']}"
+                lst = f"ls -1t {pat} 2>/dev/null | head -n 1" if s.get("newest") else f"for f in {pat}; do [ -f \"$f\" ] && echo \"$f\"; done"
+                _, out, _ = ssh_exec(st, lst)
+                remote = [x for x in out.splitlines() if x.strip()]
+                if not remote:
+                    raise RuntimeError(f"nessun file corrisponde a {pat}")
+                dest = DIST_OUT / rid / _safe_name(st.get("name") or st["id"])
+                for rf in remote:
+                    loc = dest / os.path.basename(rf)
+                    n = _get(st, rf, loc)
+                    log(f"scaricato {rf} ({n} byte)")
+                    with LOCK:
+                        r["files"].append(str(loc.relative_to(DIST_OUT / rid)).replace("\\", "/"))
+                    if s.get("import"):
+                        r["imported"] += _import_tests(st, loc, log)
+                    if s.get("delete"):
+                        ssh_exec(st, f"rm -f -- {shlex.quote(rf)}")
+                        log(f"cancellato dalla colonnina {rf}")
+                audit(st, "distribuzione: download", f"{p['name']}: {len(remote)} file", True)
+            elif s["type"] == "attendi":
+                log(f"attesa {s['seconds']} s")
+                if ctrl["stop"].wait(s["seconds"]):
+                    raise Aborted("fermata dall'operatore")
+        r.update(state="ok")
+    except Aborted as e:
+        r.update(state="fermata", error=str(e))
+        log(str(e))
+    except Exception as e:
+        r.update(state="errore", error=describe_error(e))
+        log("ERRORE: " + describe_error(e))
+    r["ended"] = time.time()
+    with LOCK:
+        if all(x["state"] not in ("in coda", "in corso") for x in run["stations"].values()):
+            run["done"], run["ended"] = True, time.time()
+        save(DIST_RUNS / f"{rid}.json", run)
+
+
+def dist_start(body):
+    p = _pkg(body.get("package_id", ""))
+    sts = [s for s in stations() if s["id"] in (body.get("station_ids") or [])]
+    if not sts:
+        raise ValueError("nessuna colonnina selezionata")
+    if not p["steps"]:
+        raise ValueError("il pacchetto non ha passi")
+    if any(s["type"] == "invia" for s in p["steps"]):
+        miss = [f["name"] for f in p["files"] if not (DIST_FILES / p["id"] / f["name"]).exists()]
+        if miss or not p["files"]:
+            raise ValueError("file del pacchetto mancanti: " + (", ".join(miss) if miss else "aggiungine almeno uno"))
+    params = {x["name"]: str((body.get("params") or {}).get(x["name"], x.get("default", ""))) for x in p.get("params", [])}
+    rid = f"{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:4]}"
+    par = max(1, min(int(body.get("parallel") or 5), int(settings()["max_parallel"]), 50))
+    run = {"id": rid, "package_id": p["id"], "package": p, "params": params, "parallel": par,
+           "started": time.time(), "done": False,
+           "stations": {s["id"]: {"name": s.get("name", ""), "host": s.get("host", ""), "state": "in coda", "step": "", "last": "",
+                                  "error": "", "log": [], "files": [], "imported": 0} for s in sts}}
+    DISTRUNS[rid], DISTCTRL[rid] = run, {"stop": threading.Event()}
+    for old in sorted(DISTRUNS)[:-20]:
+        if DISTRUNS[old]["done"]:
+            DISTRUNS.pop(old, None)
+            DISTCTRL.pop(old, None)
+    pool = ThreadPoolExecutor(max_workers=par)
+    for s in sts:
+        pool.submit(_dist_one, rid, s)
+    pool.shutdown(wait=False)
+    audit(None, "distribuzione", f"avvio {p['name']} su {len(sts)} colonnine", True, json.dumps(params, ensure_ascii=False)[:250])
+    return rid
+
+
+def dist_run(rid):
+    run = DISTRUNS.get(rid) or load(DIST_RUNS / f"{rid}.json", None)
+    if not run:
+        raise KeyError("esecuzione non trovata")
+    with LOCK:
+        return json.loads(json.dumps(run))
+
+
+def dist_runs():
+    out = []
+    for f in sorted(DIST_RUNS.glob("*.json"), reverse=True)[:40]:
+        r = DISTRUNS.get(f.stem) or load(f, {})
+        if r:
+            sts = r.get("stations", {}).values()
+            out.append({"id": r["id"], "package": r.get("package", {}).get("name", ""), "started": r.get("started"), "done": r.get("done"),
+                        "n": len(sts), "ok": sum(x["state"] == "ok" for x in sts), "err": sum(x["state"] == "errore" for x in sts),
+                        "files": sum(len(x.get("files", [])) for x in sts)})
+    live = [r for k, r in DISTRUNS.items() if not (DIST_RUNS / f"{k}.json").exists()]
+    for r in live:
+        sts = r["stations"].values()
+        out.insert(0, {"id": r["id"], "package": r["package"]["name"], "started": r["started"], "done": r["done"], "n": len(sts),
+                       "ok": sum(x["state"] == "ok" for x in sts), "err": sum(x["state"] == "errore" for x in sts),
+                       "files": sum(len(x.get("files", [])) for x in sts)})
+    return out
+
+
+def dist_report(rid):
+    run = dist_run(rid)
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=";")
+    w.writerow(["colonnina", "host", "esito", "errore", "ultimo_output", "file_scaricati", "prove_importate", "durata_s", "registro"])
+    for s in run["stations"].values():
+        w.writerow([s["name"], s["host"], s["state"], s.get("error", ""), s.get("last", ""), " ".join(s.get("files", [])), s.get("imported", 0),
+                    int((s.get("ended") or time.time()) - (s.get("started") or time.time())) if s.get("started") else "",
+                    " | ".join(s.get("log", []))[:30000]])
+    return buf.getvalue()
+
+
+def dist_zip(rid):
+    if not re.fullmatch(r"[\w-]+", rid):
+        raise KeyError("esecuzione non trovata")
+    d = DIST_OUT / rid
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(f"rapporto_{rid}.csv", dist_report(rid).encode("utf-8-sig"))
+        if d.exists():
+            for f in d.rglob("*"):
+                if f.is_file():
+                    z.write(f, f.relative_to(d))
+    return buf.getvalue()
+
+
+def dist_open(rid):
+    d = DIST_OUT / rid if rid else DIST_OUT
+    d.mkdir(parents=True, exist_ok=True)
+    if hasattr(os, "startfile"):
+        os.startfile(str(d))
+    return {"path": str(d)}
+
+
 # ---------------------------------------------------------------- HTTP
 
 def route(method, path, q, body):
@@ -3766,6 +4214,10 @@ def route(method, path, q, body):
             return web_data(float(q.get("since", ["0"])[0]))
         if path == "/api/monitor/data":
             return mon_data(float(q.get("since", ["0"])[0]))
+        if path == "/api/dist/state":
+            return {"packages": packages(), "runs": dist_runs(), "folder": str(DIST_OUT)}
+        if path.startswith("/api/dist/run/"):
+            return dist_run(path.rsplit("/", 1)[1])
         if path == "/api/audit":
             n = int(q.get("lines", ["300"])[0])
             lines = deque(F_AUDIT.open(encoding="utf-8"), maxlen=n) if F_AUDIT.exists() else []
@@ -3919,6 +4371,19 @@ def route(method, path, q, body):
         if path == "/api/proc/abort":
             proc_abort(body)
             return {"ok": True}
+        if path == "/api/dist/package":
+            return {"packages": pkg_save(body)}
+        if path == "/api/dist/file":
+            return {"package": pkg_file(body)}
+        if path == "/api/dist/start":
+            return {"id": dist_start(body)}
+        if path == "/api/dist/stop":
+            c = DISTCTRL.get(body.get("id", ""))
+            if c:
+                c["stop"].set()
+            return {"ok": True}
+        if path == "/api/dist/open":
+            return dist_open(body.get("id", ""))
         if path == "/api/disconnect":
             POOL.drop_all()
             return {"ok": True}
@@ -3957,6 +4422,19 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(404, {"error": "file non trovato"})
             return self._send(200, p.read_bytes(), "text/csv; charset=utf-8" if name.endswith(".csv") else "application/json",
                               {"Content-Disposition": f"attachment; filename={name}"})
+        if method == "GET" and u.path in ("/api/dist/export", "/api/dist/report", "/api/dist/zip"):
+            i = parse_qs(u.query).get("id", [""])[0]
+            try:
+                if u.path.endswith("export"):
+                    d = pkg_export(i)
+                    return self._send(200, json.dumps(d, ensure_ascii=False, indent=1).encode("utf-8"), "application/json",
+                                      {"Content-Disposition": f"attachment; filename=pacchetto_{_safe_name(d['name'])}.json"})
+                if u.path.endswith("report"):
+                    return self._send(200, dist_report(i).encode("utf-8-sig"), "text/csv; charset=utf-8",
+                                      {"Content-Disposition": f"attachment; filename=rapporto_{i}.csv"})
+                return self._send(200, dist_zip(i), "application/zip", {"Content-Disposition": f"attachment; filename=raccolta_{i}.zip"})
+            except KeyError as e:
+                return self._send(404, {"error": str(e).strip("'\"")})
         if method == "GET" and u.path == "/api/web/export":
             text, name = web_export()
             return self._send(200, text.encode("utf-8-sig"), "text/csv; charset=utf-8",

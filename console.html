@@ -106,6 +106,22 @@ dialog h2{font:600 18px var(--ui);margin:0 0 4px}
 @keyframes pop{from{transform:translateY(8px);opacity:0}}
 .hint{font-size:12px;color:var(--muted)}
 .empty{padding:24px;color:var(--muted);text-align:center}
+.dsgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;align-items:start}
+.dsgrid>*,.dsgrid .card{min-width:0}
+.dsgrid .card>.b{grid-template-columns:minmax(0,1fr)}
+.dsgrid input,.dsgrid select,.dsgrid textarea{min-width:0;max-width:100%}
+#dsRunCard>h3{flex-wrap:wrap}#dsRunTitle{flex:1 1 100%;font-weight:500}
+#dsRunBody td:nth-child(4){max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:1200px){.dsgrid{grid-template-columns:1fr}}
+.dsstep{display:grid;grid-template-columns:24px 118px minmax(0,1fr) auto;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--line)}
+.dsstep:last-child{border-bottom:0}
+.dsstep .n{font:600 13px var(--mono);color:var(--muted);padding-top:8px}
+.dsstep .fx{display:grid;gap:6px}
+.dsstep textarea{min-height:54px}
+.dsfile,.dspar{display:grid;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px}
+.dsfile{grid-template-columns:minmax(0,1fr) 70px 70px auto auto}.dspar{grid-template-columns:minmax(0,.8fr) minmax(0,1fr) minmax(0,1.2fr) auto}
+.dsst td:first-child{white-space:nowrap}
+.dsst .s-ok{color:var(--ok)}.dsst .s-errore,.dsst .s-fermata{color:var(--err)}.dsst .s-in.corso{color:var(--warn)}
 /* console AUX */
 .aux{display:grid;grid-template-columns:340px minmax(0,1fr) 380px;gap:14px;align-items:start}
 .seg{display:grid;grid-template-columns:repeat(5,1fr);background:var(--sunk);border:1px solid var(--line);border-radius:9px;padding:3px;gap:3px}
@@ -306,7 +322,8 @@ a.btn{text-decoration:none;color:inherit}
       <button role="tab" data-t="prof">Profilo termico</button>
       <button role="tab" data-t="pg">Grafici prove</button>
       <button role="tab" data-t="an">Analisi</button>
-      <button role="tab" data-t="co">Conclusioni<span class="new">nuovo</span></button>
+      <button role="tab" data-t="co">Conclusioni</button>
+      <button role="tab" data-t="dist">Distribuzione<span class="new">nuovo</span></button>
       <button role="tab" data-t="seq">Sequenze</button>
       <button role="tab" data-t="files">File</button>
       <button role="tab" data-t="log">Log</button>
@@ -585,6 +602,41 @@ a.btn{text-decoration:none;color:inherit}
         <div class="card"><h3>Riferimenti e decisione per colonnina</h3><div id="coRef" style="overflow-x:auto"></div></div>
         <div class="card"><h3>Conclusioni dell’operatore<span class="grow"></span><button class="btn no-print" id="coSave">Salva</button></h3><div class="b"><textarea id="coText" rows="7" class="no-print" style="width:100%" placeholder="Cosa concludi da queste prove, decisioni prese, prossimi passi. Salvate con la campagna scelta."></textarea><div id="coTextP" class="only-print" style="white-space:pre-wrap"></div></div></div>
         <div class="card wide" data-fold="co-gloss"><h3>Che cosa significano i parametri</h3><div class="b" id="coGloss"></div></div>
+      </div>
+    </section>
+
+    <section class="panel" id="p-dist">
+      <div class="row">
+        <select id="dsPkg" class="grow" aria-label="Pacchetto" style="max-width:520px"></select>
+        <button class="btn" id="dsNew">Nuovo</button><button class="btn" id="dsDup">Duplica</button>
+        <button class="btn" id="dsExp">Esporta</button>
+        <label class="btn">Importa<input type="file" id="dsImp" accept=".json" hidden></label>
+        <button class="btn danger" id="dsDel">Elimina</button>
+      </div>
+      <div class="hint">Un pacchetto è una lista di passi eseguiti in ordine su ogni colonnina selezionata a sinistra, in parallelo, anche tramite jump host: <b>invia file</b> (con verifica md5), <b>comando</b>, <b>attendi</b>, <b>scarica</b> (sul PC, con importazione delle prove in Profilo termico). Nei comandi: {{dir}}, {{name}}, {{host}}, le variabili della colonnina e i parametri del pacchetto.</div>
+      <div class="dsgrid">
+        <div class="card"><h3>Pacchetto<span class="grow"></span><span id="dsDirty" class="warn"></span><button class="btn primary" id="dsSave">Salva</button></h3><div class="b" style="display:grid;gap:12px">
+          <div class="row"><label class="f grow">Nome<input id="dsName"></label><label class="f" style="flex:1 1 200px">Cartella sulla colonnina<input id="dsDir" spellcheck="false"></label></div>
+          <label class="f">Note<input id="dsNote"></label>
+          <div><div class="row"><b style="font-weight:600">File da inviare</b><span class="grow"></span><label class="btn">Aggiungi file<input type="file" id="dsAdd" multiple hidden></label></div><div id="dsFiles"></div></div>
+          <div><div class="row"><b style="font-weight:600">Parametri</b><span class="hint">valori chiesti a ogni esecuzione, usati come {{nome}}</span><span class="grow"></span><button class="btn" id="dsAddPar">+ Parametro</button></div><div id="dsPars"></div></div>
+          <div><div class="row"><b style="font-weight:600">Passi</b><span class="grow"></span>
+            <button class="btn" data-add="invia">+ Invia file</button><button class="btn" data-add="comando">+ Comando</button><button class="btn" data-add="attendi">+ Attendi</button><button class="btn" data-add="scarica">+ Scarica</button></div>
+            <div id="dsSteps"></div></div>
+        </div></div>
+        <div style="display:grid;gap:14px">
+          <div class="card"><h3>Esegui</h3><div class="b" style="display:grid;gap:10px">
+            <div id="dsRunPars" style="display:grid;gap:8px"></div>
+            <div class="row"><label class="row" style="gap:6px">In parallelo <input id="dsPar" type="number" min="1" max="50" value="5" style="width:70px"></label>
+              <span class="grow"></span><button class="btn primary run" id="dsGo">Esegui</button></div>
+            <div class="hint" id="dsGoHint"></div>
+          </div></div>
+          <div class="card" id="dsRunCard" hidden><h3><span id="dsRunTitle">Esecuzione</span>
+            <button class="btn danger" id="dsStop">Ferma</button><button class="btn" id="dsRep">Rapporto CSV</button><button class="btn" id="dsZip">Scarica raccolta (.zip)</button><button class="btn" id="dsOpen">Apri cartella</button></h3>
+            <div style="overflow:auto"><table class="dsst"><thead><tr><th>Colonnina</th><th>Stato</th><th>Passo</th><th>Ultima riga</th><th class="num">File</th><th class="num">Durata</th></tr></thead><tbody id="dsRunBody"></tbody></table></div>
+          </div>
+          <div class="card"><h3>Esecuzioni precedenti<span class="grow"></span><button class="btn" id="dsFolder">Cartella raccolte</button></h3><div style="overflow:auto;max-height:300px"><table><tbody id="dsHist"></tbody></table></div></div>
+        </div>
       </div>
     </section>
 
@@ -2093,11 +2145,106 @@ $("#stJumps").onclick=()=>openJumps();
 $("#dJump").addEventListener("close",()=>{if($("#dSt").open){const f=$("#fStForm"),cur=f.jump.value,dj=jName(S.settings.default_jump);
   f.jump.innerHTML=`<option value="">${dj?`predefinito: tramite ${esc(dj)}`:"predefinito: diretto"}</option><option value="direct">diretto dal PC</option>`+(S.jumps||[]).map(j=>`<option value="${j.id}">tramite ${esc(j.name)}</option>`).join("");f.jump.value=cur}});
 
+
+/* ---------- distribuzione ---------- */
+const DS={pkgs:[],runs:[],cur:"",edit:null,dirty:false,run:"",open:new Set(),timer:null};
+const DSTYPES={invia:"Invia file",comando:"Comando",attendi:"Attendi",scarica:"Scarica"};
+const dsClone=o=>JSON.parse(JSON.stringify(o));
+const dsSize=n=>n==null?"":n<1024?n+" B":n<1048576?(n/1024).toFixed(1)+" kB":(n/1048576).toFixed(1)+" MB";
+function dsMark(d=true){DS.dirty=d;$("#dsDirty").textContent=d?"modifiche non salvate":""}
+async function dsLoad(keep){try{const d=await api("/api/dist/state");DS.pkgs=d.packages;DS.runs=d.runs;
+  if(!DS.pkgs.find(p=>p.id===DS.cur))DS.cur=DS.pkgs[0]?.id||"";
+  if(!keep||!DS.edit||!DS.dirty)DS.edit=dsClone(DS.pkgs.find(p=>p.id===DS.cur)||null),dsMark(false);
+  dsRender();dsHist();const live=DS.runs.find(r=>!r.done);if(live&&!DS.run){DS.run=live.id;dsPoll()}}catch(e){fail(e)}}
+function dsRender(){
+  $("#dsPkg").innerHTML=DS.pkgs.map(p=>`<option value="${p.id}" ${p.id===DS.cur?"selected":""}>${esc(p.name)}</option>`).join("")||`<option value="">nessun pacchetto</option>`;
+  const p=DS.edit;["#dsSave","#dsDup","#dsExp","#dsDel","#dsGo"].forEach(i=>$(i).disabled=!p);
+  if(!p){$("#dsFiles").innerHTML=$("#dsPars").innerHTML=$("#dsSteps").innerHTML=$("#dsRunPars").innerHTML="";return}
+  $("#dsName").value=p.name;$("#dsDir").value=p.dir;$("#dsNote").value=p.note||"";
+  $("#dsFiles").innerHTML=(p.files||[]).map((f,i)=>`<div class="dsfile"><span style="font:13px var(--mono)">${esc(f.name)}</span><span class="mut">${dsSize(f.size)}</span><span class="mut" title="md5 ${esc(f.md5)}" style="font:11px var(--mono)">${esc((f.md5||"").slice(0,8))}</span>
+    <label class="row" style="gap:4px" title="chmod +x dopo l'invio"><input type="checkbox" data-fx="${i}" ${f.exec?"checked":""}>eseguibile</label><button class="btn icon" data-frm="${esc(f.name)}" title="Togli il file">✕</button></div>`).join("")||`<div class="hint">Nessun file.${p.note?" "+esc(p.note):""}</div>`;
+  $("#dsPars").innerHTML=(p.params||[]).map((x,i)=>`<div class="dspar"><input data-pk="name" data-i="${i}" value="${esc(x.name)}" placeholder="nome" spellcheck="false"><input data-pk="default" data-i="${i}" value="${esc(x.default)}" placeholder="valore predefinito" spellcheck="false"><input data-pk="descr" data-i="${i}" value="${esc(x.descr)}" placeholder="descrizione"><button class="btn icon" data-prm="${i}">✕</button></div>`).join("")||`<div class="hint">Nessun parametro.</div>`;
+  $("#dsSteps").innerHTML=(p.steps||[]).map((s,i)=>`<div class="dsstep" data-i="${i}"><span class="n">${i+1}</span>
+    <select data-sk="type">${Object.entries(DSTYPES).map(([k,l])=>`<option value="${k}" ${s.type===k?"selected":""}>${l}</option>`).join("")}</select><div class="fx">${dsStepFields(s,p)}</div>
+    <span class="row" style="gap:0"><button class="btn icon" data-mv="-1" title="Su">↑</button><button class="btn icon" data-mv="1" title="Giù">↓</button><button class="btn icon" data-srm title="Togli">✕</button></span></div>`).join("")||`<div class="hint">Nessun passo.</div>`;
+  const prev={};$$("#dsRunPars input").forEach(i=>prev[i.dataset.rp]=i.value);
+  $("#dsRunPars").innerHTML=(p.params||[]).filter(x=>x.name).map(x=>`<label class="f">${esc(x.name)}${x.descr?` <span class="hint">— ${esc(x.descr)}</span>`:""}<input data-rp="${esc(x.name)}" value="${esc(prev[x.name]??x.default??"")}" spellcheck="false" style="font:13px var(--mono)"></label>`).join("");
+  dsGoHint()}
+function dsStepFields(s,p){
+  if(s.type==="invia")return `<span class="hint">Invia ${(p.files||[]).length?((s.only||[]).length?esc(s.only.join(", ")):"tutti i file del pacchetto ("+(p.files||[]).length+")"):"— nessun file nel pacchetto"} in ${esc(p.dir)}, crea la cartella se manca e verifica md5.</span>
+    <input data-sk="only" value="${esc((s.only||[]).join(" "))}" placeholder="solo questi file (vuoto = tutti)" spellcheck="false">`;
+  if(s.type==="comando")return `<textarea data-sk="command" spellcheck="false" placeholder="comando sulla colonnina, es. cd {{dir}} && sh prova_schermo.sh --stato">${esc(s.command||"")}</textarea>
+    <div class="row"><label class="row" style="gap:4px">tempo max <input data-sk="timeout" type="number" min="5" value="${s.timeout||60}" style="width:75px"> s</label>
+    <input data-sk="expect" class="grow" value="${esc(s.expect||"")}" placeholder="riuscito se l'uscita contiene (regex, facoltativo)" spellcheck="false">
+    <label class="row" style="gap:4px"><input type="checkbox" data-sk="continue" ${s.continue?"checked":""}> continua se fallisce</label></div>`;
+  if(s.type==="attendi")return `<label class="row" style="gap:6px">attendi <input data-sk="seconds" type="number" min="1" value="${s.seconds||10}" style="width:90px"> secondi</label>`;
+  return `<input data-sk="pattern" value="${esc(s.pattern||"")}" placeholder="file sulla colonnina, relativo alla cartella o assoluto; jolly * ? (es. archivio_*.tar.gz)" spellcheck="false">
+    <div class="row"><label class="row" style="gap:4px"><input type="checkbox" data-sk="newest" ${s.newest?"checked":""}> solo il più recente</label>
+    <label class="row" style="gap:4px"><input type="checkbox" data-sk="delete" ${s.delete?"checked":""}> cancella dalla colonnina dopo il download</label>
+    <label class="row" style="gap:4px"><input type="checkbox" data-sk="import" ${s.import?"checked":""}> importa le prove in Profilo termico</label></div>`}
+function dsGoHint(){const n=selected().length;$("#dsGo").textContent=n?`Esegui su ${n} colonnin${n===1?"a":"e"}`:"Esegui";
+  $("#dsGoHint").textContent=n?selected().slice(0,8).map(s=>s.name).join(", ")+(n>8?` e altre ${n-8}`:""):"Seleziona le colonnine a sinistra."}
+$("#dsPkg").onchange=e=>{if(DS.dirty&&!confirm("Ci sono modifiche non salvate al pacchetto: le perdi?")){e.target.value=DS.cur;return}DS.cur=e.target.value;DS.edit=dsClone(DS.pkgs.find(p=>p.id===DS.cur));dsMark(false);dsRender()};
+$("#p-dist").addEventListener("input",e=>{const t=e.target,p=DS.edit;if(!p||t.closest(".dsgrid>div:last-child")&&!t.dataset.sk)return;
+  if(t.id==="dsName")p.name=t.value;else if(t.id==="dsDir")p.dir=t.value;else if(t.id==="dsNote")p.note=t.value;
+  else if(t.dataset.pk)p.params[+t.dataset.i][t.dataset.pk]=t.value;
+  else if(t.dataset.fx!==undefined)p.files[+t.dataset.fx].exec=t.checked;
+  else if(t.dataset.sk){const st=p.steps[+t.closest(".dsstep").dataset.i],k=t.dataset.sk;
+    if(k==="type"){p.steps[+t.closest(".dsstep").dataset.i]=dsNewStep(t.value);dsMark();return dsRender()}
+    st[k]=t.type==="checkbox"?t.checked:k==="only"?t.value.split(/[\s,]+/).filter(Boolean):(k==="timeout"||k==="seconds")?+t.value:t.value}
+  else return;dsMark()});
+function dsNewStep(t){return t==="invia"?{type:"invia",only:[]}:t==="comando"?{type:"comando",command:"cd {{dir}} && ",timeout:60,expect:"",continue:false}:t==="attendi"?{type:"attendi",seconds:30}:{type:"scarica",pattern:"",newest:true,delete:false,import:false}}
+$("#p-dist").addEventListener("click",async e=>{const t=e.target,p=DS.edit;if(!p)return;
+  if(t.dataset.add){(p.steps||(p.steps=[])).push(dsNewStep(t.dataset.add));dsMark();dsRender()}
+  else if(t.dataset.mv){const i=+t.closest(".dsstep").dataset.i,j=i+ +t.dataset.mv;if(j<0||j>=p.steps.length)return;[p.steps[i],p.steps[j]]=[p.steps[j],p.steps[i]];dsMark();dsRender()}
+  else if(t.dataset.srm!==undefined){p.steps.splice(+t.closest(".dsstep").dataset.i,1);dsMark();dsRender()}
+  else if(t.dataset.prm!==undefined){p.params.splice(+t.dataset.prm,1);dsMark();dsRender()}
+  else if(t.dataset.frm){if(!confirm(`Togliere ${t.dataset.frm} dal pacchetto?`))return;
+    try{const r=await api("/api/dist/file",{id:p.id,name:t.dataset.frm,remove:true});p.files=r.package.files;DS.pkgs=DS.pkgs.map(x=>x.id===p.id?{...x,files:r.package.files}:x);dsRender()}catch(err){fail(err)}}});
+$("#dsAddPar").onclick=()=>{if(!DS.edit)return;(DS.edit.params||(DS.edit.params=[])).push({name:"",default:"",descr:""});dsMark();dsRender()};
+async function dsSave(){const p=DS.edit;const r=await api("/api/dist/package",{package:p});DS.pkgs=r.packages;DS.cur=p.id||r.packages[r.packages.length-1].id;
+  DS.edit=dsClone(DS.pkgs.find(x=>x.id===DS.cur));dsMark(false);dsRender()}
+$("#dsSave").onclick=async()=>{try{await dsSave();toast("Pacchetto salvato")}catch(e){fail(e)}};
+$("#dsNew").onclick=async()=>{if(DS.dirty&&!confirm("Modifiche non salvate: le perdi?"))return;try{const r=await api("/api/dist/package",{package:{name:"Nuovo pacchetto",dir:"/home/root/test",steps:[{type:"invia",only:[]}],params:[]}});
+  DS.pkgs=r.packages;DS.cur=r.packages[r.packages.length-1].id;DS.edit=dsClone(DS.pkgs.find(x=>x.id===DS.cur));dsMark(false);dsRender();$("#dsName").select()}catch(e){fail(e)}};
+$("#dsDup").onclick=async()=>{try{const r=await fetch("/api/dist/export?id="+DS.cur).then(r=>r.json());r.name+=" (copia)";const d=await api("/api/dist/package",{import:r});
+  DS.pkgs=d.packages;DS.cur=d.packages[d.packages.length-1].id;DS.edit=dsClone(DS.pkgs.find(x=>x.id===DS.cur));dsMark(false);dsRender();toast("Pacchetto duplicato, con i suoi file")}catch(e){fail(e)}};
+$("#dsExp").onclick=()=>{location.href="/api/dist/export?id="+DS.cur};
+$("#dsImp").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;try{const d=await api("/api/dist/package",{import:JSON.parse(await f.text())});
+  DS.pkgs=d.packages;DS.cur=d.packages[d.packages.length-1].id;DS.edit=dsClone(DS.pkgs.find(x=>x.id===DS.cur));dsMark(false);dsRender();toast("Pacchetto importato")}catch(err){fail(err)}};
+$("#dsDel").onclick=async()=>{if(!confirm(`Eliminare il pacchetto «${DS.edit.name}» e i suoi file?`))return;try{const d=await api("/api/dist/package",{delete:DS.cur});DS.pkgs=d.packages;DS.cur=DS.pkgs[0]?.id||"";DS.edit=dsClone(DS.pkgs[0]||null);dsMark(false);dsRender()}catch(e){fail(e)}};
+$("#dsAdd").onchange=async e=>{const fs=[...e.target.files];e.target.value="";if(!DS.edit)return;
+  try{if(DS.dirty)await dsSave();for(const f of fs){const b=new Uint8Array(await f.arrayBuffer());let bin="";for(let i=0;i<b.length;i+=32768)bin+=String.fromCharCode.apply(null,b.subarray(i,i+32768));
+    const r=await api("/api/dist/file",{id:DS.edit.id,name:f.name,data:btoa(bin)});DS.edit.files=r.package.files}
+    DS.pkgs=DS.pkgs.map(x=>x.id===DS.edit.id?{...x,files:DS.edit.files}:x);dsRender();toast(`${fs.length} file aggiunt${fs.length===1?"o":"i"}`)}catch(err){fail(err)}};
+$("#dsGo").onclick=async()=>{const sts=selected(),p=DS.edit;if(!sts.length)return toast("Seleziona le colonnine a sinistra",true);
+  try{if(DS.dirty)await dsSave();const params={};$$("#dsRunPars input").forEach(i=>params[i.dataset.rp]=i.value);
+    const desc=p.steps.map((s,i)=>`${i+1}. ${DSTYPES[s.type]}${s.type==="comando"?": "+s.command:s.type==="scarica"?": "+s.pattern:s.type==="attendi"?" "+s.seconds+" s":""}`).join("\n");
+    if(!confirm(`Eseguire «${p.name}» su ${sts.length} colonnin${sts.length===1?"a":"e"}?\n\n${desc}\n\nParametri: ${Object.entries(params).map(([k,v])=>k+" = "+v).join("; ")||"nessuno"}`))return;
+    const r=await api("/api/dist/start",{package_id:p.id,station_ids:sts.map(s=>s.id),params,parallel:+$("#dsPar").value||5});DS.run=r.id;DS.open.clear();dsPoll()}catch(e){fail(e)}};
+async function dsPoll(){clearTimeout(DS.timer);if(!DS.run)return;try{const r=await api("/api/dist/run/"+DS.run);dsShowRun(r);
+  if(!r.done&&$("#p-dist").classList.contains("on"))DS.timer=setTimeout(dsPoll,1500);else if(r.done){const d=await api("/api/dist/state");DS.runs=d.runs;dsHist()}}catch(e){fail(e)}}
+function dsShowRun(r){$("#dsRunCard").hidden=false;const v=Object.entries(r.stations),c=k=>v.filter(([,x])=>x.state===k).length;
+  $("#dsRunTitle").innerHTML=`${esc(r.package.name)} · ${new Date(r.started*1000).toLocaleString("it-IT")} · <span class="ok">${c("ok")} ok</span>${c("errore")?` · <span class="err">${c("errore")} errori</span>`:""}${c("fermata")?` · <span class="err">${c("fermata")} fermate</span>`:""}${c("in corso")+c("in coda")?` · <span class="warn">${c("in corso")} in corso, ${c("in coda")} in coda</span>`:""}`;
+  $("#dsStop").disabled=r.done;const now=Date.now()/1000;
+  $("#dsRunBody").innerHTML=v.map(([sid,x])=>`<tr class="res" data-sid="${sid}"><td><b style="font-weight:600">${esc(x.name)}</b><div class="hint">${esc(x.host)}</div></td><td class="s-${x.state.replace(" ",".")}">${esc(x.state)}</td><td class="mut">${esc(x.step||"")}</td>
+    <td style="font:12px var(--mono)">${esc(x.error||x.last||"")}</td><td class="num">${x.files.length||""}${x.imported?` <span class="hint">(${x.imported} importate)</span>`:""}</td><td class="num">${x.started?Math.round((x.ended||now)-x.started)+" s":""}</td></tr>`+
+    (DS.open.has(sid)?`<tr class="out"><td colspan="6"><pre class="term">${esc(x.log.join("\n"))||"—"}</pre></td></tr>`:"")).join("")}
+$("#dsRunBody").onclick=e=>{const tr=e.target.closest("tr.res");if(!tr)return;const s=tr.dataset.sid;DS.open.has(s)?DS.open.delete(s):DS.open.add(s);dsPoll()};
+$("#dsStop").onclick=async()=>{if(!confirm("Fermare l'esecuzione? Le colonnine in coda non partono; su quelle in corso il passo attuale finisce, poi si ferma."))return;try{await api("/api/dist/stop",{id:DS.run});toast("Arresto richiesto")}catch(e){fail(e)}};
+$("#dsRep").onclick=()=>{location.href="/api/dist/report?id="+DS.run};
+$("#dsZip").onclick=()=>{location.href="/api/dist/zip?id="+DS.run};
+$("#dsOpen").onclick=async()=>{try{const r=await api("/api/dist/open",{id:DS.run});toast("Cartella: "+r.path)}catch(e){fail(e)}};
+$("#dsFolder").onclick=async()=>{try{const r=await api("/api/dist/open",{});toast("Cartella: "+r.path)}catch(e){fail(e)}};
+function dsHist(){$("#dsHist").innerHTML=DS.runs.map(r=>`<tr class="res" data-rid="${r.id}"><td>${new Date(r.started*1000).toLocaleString("it-IT",{dateStyle:"short",timeStyle:"short"})}</td><td>${esc(r.package)}</td>
+  <td class="num">${r.n} col.</td><td class="num"><span class="ok">${r.ok}</span>${r.err?` / <span class="err">${r.err}</span>`:""}</td><td class="num">${r.files?r.files+" file":""}</td><td>${r.done?"":`<span class="warn">in corso</span>`}</td></tr>`).join("")||`<tr><td class="empty">Nessuna esecuzione</td></tr>`}
+$("#dsHist").onclick=e=>{const tr=e.target.closest("tr[data-rid]");if(!tr)return;DS.run=tr.dataset.rid;DS.open.clear();dsPoll()};
+$("#fleet").addEventListener("click",()=>setTimeout(dsGoHint,0));
 /* ---------- schede ---------- */
 $$("nav.tabs button").forEach(b=>b.onclick=()=>{
   $$("nav.tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));
   $$("section.panel").forEach(p=>p.classList.toggle("on",p.id==="p-"+b.dataset.t));
-  if(b.dataset.t==="audit")loadAudit();if(b.dataset.t==="mon")pollMon();if(b.dataset.t==="aux"){axRenderForm();axPoll()}if(b.dataset.t==="seq")sqPoll();if(b.dataset.t==="prof"){pfRender();pfPoll();pfHist();pfStatus()}if(b.dataset.t==="pg")pgLoad();if(b.dataset.t==="an")anLoad();if(b.dataset.t==="co")coLoad()
+  if(b.dataset.t==="audit")loadAudit();if(b.dataset.t==="mon")pollMon();if(b.dataset.t==="aux"){axRenderForm();axPoll()}if(b.dataset.t==="seq")sqPoll();if(b.dataset.t==="prof"){pfRender();pfPoll();pfHist();pfStatus()}if(b.dataset.t==="pg")pgLoad();if(b.dataset.t==="an")anLoad();if(b.dataset.t==="co")coLoad();if(b.dataset.t==="dist"){dsLoad(true);dsPoll()}
 });
 
 refresh().then(()=>{pollMon();api("/api/seq/runs").then(d=>{const n=d.runs.filter(r=>r.resumable).length;if(n)toast(`${n} sequenz${n===1?"a interrotta":"e interrotte"} alla chiusura: le trovi in Sequenze, con “Riprendi”`)}).catch(()=>{});

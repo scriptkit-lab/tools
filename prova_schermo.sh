@@ -375,7 +375,10 @@ $SCALED
 --archivio)
     read_page; CU="$(get_value "CUID")"
     A="$DIR/archivio_${CU:-colonnina}_$(date '+%Y%m%d_%H%M').tar.gz"
-    (cd "$DIR" && tar czf "$A" --exclude='archivio_*' ./*.csv ./*.log ./*.txt ./*.conf 2>/dev/null || tar czf "$A" ./*.csv ./*.log 2>/dev/null)
+    # dati della cartella e delle prove di funzionamento (collaudo/), senza archivi precedenti
+    L=$(cd "$DIR" && for f in ./*.csv ./*.log ./*.txt ./*.conf ./collaudo/*.csv ./collaudo/*.log ./collaudo/*.txt; do [ -f "$f" ] && echo "$f"; done)
+    [ -z "$L" ] && { echo "Nessun dato da archiviare in $DIR"; exit 1; }
+    (cd "$DIR" && tar czf "$A" $L)
     echo "Archivio pronto: $A"; exit 0;;
 esac
 
