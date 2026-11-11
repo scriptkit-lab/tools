@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manutenzione 2.1 · mockup</title>
+<style>
+:root{--side:#212529;--side2:#343a40;--top:#1b1e21;--bg:#f2f3f5;--card:#fff;--line:#dee2e6;--ink:#212529;--mute:#6c757d;
+--blue:#007bff;--green:#28a745;--red:#dc3545;--yellow:#ffc107;--gray:#adb5bd}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 "Segoe UI",system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+#top{height:56px;background:var(--top);color:#fff;display:flex;align-items:center;gap:12px;padding:0 16px;position:sticky;top:0;z-index:5}
+#top .brand{font-weight:700;font-size:18px;letter-spacing:.3px}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700}
+.bg-red{background:var(--red);color:#fff}.bg-yel{background:var(--yellow);color:#212529}.bg-grn{background:var(--green);color:#fff}.bg-gry{background:#6c757d;color:#fff}
+#clock{flex:1;text-align:center;color:#ffffff99}
+#wrap{display:flex;min-height:calc(100vh - 56px)}
+#side{width:230px;background:var(--side);padding:8px 0;flex-shrink:0}
+#side a{display:flex;align-items:center;gap:10px;color:#ffffff99;text-decoration:none;padding:12px 18px;font-size:15px}
+#side a:hover{color:#fff}#side a.on{color:#fff;background:var(--side2)}
+#side .sec{color:#ffffff55;font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:14px 18px 4px}
+#side hr{border:0;border-top:1px solid #ffffff22;margin:8px 14px}
+#side .ic{width:18px;text-align:center}
+#main{flex:1;padding:16px 22px;min-width:0}
+.crumb{background:#e9ecef;border-radius:4px;padding:10px 14px;margin-bottom:16px;color:var(--mute)}
+.crumb b{color:var(--blue);font-weight:400}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.card>h5{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);background:#f7f7f7;font-size:17px;font-weight:600;display:flex;align-items:center;gap:8px}
+.card>.bd{padding:12px 16px}
+table{border-collapse:collapse;width:100%}
+td,th{padding:5px 6px;vertical-align:middle;text-align:left}
+.kv td:first-child{color:#343a40;font-size:14px}
+.kv td.ind{padding-left:30px}
+.lines td{border-bottom:1px solid var(--line)}
+th{font-size:13px;color:var(--mute);font-weight:600;border-bottom:2px solid var(--line)}
+.led{display:inline-block;width:18px;height:18px;border-radius:50%;box-shadow:inset 0 -2px 3px #0003,0 0 0 2px #0001;vertical-align:middle}
+.led-green{background:radial-gradient(circle at 35% 35%,#7dff9a,#1e9e45)}.led-red{background:radial-gradient(circle at 35% 35%,#ff9a9a,#c21f2f)}
+.led-gray{background:radial-gradient(circle at 35% 35%,#e9ecef,#8c959d)}.led-yellow{background:radial-gradient(circle at 35% 35%,#fff3a3,#d9a400)}
+.blink{animation:bl 1s steps(2) infinite}@keyframes bl{50%{opacity:.25}}
+.prog{height:20px;background:#e9ecef;border-radius:4px;overflow:hidden}
+.prog>div{height:100%;color:#fff;font-weight:700;font-size:13px;padding-left:6px;line-height:20px;background-image:linear-gradient(45deg,#ffffff26 25%,transparent 25%,transparent 50%,#ffffff26 50%,#ffffff26 75%,transparent 75%);background-size:1rem 1rem}
+.btn{display:inline-block;border:1px solid transparent;padding:6px 14px;border-radius:4px;font:inherit;cursor:pointer;text-decoration:none;line-height:1.4}
+.btn-p{background:var(--blue);color:#fff}.btn-s{background:#6c757d;color:#fff}.btn-d{background:var(--red);color:#fff}.btn-g{background:var(--green);color:#fff}
+.btn-o{background:#fff;border-color:var(--line);color:var(--ink)}
+.btn-sm{padding:2px 8px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:default}
+.ctl{display:flex;align-items:center;gap:8px;margin:8px 0}.ctl label{width:150px;color:#343a40}
+.flt td{border-bottom:1px solid var(--line);padding:9px 8px}
+.flt tr.clk{cursor:pointer}.flt tr.clk:hover td{background:#f1f5fb}
+.pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:12px;font-weight:700}
+.p-GUASTO{background:#f8d7da;color:#842029}.p-ATTENZIONE{background:#fff3cd;color:#664d03}.p-OK{background:#d1e7dd;color:#0f5132}.p-INFO{background:#e2e3e5;color:#41464b}
+.mute{color:var(--mute)}small{color:var(--mute)}
+.note{background:#fff3cd;border:1px solid #ffe69c;border-radius:4px;padding:8px 12px;margin-bottom:14px;font-size:14px}
+.steps li{padding:8px 10px;border-radius:4px;margin-bottom:6px;background:#e9ecef;list-style:none;display:flex;justify-content:space-between;gap:8px}
+.steps{padding:0;margin:0}.steps li.run{background:#cfe2ff}.steps li.pass{background:#d1e7dd}.steps li.fail{background:#f8d7da}
+.modal{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}
+.modal.on{display:flex}
+.mbox{background:#fff;border-radius:8px;width:min(1100px,94vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.mbody{display:grid;grid-template-columns:340px 1fr;flex:1;min-height:420px;overflow:auto}
+.mleft{background:#f7f7f7;padding:16px;border-right:1px solid var(--line)}
+.mright{padding:16px}
+.mfoot{display:flex}.mfoot button{flex:1;padding:14px;font-size:17px;font-weight:600;border:0;border-radius:0;cursor:pointer;color:#fff}
+.part{border:1px solid var(--line);border-radius:6px;padding:10px;margin-bottom:10px;display:grid;grid-template-columns:90px 1fr;gap:12px;align-items:center}
+.ph{width:90px;height:70px;border-radius:4px;background:repeating-linear-gradient(45deg,#e9ecef,#e9ecef 8px,#f8f9fa 8px,#f8f9fa 16px);display:flex;align-items:center;justify-content:center;font-size:11px;color:#6c757d;text-align:center}
+.code{font-family:Consolas,monospace;font-weight:700;background:#e9ecef;padding:1px 6px;border-radius:3px}
+.ev td{border-bottom:1px solid var(--line);padding:8px 6px;font-size:14px}
+.sumrow{display:flex;gap:18px;margin:4px 0 14px;flex-wrap:wrap}
+.cfgt input{width:100%;padding:4px 6px;border:1px solid var(--line);border-radius:4px;font:inherit;font-size:13px}.cfgt td{padding:4px;border-bottom:1px solid var(--line);font-size:13px}
+.spc{font-size:12px;padding:1px 6px;border:1px solid #ffda6a;border-radius:3px;background:#fff8e1;color:#7a5b00;font-family:Consolas,monospace;font-weight:700;white-space:nowrap}
+.man{font-size:12px;text-decoration:none;padding:1px 6px;border:1px solid #9ec5fe;border-radius:3px;background:#e7f1ff;color:#0a58ca;white-space:nowrap}
+.dtab{width:100%;border-collapse:collapse}.dtab th{background:#343a40;color:#fff;text-align:center;padding:6px;border:2px solid #fff}
+.dtab td{padding:3px 8px;border:2px solid #fff;background:#eceeef;font-size:14px}.dtab td.dk{width:24%}.dtab td.dv{width:26%}
+.dtab td.dv-GUASTO{background:#f8d7da;color:#842029;font-weight:700}.dtab td.dv-ATTENZIONE{background:#fff3cd;color:#664d03;font-weight:700}
+.chk{display:inline-block;width:16px;height:16px;border:2px solid #6c757d;border-radius:3px}
+@media print{#top,#side,.noprint,.crumb,.note,.toast{display:none!important}#main{padding:0}.card{break-inside:avoid;border:0}body{background:#fff}}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-left:5px solid #2a78d6;border-radius:4px;padding:10px 14px}.kpi-ok{border-left-color:#28a745}.kpi-bad{border-left-color:#dc3545}.kpi-warn{border-left-color:#e0a800}
+.kl{font-size:13px;color:var(--mute)}.kv2{font-size:28px;font-weight:700;line-height:1.2}.kv2 small{font-size:15px;color:var(--mute);font-weight:400}.ks{font-size:12px;color:var(--mute)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.tile{border:1px solid var(--line);border-left:6px solid #adb5bd;border-radius:4px;padding:8px 10px;cursor:pointer;background:#fff;min-height:108px;display:flex;flex-direction:column;gap:2px}
+.tile:hover{box-shadow:0 2px 8px #0002}.t-GUASTO{border-left-color:#dc3545;background:#fff8f8}.t-ATTENZIONE{border-left-color:#e0a800;background:#fffdf4}.t-OK{border-left-color:#28a745}
+.tt{display:flex;justify-content:space-between;gap:6px;align-items:center}.tm{font-size:13px;flex:1}.tb{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sig{font-size:13px;background:#eef2f7;border-radius:10px;padding:0 6px}
+.cbars{table-layout:fixed}.cbars td{padding:4px 6px;font-size:14px}.cb{display:flex;gap:2px;height:14px}.cbg{background:#dc3545;border-radius:0 3px 3px 0;height:14px}.cba{background:#e0a800;border-radius:0 3px 3px 0;height:14px}
+.leg{display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--mute)}.leg i{display:inline-block;width:12px;height:10px;vertical-align:middle;border-radius:2px}
+.smalls{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.chart{position:relative;border:1px solid var(--line);border-radius:4px;padding:6px 8px}.ct{display:flex;justify-content:space-between;font-size:13px;color:#343a40}.ct b{font-size:15px}.vbad{color:#842029}
+.chart svg{width:100%;height:auto;display:block}.ln{fill:none;stroke:#2a78d6;stroke-width:2;stroke-linejoin:round}.lp{fill:#2a78d6;stroke:#fff;stroke-width:2}
+.thr{stroke:#dc3545;stroke-width:1;stroke-dasharray:4 3;opacity:.7}.thl{font-size:10px;fill:#842029}.grid{stroke:#e9ecef}.axl{font-size:10px;fill:#6c757d}
+.cx{stroke:#6c757d;stroke-width:1}.cxp{fill:#2a78d6;stroke:#fff;stroke-width:2}.tip{display:none;position:absolute;top:24px;background:#212529;color:#fff;font-size:12px;padding:3px 7px;border-radius:4px;pointer-events:none;white-space:nowrap}
+.ebars{width:100%;height:auto}.eb{fill:#2a78d6}
+.toast{pointer-events:none;position:fixed;right:16px;bottom:16px;background:#212529;color:#fff;padding:10px 14px;border-radius:6px;opacity:0;transition:.2s;z-index:30}
+.toast.on{opacity:.95}
+@media(max-width:800px){#side{width:62px}#side a span,#side .sec{display:none}.mbody{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="top"><span class="brand">Manutenzione 2.1</span><span class="badge bg-red">ADMIN</span><span class="badge bg-yel">MOCKUP · dati simulati</span>
+  <span id="clock"></span><small style="color:#ffffff88">JPWeb-style · v0.1 demo</small></div>
+<div id="wrap">
+  <nav id="side"></nav>
+  <main id="main"></main>
+</div>
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =================================================================== dati simulati
+   Valori di base dal rilievo del 11/11/2026 su una 2.1 sana. Nomi di ricambi e codici sono d'esempio. */
+const BASE=[["CP VERS","29.1.19"],["CM_VERS","EIGCU_EMMS"],["RVE_USR_VERS","RVE-PS-4G V0.14"],["RVE_AUX_VERS","RVE-PS-4G-AUX V0.17"],
+["RVE_RFID_VERS","RVE-RFID V 2.42"],["DISPLAY_VERS","01.44#001"],["DISPLAY STATUS","CONNECTED"],["CUID",""],["ACTIVE FLAG","ACTIVE"],
+["PPP0 ADDRESS","10.59.3.33"],["MODEM STATUS","CONNECTED"],["MODEM SIGNAL QUALITY","CSQ=24 PWR=-68dbm"],["AUX CONNECTION","CONNECTED"],
+["FTDI START COUNTER","1"],["RFID CONNECTION","CONNECTED"],["BLUETOOTH CONNECTION","DISABLED"],["SUPERCAP VOLTAGE","12.76 v"],
+["TEMPERATURE","41.53 c"],["AC POWER","ONLINE"],["CPU-TEMPERATURE","61.93 c"],["CPU-FREQ","198.00 Mhz"],["ANTITAMPER OK STATUS","CLOSED"],
+["MAIN POWER VOLTAGE","24.96 v"],["SEC POWER VOLTAGE","13.49 v"],["AUX SUPPLY 5V","4.90 v"],["AUX SUPPLY 12V","12.91 v"],["AUX SUPPLY USB","4.84 v"],
+["AUX TEMPERATURE","35.98 C"],["AUX LEDS CURRENT","3.21 A"],["AUX LUX","269"],["AUX RFID POWER","ON"],["AUX FAN POWER","ON"],["AUX HEATER POWER","OFF"],
+["AUX PANEL POWER","ON"],["AUX FAULT","00000000"],["USER STATUS","IDLE"]];
+const SOCK=[["EVSE TASK {n} STATUS","IDLE"],["EVSE TASK {n} END CHARGE RESULT","INIT_RESET"],["EVSE TASK {n} SOCKET IN USE","NONE"],
+["EVSE TASK {n} TEMPERATURE","41.52 c"],["SOCKET TYPE {n}","UNKNOWN"],["SOCKET {n} PROXIMITY","65535 Ohm"],["SOCKET {n} CONTROL PILOT","11.90 v."],
+["SOCKET {n} POWER SWITCH","OPEN"],["SOCKET {n} POWER BREAKER","CLOSE"],["SOCKET {n} DIFF.BREAKER","CLOSE"],
+["METER {n} TOTAL ACTIVE ENERGY","171605 wh"],["METER {n} ISTANT POWER SUPPLY","0 w"],["METER {n} SESSION ACTIVE ENERGY","0 wh"],
+["METER {n} CURRENT L1","0.00 A"],["EVSE {n} MAX CURRENT","0.00 A"],["EVSE {n} CHARGE CURRENT","0.00 A"]];
+
+BASE.push(["LANGUAGE.INI","it de US es fr hu ru ro no UK pl he ca"],["DATE/TIME LINUX",""],["FTDI LAST START","11/11/2026-11:42:11"],["FREE VALUE","FREE VALUE"]);
+SOCK.push(["EVSE TASK {n} GROUP",""],["SOCKET {n} PWM STATUS",""],["METER {n} TOTAL REACTIVE ENERGY","264 wh"],["METER {n} SESSION REACTIVE ENERGY","0 wh"],
+ ["EVSE {n} PHASE NUMBER","0"],["EVSE {n} CP SIMPLIFIED","0"],["EVSE {n} BOOKING TIME","0"],["EVSE {n} BOOKING ID",""],["EVSE {n} BOOKING RFID_ID",""],
+ ["EVSE {n} BLE BOOKING",""],["EVSE {n} BLE CLIENT_ID",""]);
+/* ordine e impaginazione della pagina "Informazioni Diagnostiche" vera (due coppie per riga) */
+const FULL_TOP=[["CP VERS","CM_VERS"],["RVE_USR_VERS","RVE_AUX_VERS"],["RVE_RFID_VERS","DISPLAY_VERS"],["DISPLAY STATUS","LANGUAGE.INI"],["CUID","ACTIVE FLAG"],
+ ["PPP0 ADDRESS","MODEM STATUS"],["MODEM SIGNAL QUALITY","DATE/TIME LINUX"],["AUX CONNECTION","FTDI START COUNTER"],["FTDI LAST START","RFID CONNECTION"],
+ ["BLUETOOTH CONNECTION","SUPERCAP VOLTAGE"],["TEMPERATURE","AC POWER"],["CPU-TEMPERATURE","CPU-FREQ"],["ANTITAMPER OK STATUS","MAIN POWER VOLTAGE"],
+ ["SEC POWER VOLTAGE","AUX SUPPLY 5V"],["AUX SUPPLY 12V","AUX SUPPLY USB"],["AUX TEMPERATURE","AUX LEDS CURRENT"],["AUX LUX","AUX RFID POWER"],
+ ["AUX FAN POWER","AUX HEATER POWER"],["AUX PANEL POWER","AUX FAULT"],["FREE VALUE","USER STATUS"]];
+const FULL_SOCK=["EVSE TASK {n} STATUS","EVSE TASK {n} GROUP","EVSE TASK {n} END CHARGE RESULT","EVSE TASK {n} SOCKET IN USE","EVSE TASK {n} TEMPERATURE",
+ "SOCKET TYPE {n}","SOCKET {n} PROXIMITY","SOCKET {n} CONTROL PILOT","SOCKET {n} PWM STATUS","SOCKET {n} POWER SWITCH","SOCKET {n} POWER BREAKER",
+ "SOCKET {n} DIFF.BREAKER","METER {n} TOTAL ACTIVE ENERGY","METER {n} TOTAL REACTIVE ENERGY","METER {n} ISTANT POWER SUPPLY","METER {n} SESSION ACTIVE ENERGY",
+ "METER {n} SESSION REACTIVE ENERGY","METER {n} CURRENT L1","EVSE {n} MAX CURRENT","EVSE {n} CHARGE CURRENT","EVSE {n} PHASE NUMBER","EVSE {n} CP SIMPLIFIED",
+ "EVSE {n} BOOKING TIME","EVSE {n} BOOKING ID","EVSE {n} BOOKING RFID_ID","EVSE {n} BLE BOOKING","EVSE {n} BLE CLIENT_ID"];
+
+const STATIONS=[
+ {id:"rm01",nome:"Roma Casalotti 01",ip:"10.20.1.11",over:{}},
+ {id:"rm02",nome:"Roma Boccea 02",ip:"10.20.1.12",over:{"DISPLAY STATUS":"DISCONNECTED"}},
+ {id:"rm03",nome:"Roma Aurelio 03",ip:"10.20.1.13",over:{"SOCKET 0 POWER BREAKER":"OPEN","EVSE TASK 0 STATUS":"FAULTED","EVSE TASK 0 END CHARGE RESULT":"MCB_OPEN"}},
+ {id:"rm04",nome:"Roma Prati 04",ip:"10.20.1.14",charge:1,over:{}},
+ {id:"rm05",nome:"Fiumicino 05",ip:"10.20.2.21",over:{"AUX FAULT":"00000004","AUX SUPPLY 12V":"10.80 v","AUX FAN POWER":"OFF"}},
+ {id:"rm06",nome:"Ostia 06",ip:"10.20.2.22",over:{"MODEM STATUS":"DISCONNECTED","MODEM SIGNAL QUALITY":"CSQ=99 PWR=0dbm","PPP0 ADDRESS":"-"}},
+ {id:"rm07",nome:"Tivoli 07",ip:"10.20.3.31",over:{"SOCKET 1 POWER SWITCH":"CLOSE"}},
+ {id:"rm08",nome:"Frascati 08",ip:"10.20.3.32",over:{"RFID CONNECTION":"DISCONNECTED","ANTITAMPER OK STATUS":"OPEN","SUPERCAP VOLTAGE":"11.92 v"}},
+];
+
+/* ricambi d'esempio (in produzione da ricambi.csv / catalogo spare parts) */
+const PARTS={
+ "DISPLAY":{code:"DEMO-DSP-001",desc:"Display completo con cornice"},
+ "CAVO DISPLAY":{code:"DEMO-CBL-014",desc:"Cablaggio display ↔ CDA"},
+ "SCHEDA AUX TESTA":{code:"DEMO-AUX-020",desc:"Scheda PS4GAUX testa"},
+ "VENTOLA TESTA":{code:"DEMO-FAN-031",desc:"Ventola testa 12 V"},
+ "MAGNETOTERMICO PRESA 0":{code:"DEMO-MCB-040",desc:"Magnetotermico 40 A 4P"},
+ "MAGNETOTERMICO PRESA 1":{code:"DEMO-MCB-040",desc:"Magnetotermico 40 A 4P"},
+ "CONTATTORE PRESA 0":{code:"DEMO-CTT-052",desc:"Contattore 4P 40 A"},
+ "CONTATTORE PRESA 1":{code:"DEMO-CTT-052",desc:"Contattore 4P 40 A"},
+ "MODEM":{code:"DEMO-MDM-060",desc:"Modem 4G"},
+ "ANTENNA MODEM":{code:"DEMO-ANT-061",desc:"Antenna 4G con cavo"},
+ "LETTORE RFID":{code:"DEMO-RFD-070",desc:"Lettore RFID"},
+ "ANTITAMPER":{code:"DEMO-TMP-080",desc:"Microinterruttore antitamper"},
+ "DIFFERENZIALE PRESA 0":{code:"DEMO-RCB-045",desc:"Differenziale tipo A 40 A"},"DIFFERENZIALE PRESA 1":{code:"DEMO-RCB-045",desc:"Differenziale tipo A 40 A"},
+};
+
+/* regole (stesse di regole.csv del tool) */
+const RULES=[
+ ["DISPLAY STATUS","!=","CONNECTED","GUASTO","DISPLAY","Schermo non comunica","ALARM DISPLAY COMMUNICATION","G"],
+ ["AUX CONNECTION","!=","CONNECTED","GUASTO","SCHEDA AUX TESTA","Scheda AUX della testa non comunica","ALARM AUX COMMUNICATION","G"],
+ ["AUX FAULT","!=","00000000","GUASTO","SCHEDA AUX TESTA","Scheda AUX segnala guasti","ALARM AUX FAULT","G"],
+ ["AUX SUPPLY 12V","fuori","11.4|13.2","ATTENZIONE","SCHEDA AUX TESTA","12 V scheda AUX fuori range","WARNING AUX SUPPLY 12V","G"],
+ ["RFID CONNECTION","!=","CONNECTED","GUASTO","LETTORE RFID","Lettore RFID non comunica","ALARM RFID COMMUNICATION","G"],
+ ["MODEM STATUS","!=","CONNECTED","ATTENZIONE","MODEM","Modem non connesso","WARNING MODEM","G"],
+ ["AC POWER","!=","ONLINE","GUASTO","ALIMENTAZIONE","Rete non presente","ALARM AC POWER","G"],
+ ["ANTITAMPER OK STATUS","!=","CLOSED","ATTENZIONE","ANTITAMPER","Antitamper aperto","WARNING ANTITAMPER","G"],
+ ["MAIN POWER VOLTAGE","fuori","23|26","ATTENZIONE","ALIMENTATORE 24V","Tensione principale fuori range","WARNING MAIN POWER","G"],
+ ["SOCKET {n} POWER BREAKER","!=","CLOSE","GUASTO","MAGNETOTERMICO PRESA {n}","Magnetotermico aperto","ALARM BREAKER OPEN","S"],
+ ["SOCKET {n} DIFF.BREAKER","!=","CLOSE","GUASTO","DIFFERENZIALE PRESA {n}","Differenziale aperto","ALARM RCCB OPEN","S"],
+ ["SOCKET {n} POWER SWITCH","contattore","","GUASTO","CONTATTORE PRESA {n}","Contattore chiuso a riposo: possibile contatto incollato","ALARM CONTACTOR FAILURE","S"],
+ ["EVSE TASK {n} STATUS","contiene","FAULT","GUASTO","PRESA {n}","Presa in guasto","ALARM EVSE FAULT","S"],
+];
+
+/* procedure di manutenzione (Remote = verifiche da remoto, On-Field = ricambi) */
+const PROCS={
+ "DISPLAY":{remote:[["Leggi DISPLAY STATUS dalla pagina di stato","WEB","DISPLAY STATUS","CONNECTED"],
+   ["Ping dello schermo (IP interno da displayip.txt)","SSH","ping","ok"],["Riavvio servizio schermo e nuova lettura","SSH","DISPLAY STATUS","CONNECTED"]],
+   onfield:[["CAVO DISPLAY","Il cavo display ↔ CDA è inserito e integro?"],["DISPLAY","Dopo il riaggancio lo schermo si accende?"]]},
+ "SCHEDA AUX TESTA":{remote:[["Leggi AUX CONNECTION e AUX FAULT","WEB","AUX FAULT","00000000"],["Lettura stato scheda AUX (comando 06)","AUX","AUX SUPPLY 12V","12"],
+   ["Prova ventola (07 con controllo termico sospeso, poi ripristino)","AUX","AUX FAN POWER","ON"]],
+   onfield:[["VENTOLA TESTA","La ventola della testa gira?"],["SCHEDA AUX TESTA","Sostituita la scheda AUX, i LED tornano verdi?"]]},
+ "MAGNETOTERMICO PRESA {n}":{remote:[["Leggi SOCKET {n} POWER BREAKER","WEB","SOCKET {n} POWER BREAKER","CLOSE"],
+   ["Controlla corto/dispersione dal meter (corrente a riposo)","WEB","METER {n} CURRENT L1","0"],["Attesa 15 s","WAIT","",""]],
+   onfield:[["MAGNETOTERMICO PRESA {n}","Il magnetotermico si richiude e resta chiuso?"],["CONTATTORE PRESA {n}","Ci sono segni di bruciatura sui contatti?"]]},
+ "CONTATTORE PRESA {n}":{remote:[["Leggi SOCKET {n} POWER SWITCH a riposo","WEB","SOCKET {n} POWER SWITCH","OPEN"],["Leggi EVSE TASK {n} STATUS","WEB","EVSE TASK {n} STATUS","IDLE"]],
+   onfield:[["CONTATTORE PRESA {n}","Il contattore resta chiuso senza bobina alimentata?"]]},
+ "MODEM":{remote:[["Leggi MODEM STATUS e CSQ","WEB","MODEM STATUS","CONNECTED"],["Reset modem e nuova lettura dopo 60 s","SSH","MODEM STATUS","CONNECTED"]],
+   onfield:[["ANTENNA MODEM","L'antenna è collegata e integra?"],["MODEM","Il LED del modem lampeggia?"]]},
+ "LETTORE RFID":{remote:[["Leggi RFID CONNECTION","WEB","RFID CONNECTION","CONNECTED"],["Leggi AUX RFID POWER","WEB","AUX RFID POWER","ON"]],
+   onfield:[["LETTORE RFID","Avvicinando la tessera di prova il lettore emette il suono?"]]},
+ "ANTITAMPER":{remote:[["Leggi ANTITAMPER OK STATUS","WEB","ANTITAMPER OK STATUS","CLOSED"]],onfield:[["ANTITAMPER","Il pannello è chiuso correttamente?"]]},
+};
+
+
+/* =================================================================== configurazione (nomi e manuali)
+   Salvata nel browser; si esporta in un file JSON da usare anche nel tool vero. */
+const DEF_NAMES={"SCHEDA AUX TESTA":"Scheda PS4GAUX (testa)","VENTOLA TESTA":"Ventola testa","DISPLAY":"Display","CAVO DISPLAY":"Cavo display",
+ "LETTORE RFID":"Lettore RFID","MODEM":"Modem 4G","ANTENNA MODEM":"Antenna 4G","ANTITAMPER":"Antitamper","ALIMENTAZIONE":"Alimentazione di rete","ALIMENTATORE 24V":"Alimentatore 24 V"};
+const EMPTY_CFG=()=>({names:{},labels:{},msgs:{},manuals:{},codes:{},faultParts:{}});
+let CFG=EMPTY_CFG();
+try{const x=JSON.parse(localStorage.getItem("manut21cfg")||"null");if(x)CFG=Object.assign(EMPTY_CFG(),x)}catch(e){}
+function saveCfg(){try{localStorage.setItem("manut21cfg",JSON.stringify(CFG))}catch(e){toast("Il browser non permette di salvare: usa «Esporta»")}}
+function defName(k){return DEF_NAMES[k]||(k.charAt(0)+k.slice(1).toLowerCase())}
+function nm(k){return k?(CFG.names[k]||defName(k)):""}
+function lbl(v){return CFG.labels[v]||v}
+function part(k){const b=PARTS[k];const code=CFG.codes[k]||(b&&b.code);if(!code)return null;return {code,desc:(b&&b.desc)||""}}
+function man(alarm){const u=alarm&&CFG.manuals[alarm];if(!u)return"";return `<a class="man" href="${esc(u)}" target="_blank" rel="noopener" title="${esc(u)}">📖 Manuale</a>`}
+function faultCode(alarm,comp){return (CFG.faultParts&&CFG.faultParts[alarm])||part(comp)?.code||""}
+function codeDesc(code){for(const k of compKeys()){if(part(k)?.code===code)return part(k).desc||nm(k)}return ""}
+function fx(alarm,comp){const c=faultCode(alarm,comp);return (c?`<span class="spc" title="Ricambio da usare per ripristinare">🔧 ${esc(c)}</span> `:"")+man(alarm)}
+function compKeys(){const ks=new Set();RULES.forEach(r=>{if(r[7]==="S"){ks.add(r[4].replace("{n}","0"));ks.add(r[4].replace("{n}","1"))}else ks.add(r[4])});
+  Object.keys(PARTS).forEach(k=>ks.add(k));Object.values(PROCS).forEach(p=>p.onfield.forEach(([k])=>{if(k.includes("{n}")){ks.add(k.replace("{n}","0"));ks.add(k.replace("{n}","1"))}else ks.add(k)}));return [...ks].sort()}
+function allVars(){return Object.keys(STATIONS[0].v)}
+
+/* =================================================================== stato */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=v=>{const m=String(v).match(/-?\d+(?:[.,]\d+)?/);return m?parseFloat(m[0].replace(",",".")):null};
+const LOG=[];let MAINT=null;
+
+STATIONS.forEach((s,i)=>{s.cuid="N.22XP22T3QQ1AN0"+(1096+i*37);s.v={};BASE.forEach(([k,v])=>s.v[k]=v);
+  for(const n of "01")SOCK.forEach(([k,v])=>s.v[k.replace("{n}",n)]=v);s.v.CUID=s.cuid;Object.assign(s.v,s.over);s.fixed={};
+  s.energy=[171605+i*913,127164+i*511];s.chargeT=[0,0];if(s.charge){startCharge(s,0,true)}});
+
+function startCharge(s,n,silent){s.v[`SOCKET ${n} POWER SWITCH`]="CLOSE";s.v[`EVSE TASK ${n} STATUS`]="CHARGING";s.v[`SOCKET ${n} PROXIMITY`]="220 Ohm";
+  s.v[`SOCKET TYPE ${n}`]="TYPE2 32A";s.v[`SOCKET ${n} CONTROL PILOT`]="6.02 v.";s.v[`EVSE TASK ${n} SOCKET IN USE`]="SOCKET "+n;s.chargeT[n]=Date.now();
+  if(!silent)toast(`Ricarica simulata avviata sulla presa ${n}`)}
+function stopCharge(s,n){s.v[`SOCKET ${n} POWER SWITCH`]="OPEN";s.v[`EVSE TASK ${n} STATUS`]="IDLE";s.v[`SOCKET ${n} PROXIMITY`]="65535 Ohm";s.v[`SOCKET TYPE ${n}`]="UNKNOWN";
+  s.v[`SOCKET ${n} CONTROL PILOT`]="11.90 v.";s.v[`EVSE TASK ${n} SOCKET IN USE`]="NONE";s.v[`EVSE TASK ${n} END CHARGE RESULT`]="EV_DISCONNECTED";s.chargeT[n]=0;
+  ["METER {n} ISTANT POWER SUPPLY","METER {n} CURRENT L1","EVSE {n} CHARGE CURRENT","EVSE {n} MAX CURRENT"].forEach(k=>s.v[k.replace("{n}",n)]=k.includes("POWER")?"0 w":"0.00 A");toast(`Ricarica fermata sulla presa ${n}`)}
+
+/* simulazione viva: piccole variazioni e ricariche in corso */
+function tick(){const t=Date.now()/1000;
+  STATIONS.forEach((s,i)=>{const j=(a,b)=>(a+b*Math.sin(t/17+i)).toFixed(2);
+    s.v["TEMPERATURE"]=j(41.5,0.6)+" c";s.v["CPU-TEMPERATURE"]=(s.id==="rm04"?j(78.4,0.4):j(61.9,1.2))+" c";s.v["AUX TEMPERATURE"]=j(36,0.8)+" C";
+    if(!s.over["MAIN POWER VOLTAGE"])s.v["MAIN POWER VOLTAGE"]=j(24.96,0.05)+" v";
+    if(s.v["MODEM STATUS"]==="CONNECTED"){const c=Math.round(22+3*Math.sin(t/40+i));s.v["MODEM SIGNAL QUALITY"]=`CSQ=${c} PWR=${-113+2*c}dbm`}
+    s.v["AUX LUX"]=String(Math.round(260+40*Math.sin(t/30+i)));
+    for(const n of [0,1]){if(s.v[`EVSE TASK ${n} STATUS`]==="CHARGING"){const I=(31.2+0.5*Math.sin(t/7+n)).toFixed(2),P=Math.round(3*230*I);
+      s.energy[n]+=P*2/3600;s.v[`METER ${n} CURRENT L1`]=I+" A";s.v[`EVSE ${n} CHARGE CURRENT`]=I+" A";s.v[`EVSE ${n} MAX CURRENT`]="32.00 A";
+      s.v[`METER ${n} ISTANT POWER SUPPLY`]=P+" w";s.v[`METER ${n} SESSION ACTIVE ENERGY`]=Math.round((Date.now()-s.chargeT[n])/1000*P/3600)+" wh"}
+      s.v[`METER ${n} TOTAL ACTIVE ENERGY`]=Math.round(s.energy[n])+" wh"}});
+  const d=new Date(),z=x=>String(x).padStart(2,"0"),dt=`${z(d.getDate())}.${z(d.getMonth()+1)}.${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}:${z(d.getSeconds())}`;
+  STATIONS.forEach(s=>{s.v["DATE/TIME LINUX"]=dt;for(const n of [0,1]){const c=s.v[`EVSE TASK ${n} STATUS`]==="CHARGING";s.v[`SOCKET ${n} PWM STATUS`]=c?"ON":"";s.v[`EVSE ${n} PHASE NUMBER`]=c?"3":"0"}});
+  $("#clock").textContent=d.toLocaleString("it-IT");render(true)}
+
+/* =================================================================== regole */
+function check(op,val,ref){if(val==null)return false;const sv=String(val).toUpperCase(),sr=String(ref).toUpperCase();
+  if(op==="!=")return sv!==sr;if(op==="=")return sv===sr;if(op==="contiene")return sv.includes(sr);
+  if(op==="fuori"){const[lo,hi]=ref.split("|").map(Number),n=num(val);return n!=null&&(n<lo||n>hi)}return false}
+function evaluate(s){const out=[];
+  RULES.forEach(([v,op,ref,sev,comp,msg,alarm,scope])=>{for(const n of (scope==="S"?["0","1"]:[""])){
+    const var_=v.replace("{n}",n),c=comp.replace("{n}",n);let hit;
+    if(op==="contattore")hit=s.v[var_]==="CLOSE"&&s.v[`EVSE TASK ${n} STATUS`]!=="CHARGING";else hit=check(op,s.v[var_],ref);
+    if(hit&&!s.fixed[c])out.push({sev,comp:c,msg:(scope==="S"?`Presa ${n}: `:"")+(CFG.msgs[alarm]||msg)+` (${s.v[var_]})`,var:var_,alarm,scope:scope==="S"?"SCK"+n:"GLOBAL",n})}});
+  const ord={GUASTO:2,ATTENZIONE:1};out.sort((a,b)=>(ord[b.sev]||0)-(ord[a.sev]||0));
+  return {esito:out.length?out[0].sev:"OK",an:out}}
+
+/* =================================================================== navigazione */
+let R={page:"cruscotto",st:null};
+function go(page,st){R={page,st:st??R.st};location.hash=page+(R.st?"/"+R.st:"");render()}
+window.onhashchange=()=>{const[p,s]=location.hash.slice(1).split("/");if(p&&p!==R.page||s!==R.st){R={page:p||"flotta",st:s||null};render()}};
+function side(){if(!R.st)R.st=STATIONS[0].id;const s=STATIONS.find(x=>x.id===R.st);
+  const item=(p,ic,t,need)=>`<a href="#" data-p="${p}" class="${R.page===p?"on":""}" ${need&&!s?'style="opacity:.35;pointer-events:none"':""}><span class="ic">${ic}</span><span>${t}</span></a>`;
+  $("#side").innerHTML=item("cruscotto","◉","Cruscotto")+item("flotta","▦","Flotta")+item("report","☰","Report di flotta")+`<hr><div class="sec">Colonnina</div><div style="padding:0 14px 6px"><select id="stsel" style="width:100%;padding:6px;background:#343a40;color:#fff;border:1px solid #495057;border-radius:4px">${STATIONS.map(x=>`<option value="${x.id}" ${x.id===R.st?"selected":""}>${esc(x.nome)} · ${evaluate(x).esito}</option>`).join("")}</select></div>`
+   +item("diag","▤","Pagina diagnostica",1)+item("dashboard","◷","Dashboard",1)+item("andamento","📈","Andamento",1)+item("sistema","⚙","System",1)+item("sx","⚡","Left Socket",1)+item("dx","⚡","Right Socket",1)
+   +item("alarms","🔔","Alarms",1)+item("prove","♥","Prove AUX",1)+item("maint","🔧","Maintenance",1)
+   +`<hr><a href="#" data-p="cfg" class="${R.page==="cfg"?"on":""}"><span class="ic">✎</span><span>Nomi e manuali</span></a><a href="#" data-p="info"><span class="ic">ⓘ</span><span>Cos'è questo mockup</span></a>`;
+  $$("#side a[data-p]").forEach(a=>a.onclick=e=>{e.preventDefault();go(a.dataset.p)});
+  $("#stsel").onchange=e=>{const pg=["cruscotto","flotta","report","cfg","info"].includes(R.page)?"diag":R.page;go(pg,e.target.value)}}
+
+function render(live){side();const s=STATIONS.find(x=>x.id===R.st);
+  if(live&&$(".modal.on"))return;
+  if(live&&!$("#main [data-live]"))return;
+  const P={cruscotto,andamento,flotta,report,dashboard,sistema,sx:()=>socket(0),dx:()=>socket(1),alarms,prove,maint,info,cfg:cfgPage,diag:diagPage}[R.page]||cruscotto;
+  const html=P(s);if(html!==undefined)$("#main").innerHTML=html;bind()}
+function crumb(t){const s=STATIONS.find(x=>x.id===R.st);return `<div class="crumb"><b>Home</b> / ${s&&!["cruscotto","flotta","report","info","cfg"].includes(R.page)?esc(s.nome)+" / ":""}${t}</div>`}
+
+/* fillTable come nella JPWeb */
+function led(c,bl){return `<span class="led led-${c}${bl?" blink":""}"></span>`}
+function kv(keys,s){return `<table class="kv">${keys.filter(k=>k in s.v).map(k=>{const v=s.v[k];let cell=esc(v);
+  if(/STATUS$|CONNECTION$/.test(k)&&!/USER|EVSE/.test(k))cell=`${led(v==="CONNECTED"?"green":v==="DISABLED"?"gray":"red")} <small>${esc(v)}</small>`;
+  else if(/POWER BREAKER|DIFF.BREAKER/.test(k))cell=`${led(v==="CLOSE"?"green":"red")} <small>${esc(v)}</small>`;
+  else if(/POWER SWITCH/.test(k))cell=`${led(v==="CLOSE"?"green":"gray")} <small>${esc(v)}</small>`;
+  else if(/^AUX (RFID|FAN|HEATER|PANEL) POWER$/.test(k))cell=`${led(v==="ON"?"green":"gray")} <small>${esc(v)}</small>`;
+  else if(k==="AUX FAULT")cell=`${led(v==="00000000"?"green":"red")} <small>${esc(v)}</small>`;
+  else if(k==="ANTITAMPER OK STATUS")cell=`${led(v==="CLOSED"?"green":"red")} <small>${esc(v)}</small>`;
+  else if(k==="MODEM SIGNAL QUALITY"){const c=num(v)||0,p=c===99?0:100*c/31,col=c>22?"#28a745":c>12?"#ffc107":"#dc3545";cell=`<div class="prog"><div style="width:${Math.max(p,8)}%;background-color:${col}">${c}</div></div>`}
+  else if(/CHARGE CURRENT|CURRENT L1/.test(k)){const c=num(v)||0;cell=`<div class="prog"><div style="width:${100*c/32}%;background-color:${c>16?"#28a745":c>6?"#ffc107":"#dc3545"}">${esc(v)}</div></div>`}
+  return `<tr><td>${esc(lbl(k))}</td><td>${cell}</td></tr>`}).join("")}</table>`}
+function card(t,body,ic=""){return `<div class="card"><h5>${ic} ${t}</h5><div class="bd">${body}</div></div>`}
+
+/* =================================================================== pagine */
+function flotta(){const rs=STATIONS.map(s=>({s,...evaluate(s)}));const c=k=>rs.filter(r=>r.esito===k).length;
+  const ord={GUASTO:2,ATTENZIONE:1,OK:0};rs.sort((a,b)=>ord[b.esito]-ord[a.esito]);
+  return crumb("Flotta")+`<div class="note">Mockup con dati simulati: nessuna colonnina vera e nessun comando inviato. I valori di base vengono da una 2.1 sana (rilievo 11/11/2026); guasti, nomi e codici ricambio sono d'esempio.</div>
+  <div class="card" data-live><h5>▦ Diagnosi di flotta <span style="flex:1"></span><button class="btn btn-p" id="rerun">▶ Avvia diagnosi</button></h5><div class="bd">
+  <div class="sumrow"><span><span class="pill p-GUASTO">GUASTO</span> ${c("GUASTO")}</span><span><span class="pill p-ATTENZIONE">ATTENZIONE</span> ${c("ATTENZIONE")}</span><span><span class="pill p-OK">OK</span> ${c("OK")}</span><small>${STATIONS.length} colonnine · ultima lettura ${new Date().toLocaleTimeString("it-IT")}</small></div>
+  <table class="flt"><tr><th>Esito</th><th>Colonnina</th><th>CUID</th><th>Anomalie</th><th></th></tr>${rs.map(r=>`<tr class="clk" data-st="${r.s.id}">
+  <td><span class="pill p-${r.esito}">${r.esito}</span></td><td>${esc(r.s.nome)}<br><small>${r.s.ip}</small></td><td><small>${r.s.cuid}</small></td>
+  <td>${r.an.length?r.an.map(a=>`<div>${a.sev==="GUASTO"?"🔴":"🟡"} ${esc(a.msg)} ${fx(a.alarm,a.comp)}</div>`).join(""):'<span class="mute">nessuna</span>'}</td>
+  <td>${r.an.some(a=>PROCS[procKey(a.comp)])?`<button class="btn btn-d btn-sm" data-an="${r.s.id}">Analysis</button>`:""}</td></tr>`).join("")}</table></div></div>`}
+
+function dashboard(s){const e=evaluate(s);
+  return crumb("Dashboard")+`<div style="margin-bottom:12px"><span class="pill p-${e.esito}">${e.esito}</span> <b>${esc(s.nome)}</b> <small>${s.ip} · CUID ${s.cuid}</small></div><div class="cards" data-live>`
+  +card("Versions",kv(["CP VERS","CM_VERS","RVE_USR_VERS","RVE_AUX_VERS","RVE_RFID_VERS","DISPLAY_VERS","CUID","ACTIVE FLAG"],s),"⚙")
+  +card("E-Meter SCK0",kv(["METER 0 TOTAL ACTIVE ENERGY","METER 0 ISTANT POWER SUPPLY","METER 0 SESSION ACTIVE ENERGY","METER 0 CURRENT L1"],s),"⚡")
+  +card("E-Meter SCK1",kv(["METER 1 TOTAL ACTIVE ENERGY","METER 1 ISTANT POWER SUPPLY","METER 1 SESSION ACTIVE ENERGY","METER 1 CURRENT L1"],s),"⚡")
+  +card("Connessioni",kv(["DISPLAY STATUS","AUX CONNECTION","RFID CONNECTION","BLUETOOTH CONNECTION","MODEM STATUS","MODEM SIGNAL QUALITY","PPP0 ADDRESS"],s),"📶")
+  +(signals(s).length?card("Segnali predittivi",sigList(signals(s)),"🔮"):"")+card("Anomalie",e.an.length?`<table class="lines">${e.an.map(a=>`<tr><td><span class="pill p-${a.sev}">${a.sev}</span></td><td>${esc(a.msg)} ${fx(a.alarm,a.comp)}<br><small>${esc(nm(a.comp))}${part(a.comp)?` · <span class="code">${part(a.comp).code}</span>`:""}</small></td></tr>`).join("")}</table>`:'<span class="mute">Nessuna anomalia</span>',"🔔")
+  +"</div>"}
+
+function sistema(s){return crumb("System")+`<div class="cards" data-live>`
+  +card("Alimentazioni",kv(["AC POWER","MAIN POWER VOLTAGE","SEC POWER VOLTAGE","SUPERCAP VOLTAGE","AUX SUPPLY 12V","AUX SUPPLY 5V","AUX SUPPLY USB"],s),"🔌")
+  +card("Temperature e CPU",kv(["TEMPERATURE","CPU-TEMPERATURE","CPU-FREQ","AUX TEMPERATURE"],s),"🌡")
+  +card("Testa (scheda AUX)",kv(["AUX CONNECTION","AUX FAULT","AUX LEDS CURRENT","AUX LUX","AUX RFID POWER","AUX FAN POWER","AUX HEATER POWER","AUX PANEL POWER","ANTITAMPER OK STATUS","USER STATUS"],s),"💡")
+  +card("Comandi (simulati)",`<div class="ctl"><label>Riavvio CP_main</label><button class="btn btn-o" data-fake="Riavvio CP_main">RESTART</button></div>
+   <div class="ctl"><label>Reset modem</label><button class="btn btn-o" data-fake="Reset modem">RESET</button></div>
+   <div class="ctl"><label>Reboot colonnina</label><button class="btn btn-o" data-fake="Reboot">REBOOT</button></div>
+   <small>Nel tool vero questi comandi non ci sono: la v0.1 è in sola lettura. Qui sono solo per vedere l'interfaccia.</small>`,"⚙")+"</div>"}
+
+function socket(n){const s=STATIONS.find(x=>x.id===R.st);const k=a=>a.map(x=>x.replace("{n}",n));
+  const ch=s.v[`EVSE TASK ${n} STATUS`]==="CHARGING";
+  return crumb(n?"Right Socket":"Left Socket")+`<div class="cards" data-live>`
+  +card(`Status ${n?"Right":"Left"} Socket`,kv(k(["EVSE TASK {n} STATUS","EVSE TASK {n} END CHARGE RESULT","EVSE TASK {n} SOCKET IN USE","SOCKET TYPE {n}","SOCKET {n} PROXIMITY","SOCKET {n} CONTROL PILOT","SOCKET {n} POWER SWITCH","SOCKET {n} POWER BREAKER","SOCKET {n} DIFF.BREAKER","EVSE TASK {n} TEMPERATURE"]),s),"🚘")
+  +card(`E-Meter SCK${n}`,kv(k(["METER {n} TOTAL ACTIVE ENERGY","METER {n} ISTANT POWER SUPPLY","METER {n} SESSION ACTIVE ENERGY","METER {n} CURRENT L1","EVSE {n} MAX CURRENT","EVSE {n} CHARGE CURRENT"]),s),"⚡")
+  +card(`Control ${n?"Right":"Left"} Socket (simulato)`,`<div class="ctl"><label>Charge Control</label><button class="btn btn-g" data-ch="${n}" ${ch?"disabled":""}>START</button><button class="btn btn-d" data-st="${n}" ${ch?"":"disabled"}>STOP</button></div>
+   <div class="ctl"><label>MCB Recloser</label><button class="btn btn-o" data-mcb="${n}">CLOSE</button></div>
+   <div class="ctl"><label>RCCB Recloser</label><button class="btn btn-o" data-rccb="${n}">CLOSE</button></div><small>Simula ricarica e richiusura delle protezioni per vedere come cambiano valori e diagnosi.</small>`,"🎛")+"</div>"}
+
+function alarms(s){const e=evaluate(s);
+  const grp=(t,sc,kind)=>{const list=RULES.filter(r=>sc==="GLOBAL"?r[7]==="G":r[7]==="S").filter(r=>kind==="A"?r[3]==="GUASTO":r[3]!=="GUASTO");
+    const rows=[...new Map(list.map(r=>[r[6],r])).values()].map(r=>{const hit=e.an.find(a=>a.alarm===r[6]&&a.scope===sc);
+      return `<tr><td style="font-size:14px">${esc(lbl(r[6]))} ${fx(r[6],r[4].replace("{n}","0"))}</td><td style="width:120px">${led(hit?(kind==="A"?"red":"yellow"):"green")}
+      ${hit&&PROCS[procKey(hit.comp)]?` <button class="btn btn-d btn-sm" data-anc="${esc(hit.comp)}">Analysis</button>`:""}</td></tr>`}).join("");
+    return card(t,`<table class="lines">${rows}</table>`,kind==="A"?"🚨":"⚠")};
+  return crumb("Alarms")+`<div class="cards" data-live>${grp("Global Faults","GLOBAL","A")}${grp("Left Socket Faults","SCK0","A")}${grp("Right Socket Faults","SCK1","A")}
+  ${grp("Global Warnings","GLOBAL","W")}</div><small>Allarmi ricavati dalle regole sulla pagina di stato: sulla 2.1 non esiste un elenco allarmi come sulla 2.2.</small>`}
+
+function prove(s){return crumb("Prove AUX")+`<div class="note">Livello 1 (prossima versione): prove attive sulla scheda AUX, con controllo termico sempre ripristinato. Qui sono simulate.</div><div class="cards">`
+  +card("Prove disponibili",[["06","Lettura stato scheda AUX","alimentazioni, temperatura, rfid/fan/heater/panel"],["08","Cicalino","il tecnico conferma di averlo sentito"],
+    ["10","Test LED","sequenza colori, conferma visiva"],["07","Ventola e riscaldatore","TempContEn=0 → comando → verifica → TempContEn=1"]].map(([c,t,d])=>
+    `<div class="ctl" style="align-items:flex-start"><span class="code">${c}</span><div style="flex:1"><b>${t}</b><br><small>${d}</small></div><button class="btn btn-p btn-sm" data-prova="${c}">Esegui</button><span id="pr-${c}"></span></div>`).join(""),"♥")
+  +card("Esito",`<div id="provalog" class="mute">Nessuna prova eseguita.</div>`,"📋")+"</div>"}
+
+/* ---------- Maintenance: Remote → On-Field come nella JPWeb diagnostic */
+function procKey(comp){if(PROCS[comp])return comp;const g=comp.replace(/[01]$/,"{n}");return PROCS[g]?g:null}
+function maint(s){const e=evaluate(s);const comps=[...new Set(e.an.map(a=>a.comp))].filter(c=>procKey(c));
+  const ev=LOG.filter(l=>l.st===s.id);
+  return crumb("Maintenance")+`<div class="cards"><div class="card"><h5>🔧 Avvia un'analisi</h5><div class="bd">
+   <div class="ctl"><label>Analisi</label><select id="selan" style="flex:1;padding:6px">${(comps.length?comps:Object.keys(PROCS).map(k=>k.replace("{n}","0"))).map(c=>`<option value="${esc(c)}">${esc(nm(c))}</option>`).join("")}</select></div>
+   <div class="ctl"><label>Tipo</label><select id="seltype" style="flex:1;padding:6px"><option>Remote</option><option>On-Field</option></select></div>
+   <button class="btn btn-p" id="startm">START</button> <small>${comps.length?"Proposte le analisi per le anomalie attive.":"Nessuna anomalia attiva: elenco completo."}</small></div></div>
+   <div class="card"><h5>📒 Registro manutenzione</h5><div class="bd">${ev.length?`<table class="ev"><tr><th>Data</th><th>Analisi</th><th>Tipo</th><th>Esito</th><th>Ricambi</th></tr>${ev.map(l=>`<tr><td>${l.t}</td><td>${esc(nm(l.an))}</td><td>${l.type}</td><td><span class="pill p-${l.res==="RISOLTO"?"OK":l.res==="SOSTITUZIONE"?"ATTENZIONE":"GUASTO"}">${l.res}</span></td><td>${l.parts.map(p=>`<span class="code">${p}</span>`).join(" ")||"-"}</td></tr>`).join("")}</table>`:'<span class="mute">Nessun evento.</span>'}</div></div></div>`}
+
+function openMaint(s,comp,type){const k=procKey(comp),n=(comp.match(/[01]$/)||[""])[0],P=PROCS[k];if(!P)return;
+  const sub=x=>x.replace(/\{n\}/g,n);MAINT={s,comp,type,n,alarm:(evaluate(s).an.find(a=>a.comp===comp)||{}).alarm||RULES.find(r=>r[4].replace("{n}",n)===comp)?.[6],steps:P.remote.map(r=>({t:sub(r[0]),kind:r[1],var:sub(r[2]),exp:r[3],st:""})),
+    parts:P.onfield.map(([p,q])=>({p:sub(p),q,ans:null})),i:0,phase:type==="Remote"?"remote":"onfield"};drawModal()}
+function drawModal(){const M=MAINT,m=$("#modal");if(!M){m.classList.remove("on");return}m.classList.add("on");
+  let left,right,foot;
+  if(M.phase==="remote"){left=`<h4 style="margin-top:0">Test List</h4><ul class="steps">${M.steps.map((x,i)=>`<li class="${x.st}"><span>${esc(x.t)}<br><small>${x.kind}</small></span><span>${x.st==="pass"?"✔":x.st==="fail"?"✖":x.st==="run"?"…":""}</span></li>`).join("")}</ul>`;
+    const done=M.steps.every(x=>x.st==="pass"||x.st==="fail"),fail=M.steps.some(x=>x.st==="fail");
+    right=`<h4 style="margin-top:0">Test Results · ${esc(nm(M.comp))} ${fx(M.alarm,M.comp)}</h4>${M.running?`<p>Running test: <b>${esc(M.steps[M.i]?.t||"")}</b></p><p>Please wait...</p>`:done?
+      (fail?`<p style="font-size:18px">⚠ Il problema <b>persiste</b>: serve intervento in campo.</p><p>Ricambi probabili:</p>${M.parts.map(p=>partBox(p.p)).join("")}`:`<p style="font-size:18px">✔ <b>ISSUE FIXED</b> da remoto.</p>`):
+      `<p>${M.steps.length} verifiche da remoto, senza fermare la colonnina.</p><p class="mute">Premi Start.</p>`}`;
+    foot=!M.running&&!done?`<button style="background:#007bff" id="mstart">Start</button><button style="background:#6c757d" id="mclose">Chiudi</button>`
+      :done?`<button style="background:#dc3545" id="mclose">EXIT</button>${fail?`<button style="background:#28a745" id="mnext">NEXT → On-Field</button>`:`<button style="background:#007bff" id="mdone">Done</button>`}`:`<button style="background:#6c757d" disabled>…</button>`}
+  else if(M.phase==="onfield"){const cur=M.parts.find(p=>p.ans===null);
+    left=`<h4 style="margin-top:0">Ricambi da verificare</h4>${M.parts.map(p=>`<div style="padding:6px 0">${p.ans===null?"○":p.ans?"✔":"✖"} ${esc(nm(p.p))}</div>`).join("")}`;
+    right=cur?`<h4 style="margin-top:0">${esc(nm(cur.p))} ${man(M.alarm)}</h4>${partBox(cur.p)}<p style="font-size:18px;margin-top:18px">${esc(cur.q)}</p>`:
+      `<h4 style="margin-top:0">Fine procedura On-Field</h4><p>Ricambi sostituiti: ${M.parts.filter(p=>p.ans===false).map(p=>`<span class="code">${part(p.p)?.code||"?"}</span> ${esc(nm(p.p))}`).join(", ")||"nessuno"}</p>`;
+    foot=cur?`<button style="background:#dc3545" data-ans="0">NO → sostituisci</button><button style="background:#28a745" data-ans="1">YES</button>`:`<button style="background:#007bff" id="mdone">Done</button>`}
+  $("#mbox").innerHTML=`<div class="mbody"><div class="mleft">${left}</div><div class="mright">${right}</div></div><div class="mfoot">${foot}</div>`;
+  $("#mstart")&&($("#mstart").onclick=runRemote);$("#mclose")&&($("#mclose").onclick=()=>{MAINT=null;drawModal();render()});
+  $("#mnext")&&($("#mnext").onclick=()=>{M.phase="onfield";drawModal()});$("#mdone")&&($("#mdone").onclick=finishMaint);
+  $$("[data-ans]").forEach(b=>b.onclick=()=>{const cur=M.parts.find(p=>p.ans===null);cur.ans=b.dataset.ans==="1";drawModal()})}
+function partBox(p){const x=part(p);return `<div class="part"><div class="ph">foto<br>${esc(nm(p))}</div><div><b>${esc(nm(p))}</b><br>${x?`<span class="code">${x.code}</span> ${esc(x.desc)}`:'<i class="mute">codice da inserire in ricambi.csv</i>'}</div></div>`}
+function runRemote(){const M=MAINT;M.running=true;M.i=0;const s=M.s;
+  const step=()=>{if(M.i>=M.steps.length){M.running=false;drawModal();return}const x=M.steps[M.i];x.st="run";drawModal();
+    setTimeout(()=>{let ok=true;if(x.kind==="WEB"||x.kind==="AUX"||x.kind==="SSH"){if(x.var in s.v){const v=s.v[x.var];ok=x.exp==="0"?(num(v)||0)===0:x.exp==="12"?Math.abs((num(v)||0)-12.5)<0.8:String(v).toUpperCase()===x.exp}
+        else ok=!evaluate(s).an.some(a=>a.comp===M.comp)}x.st=ok?"pass":"fail";M.i++;step()},x.kind==="WAIT"?1500:900)};step()}
+function finishMaint(){const M=MAINT,s=M.s,fail=M.steps.some(x=>x.st==="fail");const repl=M.parts.filter(p=>p.ans===false);
+  let res;if(M.phase==="remote"&&!fail)res="RISOLTO";else if(repl.length){res="SOSTITUZIONE";s.fixed[M.comp]=true;
+    if(/MAGNETOTERMICO/.test(M.comp)){s.v[`SOCKET ${M.n} POWER BREAKER`]="CLOSE";s.v[`EVSE TASK ${M.n} STATUS`]="IDLE"}
+    if(M.comp==="DISPLAY")s.v["DISPLAY STATUS"]="CONNECTED";if(/CONTATTORE/.test(M.comp))s.v[`SOCKET ${M.n} POWER SWITCH`]="OPEN"}
+  else res=M.phase==="onfield"?"ASSISTENZA":"DA FARE";
+  LOG.unshift({st:s.id,t:new Date().toLocaleString("it-IT"),an:M.comp,type:M.phase==="remote"?"Remote":"On-Field",res,parts:repl.map(p=>part(p.p)?.code||p.p)});
+  MAINT=null;drawModal();toast(`Registrato: ${res}`);go("maint",s.id)}
+
+function report(){const rs=STATIONS.map(s=>({s,...evaluate(s)}));const ord={GUASTO:2,ATTENZIONE:1,OK:0};rs.sort((a,b)=>ord[b.esito]-ord[a.esito]);
+  const K=kit(rs);const tab=(list,tipo)=>list.length?`<table class="lines kit"><tr><th style="width:34px">Preso</th><th>Codice</th><th>Descrizione</th><th>Q.tà</th><th>Per</th></tr>${list.map(x=>`<tr><td><span class="chk"></span></td><td><span class="code">${esc(x.code)}</span></td><td>${esc(x.desc)}</td><td><b>${x.qty}</b></td><td><small>${x.per.map(esc).join("<br>")}</small></td></tr>`).join("")}</table>`:`<span class="mute">Nessun ricambio ${tipo}.</span>`;
+  const c=k=>rs.filter(r=>r.esito===k).length;
+  return crumb("Report di flotta")+`<div class="card" style="margin-bottom:16px"><h5>☰ Report di flotta · ${new Date().toLocaleString("it-IT")} <span style="flex:1"></span>
+   <button class="btn btn-o noprint" id="kitcsv">Scarica lista ricambi (CSV)</button> <button class="btn btn-o noprint" onclick="window.print()">Stampa / PDF</button></h5><div class="bd">
+   <div class="sumrow"><span><span class="pill p-GUASTO">GUASTO</span> ${c("GUASTO")}</span><span><span class="pill p-ATTENZIONE">ATTENZIONE</span> ${c("ATTENZIONE")}</span><span><span class="pill p-OK">OK</span> ${c("OK")}</span><small>${STATIONS.length} colonnine</small></div>
+   <h4 style="margin:8px 0">📦 Ricambi da portare</h4>${tab(K.need,"necessario")}
+   <h4 style="margin:16px 0 8px">🧰 Di scorta <small>(guasti in attenzione e ricambi eventuali delle procedure On-Field)</small></h4>${tab(K.spare,"di scorta")}</div></div>
+  <div class="card"><h5>🔎 Dettaglio per colonnina</h5><div class="bd">
+  <table class="flt"><tr><th>Esito</th><th>Colonnina</th><th>CUID</th><th>Anomalie, ricambio da usare, manuale</th></tr>${rs.map(r=>`<tr><td><span class="pill p-${r.esito}">${r.esito}</span></td><td>${esc(r.s.nome)}<br><small>${r.s.ip}</small></td><td><small>${r.s.cuid}</small></td>
+  <td>${r.an.map(a=>`<div><b class="${a.sev==="GUASTO"?"":"mute"}">${a.sev}</b> ${esc(a.msg)} · <small>${esc(nm(a.comp))}</small> ${fx(a.alarm,a.comp)}</div>`).join("")||'<span class="mute">nessuna anomalia</span>'}</td></tr>`).join("")}</table></div></div>`}
+
+function info(){return crumb("Cos'è questo mockup")+card("Mockup Manutenzione 2.1",`<p>Un unico file HTML che si apre con doppio clic, senza programmi, senza rete e senza colonnine. Serve a mostrare come sarà lo strumento:</p>
+<ul><li><b>Cruscotto</b>: indicatori di flotta, riquadri per colonnina, segnali predittivi (andamenti verso la soglia, valori fuori dalla flotta, prese che non erogano), guasti per componente e guasti aperti da più tempo.</li>
+<li><b>Andamento</b>: 30 giorni di storico simulato per colonnina, con soglie, energia al giorno e cronologia.</li>
+<li><b>Flotta</b>: diagnosi di più colonnine in parallelo con esito, anomalie e pulsante <i>Analysis</i>.</li>
+<li><b>Dashboard, System, Left/Right Socket</b>: la pagina di stato della 2.1 riorganizzata come la JPWeb diagnostic della 2.2, con LED e barre.</li>
+<li><b>Alarms</b>: allarmi ricavati dalle regole sui valori della pagina.</li>
+<li><b>Maintenance</b>: analisi <i>Remote</i> (verifiche da remoto) e, se il problema persiste, <i>On-Field</i> con ricambi e domande al tecnico; tutto finisce nel registro.</li>
+<li><b>Pagina diagnostica</b>: la pagina di stato completa, come quella della colonnina, con le anomalie evidenziate.</li>
+<li><b>Report di flotta</b>: lista dei ricambi da portare (con caselle da spuntare e CSV), ricambi di scorta e dettaglio per colonnina.</li>
+<li><b>Nomi e manuali</b>: nomi, etichette, codice ricambio e link al manuale per ogni guasto.</li></ul>
+<p class="mute">Valori di base dal rilievo su una 2.1 sana del 11/11/2026. Guasti, nomi delle colonnine e codici ricambio (DEMO-…) sono inventati.
+Prova: apri «Roma Aurelio 03», vai su Left Socket e premi CLOSE su MCB Recloser; oppure da Flotta premi Analysis su «Roma Boccea 02».</p>`,"ⓘ")}
+
+
+
+
+/* =================================================================== storico simulato, segnali, cruscotto, andamento */
+const LIMITS={"SUPERCAP VOLTAGE":[11.5,null],"MAIN POWER VOLTAGE":[23,26],"SEC POWER VOLTAGE":[12,14.5],"AUX SUPPLY 12V":[11.4,13.2],"AUX SUPPLY 5V":[4.7,5.3],
+ "AUX SUPPLY USB":[4.6,5.3],"TEMPERATURE":[null,70],"CPU-TEMPERATURE":[null,85],"AUX TEMPERATURE":[null,70],"MODEM SIGNAL QUALITY":[10,31],"AUX LEDS CURRENT":[null,null]};
+const OUTL={"CPU-TEMPERATURE":8,"TEMPERATURE":8,"AUX TEMPERATURE":8,"MODEM SIGNAL QUALITY":6,"MAIN POWER VOLTAGE":0.4,"SEC POWER VOLTAGE":0.4,"SUPERCAP VOLTAGE":0.4,"AUX SUPPLY 12V":0.4,"AUX SUPPLY 5V":0.2,"AUX SUPPLY USB":0.2};
+const ENERGY=["METER 0 TOTAL ACTIVE ENERGY","METER 1 TOTAL ACTIVE ENERGY"];
+const tnum=(k,v)=>{const x=num(v);return k==="MODEM SIGNAL QUALITY"&&x===99?null:x};
+const gkey=a=>a.alarm+"|"+(a.scope==="GLOBAL"?"":a.n);
+let HIST={};
+/* scenari: d = giorni prima di adesso */
+function scenario(s,v,d){const i=STATIONS.indexOf(s),j=Math.sin(d*2.1+i)*0.6,f=(x,u)=>x.toFixed(2)+" "+u;
+  v["TEMPERATURE"]=f(41.5+4*Math.sin(d*6.28)+j,"c");v["AUX TEMPERATURE"]=f(36+5*Math.sin(d*6.28)+j,"C");
+  v["CPU-TEMPERATURE"]=s.id==="rm04"?f(78.4-0.41*d+j*0.5,"c"):f(62+3*Math.sin(d*6.28)+j,"c");
+  const rate={rm01:38,rm02:25,rm03:44,rm04:47,rm05:31,rm06:52,rm07:0,rm08:29}[s.id]*1000;
+  ENERGY.forEach((k,n)=>{const dd=s.id==="rm01"?Math.max(0,d-6):d;v[k]=Math.round(s.energy[n]-rate*(n?0.45:0.55)*dd)+" wh"});
+  if(s.id==="rm08"){v["SUPERCAP VOLTAGE"]=f(11.92+0.028*d+Math.sin(d*9)*0.008,"v");if(d>=0.7){v["RFID CONNECTION"]="CONNECTED";v["ANTITAMPER OK STATUS"]="CLOSED"}}
+  if(s.id==="rm06"&&d>=2){const c=Math.min(26,Math.round(13+(d-2)*0.45+Math.sin(d*5)));v["MODEM STATUS"]="CONNECTED";v["MODEM SIGNAL QUALITY"]=`CSQ=${c} PWR=${-113+2*c}dbm`;v["PPP0 ADDRESS"]="10.59.3.41"}
+  if(s.id==="rm02"&&d>=5)v["DISPLAY STATUS"]="CONNECTED";
+  if(s.id==="rm05"&&d>=2)Object.assign(v,{"AUX FAULT":"00000000","AUX SUPPLY 12V":"12.90 v","AUX FAN POWER":"ON"});
+  if(s.id==="rm03"&&d>=0.5)Object.assign(v,{"SOCKET 0 POWER BREAKER":"CLOSE","EVSE TASK 0 STATUS":"IDLE"});
+  if(s.id==="rm07"&&d>=9)v["SOCKET 1 POWER SWITCH"]="OPEN";
+  if(s.id==="rm04"&&d>0.3){Object.assign(v,{"EVSE TASK 0 STATUS":"IDLE","SOCKET 0 POWER SWITCH":"OPEN"})}}
+function buildHistory(){const now=Date.now();HIST={};
+  STATIONS.forEach(s=>{const pts=[];for(let i=90;i>=1;i--){const t=now-i*8*3600e3,d=(now-t)/864e5,v={...s.v};scenario(s,v,d);
+      const e=evaluate({v,fixed:{}});pts.push({t,esito:e.esito,guasti:new Set(e.an.map(gkey)),v:Object.fromEntries(Object.keys(LIMITS).concat(ENERGY).filter(k=>tnum(k,v[k])!=null).map(k=>[k,tnum(k,v[k])]))})}
+    HIST[s.id]=pts})}
+function histNow(s){const e=evaluate(s);return {t:Date.now(),esito:e.esito,guasti:new Set(e.an.map(gkey)),v:Object.fromEntries(Object.keys(LIMITS).concat(ENERGY).filter(k=>tnum(k,s.v[k])!=null).map(k=>[k,tnum(k,s.v[k])]))}}
+function series(s){return HIST[s.id].concat([histNow(s)])}
+function fleetDaily(){const v=STATIONS.map(s=>{const p=series(s),a=p.find(x=>p[p.length-1].t-x.t<=7*864e5);const tot=x=>ENERGY.reduce((q,k)=>q+(x.v[k]||0),0);return Math.max(0,tot(p[p.length-1])-tot(a))/1000/7}).sort((a,b)=>a-b);return v[v.length>>1]||0}
+function signals(s){const out=[],p=series(s),now=p[p.length-1],e=evaluate(s);
+  e.an.forEach(a=>{const g=gkey(a);let first=null;for(let i=p.length-1;i>=0;i--){if(p[i].guasti.has(g))first=p[i].t;else break}
+    const d=first?(now.t-first)/864e5:0;if(d>=0.5)out.push({tipo:"persistenza",gravita:a.sev,giorni:d,messaggio:`${a.msg}: presente da ${d>=1.5?Math.round(d)+" giorni":Math.round(d*24)+" ore"}`,var:a.var})});
+  const rec=p.filter(x=>now.t-x.t<=30*864e5);
+  Object.entries(LIMITS).forEach(([k,[lo,hi]])=>{const xs=rec.filter(x=>k in x.v).map(x=>[(x.t-rec[0].t)/864e5,x.v[k]]);if(xs.length<4)return;
+    const n=xs.length,mx=xs.reduce((a,b)=>a+b[0],0)/n,my=xs.reduce((a,b)=>a+b[1],0)/n,den=xs.reduce((a,b)=>a+(b[0]-mx)**2,0);if(!den)return;
+    const sl=xs.reduce((a,b)=>a+(b[0]-mx)*(b[1]-my),0)/den,cur=xs[n-1][1];let eta=null,lim;
+    if(sl<0&&lo!=null&&cur>lo){eta=(cur-lo)/-sl;lim=lo}else if(sl>0&&hi!=null&&cur<hi){eta=(hi-cur)/sl;lim=hi}
+    if(eta!=null&&eta<=45&&Math.abs(sl)*30>=0.02*Math.max(Math.abs(cur),1))out.push({tipo:"trend",gravita:eta<=15?"ATTENZIONE":"INFO",giorni:eta,var:k,
+      messaggio:`${lbl(k)} ${sl<0?"in calo":"in aumento"} (${sl>0?"+":""}${sl.toPrecision(2)}/giorno): raggiunge ${lim} tra circa ${Math.round(eta)} giorni`})});
+  const fd=fleetDaily();if(fd>1)ENERGY.forEach((k,n)=>{const ser=p.filter(x=>k in x.v);if(ser.length<3)return;const cur=ser[ser.length-1].v[k];let since=now.t;
+    for(let i=ser.length-1;i>=0;i--){if(ser[i].v[k]===cur)since=ser[i].t;else break}const d=(now.t-since)/864e5;
+    if(d>=3)out.push({tipo:"inattiva",gravita:"ATTENZIONE",giorni:d,var:k,messaggio:`Presa ${n}: nessuna energia erogata da ${Math.round(d)} giorni (la flotta eroga in media ${Math.round(fd)} kWh/giorno per colonnina)`})});
+  Object.entries(OUTL).forEach(([k,min])=>{const vals=STATIONS.map(x=>tnum(k,x.v[k])).filter(x=>x!=null);if(vals.length<5)return;const xs=vals.slice().sort((a,b)=>a-b),med=xs[xs.length>>1];
+    const dev=xs.map(x=>Math.abs(x-med)).sort((a,b)=>a-b),sc=Math.max(dev[dev.length>>1]*1.4826,min/3),x=tnum(k,s.v[k]);
+    if(x!=null&&Math.abs(x-med)>=min&&Math.abs(x-med)/sc>=3.5)out.push({tipo:"flotta",gravita:"INFO",var:k,messaggio:`${lbl(k)} ${x}: ${x-med>0?"+":""}${+(x-med).toFixed(2)} rispetto alla mediana della flotta (${med})`})});
+  const ord={GUASTO:3,ATTENZIONE:2,INFO:1};return out.sort((a,b)=>ord[b.gravita]-ord[a.gravita])}
+const SIGICON={persistenza:"⏱",trend:"📉",flotta:"↔",inattiva:"💤"},SIGNAME={persistenza:"guasto persistente",trend:"andamento verso la soglia",flotta:"fuori dalla flotta",inattiva:"nessuna energia erogata"};
+function sigBadges(s){const by={};signals(s).forEach(x=>by[x.tipo]=(by[x.tipo]||0)+1);return Object.entries(by).map(([t,n])=>`<span class="sig" title="${SIGNAME[t]}">${SIGICON[t]}${n>1?n:""}</span>`).join("")}
+function sigList(list,withSt){return list.length?`<table class="lines">${list.map(x=>`<tr><td style="width:34px;font-size:18px" title="${SIGNAME[x.tipo]}">${SIGICON[x.tipo]}</td>
+  ${withSt?`<td style="width:160px"><a href="#" data-gost="${x.st}">${esc(STATIONS.find(s=>s.id===x.st).nome)}</a></td>`:""}<td>${esc(x.messaggio)}</td><td style="width:110px"><span class="pill p-${x.gravita}">${x.gravita==="INFO"?"SEGNALE":x.gravita}</span></td></tr>`).join("")}</table>`:'<span class="mute">Nessun segnale.</span>'}
+let DFILT={esito:"",q:""};
+function kpiTile(l,v,sub,tone){return `<div class="kpi${tone?" kpi-"+tone:""}"><div class="kl">${l}</div><div class="kv2">${v}</div><div class="ks">${sub||"&nbsp;"}</div></div>`}
+function cruscotto(){const rs=STATIONS.map(s=>({s,...evaluate(s),sig:signals(s)}));const c=k=>rs.filter(r=>r.esito===k).length;
+  let socks=0,avail=0,charging=0;rs.forEach(r=>[0,1].forEach(n=>{socks++;if(r.an.some(a=>a.sev==="GUASTO"&&a.scope==="SCK"+n))return;avail++;if(r.s.v[`EVSE TASK ${n} STATUS`]==="CHARGING")charging++}));
+  let ok7=0,t7=0,e24=0,e7=0;const tot=x=>ENERGY.reduce((q,k)=>q+(x.v[k]||0),0);
+  rs.forEach(r=>{const p=series(r.s),now=p[p.length-1];p.filter(x=>now.t-x.t<=7*864e5).forEach(x=>{t7++;if(x.esito!=="GUASTO")ok7++});
+    e24+=Math.max(0,tot(now)-tot(p.find(x=>now.t-x.t<=864e5)))/1000;e7+=Math.max(0,tot(now)-tot(p.find(x=>now.t-x.t<=7*864e5)))/1000});
+  const K=kit(rs);const all=rs.flatMap(r=>r.sig.map(x=>({...x,st:r.s.id})));const pred=all.filter(x=>x.tipo!=="persistenza");
+  const comps={};rs.forEach(r=>r.an.forEach(a=>{const x=comps[a.comp]=comps[a.comp]||{c:a.comp,G:0,A:0};a.sev==="GUASTO"?x.G++:x.A++}));
+  const cl=Object.values(comps).sort((a,b)=>b.G-a.G||b.A-a.A),mx=Math.max(1,...cl.map(x=>x.G+x.A));
+  let tiles=rs.slice().sort((a,b)=>({GUASTO:2,ATTENZIONE:1,OK:0}[b.esito]-{GUASTO:2,ATTENZIONE:1,OK:0}[a.esito]));
+  if(DFILT.esito==="SEGNALI")tiles=tiles.filter(r=>r.sig.length);else if(DFILT.esito)tiles=tiles.filter(r=>r.esito===DFILT.esito);
+  if(DFILT.q)tiles=tiles.filter(r=>(r.s.nome+r.s.cuid+r.an.map(a=>a.msg).join(" ")).toLowerCase().includes(DFILT.q.toLowerCase()));
+  const fb=(v,t,n)=>`<button class="btn btn-sm ${DFILT.esito===v?"btn-p":"btn-o"}" data-df="${v}">${t} · ${n}</button>`;
+  return crumb("Cruscotto")+`<div class="kpis">
+   ${kpiTile("Colonnine senza guasti",`${c("OK")+c("ATTENZIONE")}<small>/${rs.length}</small>`,`${Math.round(100*(c("OK")+c("ATTENZIONE"))/rs.length)}%`,c("GUASTO")?"":"ok")}
+   ${kpiTile("Prese disponibili",`${avail}<small>/${socks}</small>`,`${charging} in carica ora`)}
+   ${kpiTile("In guasto",c("GUASTO"),`${c("ATTENZIONE")} in attenzione`,c("GUASTO")?"bad":"ok")}
+   ${kpiTile("Segnali predittivi",pred.length,"prima che diventino guasti",pred.length?"warn":"")}
+   ${kpiTile("Disponibilità 7 giorni",(100*ok7/t7).toFixed(1)+"<small>%</small>",`${t7} letture`)}
+   ${kpiTile("Energia erogata 24 h",e24.toFixed(1)+"<small> kWh</small>",`${e7.toFixed(0)} kWh in 7 giorni`)}
+   ${kpiTile("Ricambi da portare",K.need.reduce((a,x)=>a+x.qty,0),`<a href="#" data-gop="report">vedi lista</a>`)}</div>
+  <div class="card"><h5>▦ Colonnine <span style="flex:1"></span>${fb("","Tutte",rs.length)}${fb("GUASTO","Guasto",c("GUASTO"))}${fb("ATTENZIONE","Attenzione",c("ATTENZIONE"))}${fb("OK","OK",c("OK"))}${fb("SEGNALI","Con segnali",rs.filter(r=>r.sig.length).length)}
+   <input id="dq" placeholder="cerca nome, CUID, guasto…" value="${esc(DFILT.q)}" style="width:210px;padding:5px"></h5><div class="bd"><div class="tiles">
+   ${tiles.map(r=>{const top=r.an[0];return `<div class="tile t-${r.esito}" data-tile="${r.s.id}"><div class="tt"><b>${esc(r.s.nome)}</b><span class="pill p-${r.esito}">${r.esito}</span></div><small>${r.s.cuid}</small>
+    <div class="tm">${top?esc(top.msg):'<span class="mute">nessuna anomalia</span>'}${r.an.length>1?` <small>+${r.an.length-1}</small>`:""}</div><div class="tb">${sigBadges(r.s)}${top&&faultCode(top.alarm,top.comp)?`<span class="spc">🔧 ${esc(faultCode(top.alarm,top.comp))}</span>`:""}</div></div>`}).join("")||'<span class="mute">Nessuna colonnina con questo filtro.</span>'}</div></div></div>
+  <div class="cards" style="grid-template-columns:minmax(0,1.7fr) minmax(0,1fr)"><div class="card"><h5>🔮 Segnali predittivi <small>andamenti verso la soglia, fuori dalla flotta, prese che non erogano</small></h5><div class="bd">${sigList(pred,true)}</div></div>
+   <div class="card"><h5>🔧 Guasti per componente</h5><div class="bd"><table class="cbars">${cl.map(x=>`<tr><td style="width:38%">${esc(nm(x.c))}</td><td style="width:42%"><div class="cb">${x.G?`<div class="cbg" style="width:${100*x.G/mx}%"></div>`:""}${x.A?`<div class="cba" style="width:${100*x.A/mx}%"></div>`:""}</div></td><td><small>${x.G?`<b>${x.G}</b> guasto `:""}${x.A?x.A+" attenz.":""}</small></td></tr>`).join("")}</table>
+   <div class="leg"><span><i class="cbg"></i> guasto</span><span><i class="cba"></i> attenzione</span></div></div></div></div>
+  <div class="card"><h5>⏱ Guasti aperti da più tempo</h5><div class="bd">${sigList(all.filter(x=>x.tipo==="persistenza").sort((a,b)=>b.giorni-a.giorni).slice(0,12),true)}</div></div>`}
+/* andamento */
+const fmtT=t=>{const d=new Date(t);return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})};
+function andamento(s){const p=series(s),sg=signals(s),sv=new Set(sg.map(x=>x.var));setTimeout(bindCharts,0);
+  const vars=Object.keys(LIMITS).filter(k=>p.some(x=>k in x.v)).sort((a,b)=>(sv.has(b)?1:0)-(sv.has(a)?1:0));
+  return crumb("Andamento")+`<div class="card"><h5>🔮 Segnali di questa colonnina</h5><div class="bd">${sigList(sg)}</div></div>
+  <div class="card"><h5>📈 Andamento <small>${p.length} letture dal ${fmtT(p[0].t)} · linee tratteggiate = soglie delle regole</small></h5><div class="bd"><div class="smalls">${vars.map(k=>lineChart(k,p.filter(x=>k in x.v).map(x=>({t:x.t,y:x.v[k]})),LIMITS[k])).join("")}</div></div></div>
+  <div class="cards"><div class="card"><h5>⚡ Energia erogata al giorno</h5><div class="bd">${energyBars(p)}</div></div><div class="card"><h5>🕑 Cronologia</h5><div class="bd">${timeline(p)}</div></div></div>`}
+function lineChart(title,pts,lim){const W=360,H=150,L=40,Rr=10,T=12,B=22;const ts=pts.map(p=>p.t),ys=pts.map(p=>p.y);
+  let lo=Math.min(...ys),hi=Math.max(...ys);const[l0,h0]=lim||[];[l0,h0].forEach(x=>{if(x!=null&&Math.abs(x-(lo+hi)/2)<(hi-lo+1)*3){lo=Math.min(lo,x);hi=Math.max(hi,x)}});
+  if(hi===lo){hi+=1;lo-=1}const pad=(hi-lo)*.12;lo-=pad;hi+=pad;const t0=Math.min(...ts),t1=Math.max(...ts);
+  const X=t=>L+(W-L-Rr)*(t-t0)/((t1-t0)||1),Y=y=>T+(H-T-B)*(1-(y-lo)/(hi-lo));const path=pts.map((p,i)=>`${i?"L":"M"}${X(ts[i]).toFixed(1)},${Y(p.y).toFixed(1)}`).join("");
+  const thr=[[l0,"min"],[h0,"max"]].filter(([x])=>x!=null&&x>=lo&&x<=hi).map(([x,n])=>`<line x1="${L}" x2="${W-Rr}" y1="${Y(x)}" y2="${Y(x)}" class="thr"/><text x="${W-Rr-2}" y="${Y(x)-3}" text-anchor="end" class="thl">${n} ${x}</text>`).join("");
+  const ticks=[lo+pad,(lo+hi)/2,hi-pad].map(v=>`<text x="${L-5}" y="${Y(v)+4}" text-anchor="end" class="axl">${+v.toFixed(2)}</text><line x1="${L}" x2="${W-Rr}" y1="${Y(v)}" y2="${Y(v)}" class="grid"/>`).join("");
+  const last=pts[pts.length-1],out=(l0!=null&&last.y<l0)||(h0!=null&&last.y>h0),data=esc(JSON.stringify(pts.map((p,i)=>[X(ts[i]),Y(p.y),fmtT(p.t),+(+p.y).toFixed(2)])));
+  return `<div class="chart"><div class="ct"><span>${esc(lbl(title))}</span><b class="${out?"vbad":""}">${+(+last.y).toFixed(2)}</b></div><svg viewBox="0 0 ${W} ${H}" data-pts="${data}"><g>${ticks}${thr}</g><path d="${path}" class="ln"/>
+   <circle cx="${X(ts[ts.length-1])}" cy="${Y(last.y)}" r="4" class="lp"/><text x="${L}" y="${H-5}" class="axl">${fmtT(pts[0].t).split(" ")[0]}</text><text x="${W-Rr}" y="${H-5}" text-anchor="end" class="axl">oggi</text>
+   <line class="cx" y1="${T}" y2="${H-B}" x1="-10" x2="-10"/><circle class="cxp" r="4" cx="-10" cy="-10"/><rect x="${L}" y="0" width="${W-L-Rr}" height="${H}" fill="transparent" class="hit"/></svg><div class="tip"></div></div>`}
+function bindCharts(){$$(".chart svg").forEach(svg=>{const pts=JSON.parse(svg.dataset.pts),tip=svg.parentNode.querySelector(".tip"),cx=svg.querySelector(".cx"),cp=svg.querySelector(".cxp");
+  svg.querySelector(".hit").onmousemove=e=>{const b=svg.getBoundingClientRect(),x=(e.clientX-b.left)*360/b.width;let best=pts[0];pts.forEach(p=>{if(Math.abs(p[0]-x)<Math.abs(best[0]-x))best=p});
+    cx.setAttribute("x1",best[0]);cx.setAttribute("x2",best[0]);cp.setAttribute("cx",best[0]);cp.setAttribute("cy",best[1]);tip.style.display="block";tip.innerHTML=`<b>${best[3]}</b> · ${best[2]}`;tip.style.left=Math.min(b.width-150,best[0]*b.width/360)+"px"};
+  svg.querySelector(".hit").onmouseleave=()=>{tip.style.display="none";cx.setAttribute("x1",-10);cx.setAttribute("x2",-10);cp.setAttribute("cx",-10)}})}
+function energyBars(p){const day={};p.forEach(x=>{const e=ENERGY.reduce((q,k)=>q+(x.v[k]||0),0);const k=new Date(x.t).toISOString().slice(0,10);day[k]=Math.max(day[k]||0,e)});
+  const ks=Object.keys(day).sort(),vals=ks.map((k,i)=>i?Math.max(0,(day[k]-day[ks[i-1]])/1000):0).slice(1),kk=ks.slice(1);const mx=Math.max(1,...vals),W=360,H=130,bw=(W-10)/Math.max(1,kk.length);
+  return `<svg viewBox="0 0 ${W} ${H+18}" style="width:100%;height:auto">${vals.map((v,i)=>`<rect x="${5+i*bw+1}" y="${H-H*v/mx}" width="${Math.max(1,bw-2)}" height="${Math.max(v?2:0,H*v/mx)}" rx="2" fill="#2a78d6"><title>${kk[i].split("-").reverse().join("/")}: ${v.toFixed(1)} kWh</title></rect>`).join("")}
+   <text x="5" y="${H+14}" class="axl">${(kk[0]||"").split("-").reverse().join("/")}</text><text x="${W-5}" y="${H+14}" text-anchor="end" class="axl">oggi</text></svg><small>Media ${(vals.reduce((a,b)=>a+b,0)/Math.max(1,vals.length)).toFixed(1)} kWh/giorno</small>`}
+function timeline(p){const ev=[];for(let i=1;i<p.length;i++){const a=p[i-1].guasti,b=p[i].guasti,add=[...b].filter(x=>!a.has(x)),rem=[...a].filter(x=>!b.has(x));
+    if(add.length||rem.length||p[i].esito!==p[i-1].esito)ev.push({t:p[i].t,da:p[i-1].esito,a:p[i].esito,add,rem})}
+  const name=g=>{const[k,n]=g.split("|");return lbl(k)+(n?` (presa ${n})`:"")};
+  return ev.length?`<table class="lines">${ev.reverse().slice(0,20).map(e=>`<tr><td style="width:100px"><small>${fmtT(e.t)}</small></td><td>${e.da!==e.a?`<span class="pill p-${e.da}">${e.da}</span> → <span class="pill p-${e.a}">${e.a}</span><br>`:""}${e.add.map(g=>`<div>🔴 compare: ${esc(name(g))}</div>`).join("")}${e.rem.map(g=>`<div>🟢 rientra: ${esc(name(g))}</div>`).join("")}</td></tr>`).join("")}</table>`:'<span class="mute">Nessun cambiamento nello storico.</span>'}
+
+/* =================================================================== pagina diagnostica completa (come l'originale) */
+let HL=true;
+function diagPage(s){const e=evaluate(s),bad={};e.an.forEach(a=>{bad[a.var]={sev:a.sev,t:a.msg}});
+  const cell=k=>{if(!k)return "<td></td><td></td>";const b=HL&&bad[k];return `<td class="dk">${esc(lbl(k))}</td><td class="dv${b?" dv-"+b.sev:""}" ${b?`title="${esc(b.t)}"`:""}>${esc(s.v[k]??"")}${b?` ${b.sev==="GUASTO"?"⛔":"⚠"}`:""}</td>`};
+  const rows=FULL_TOP.map(([a,b])=>`<tr>${cell(a)}${cell(b)}</tr>`).join("")+FULL_SOCK.map(k=>`<tr>${cell(k.replace("{n}","0"))}${cell(k.replace("{n}","1"))}</tr>`).join("");
+  return crumb("Pagina diagnostica")+`<div class="card" data-live><h5>▤ Pagina di stato completa <small>(${s.ip} · come «Informazioni Diagnostiche» della colonnina)</small><span style="flex:1"></span>
+   <label style="font-size:14px;font-weight:400"><input type="checkbox" id="hl" ${HL?"checked":""}> evidenzia anomalie</label></h5><div class="bd">
+   <div style="text-align:center;font-size:22px;font-weight:700;margin:4px 0">Informazioni Diagnostiche</div>
+   <div style="text-align:center;margin-bottom:10px"><a href="#" style="font-size:22px;font-weight:700">MASTER</a></div>
+   <table class="dtab"><tr><th>Descrizione</th><th>Valore</th><th>Descrizione</th><th>Valore</th></tr>${rows}</table>
+   ${e.an.length?`<div style="margin-top:12px"><b>Anomalie su questa pagina:</b>${e.an.map(a=>`<div>${a.sev==="GUASTO"?"🔴":"🟡"} ${esc(a.msg)} ${fx(a.alarm,a.comp)}</div>`).join("")}</div>`:""}</div></div>`}
+
+/* =================================================================== kit ricambi per il report */
+function kit(rs){const need={},spare={};
+  rs.forEach(r=>r.an.forEach(a=>{const codes=faultCode(a.alarm,a.comp).split(/[,;]/).map(x=>x.trim()).filter(Boolean);
+    const target=a.sev==="GUASTO"?need:spare;
+    codes.forEach(c=>{const x=target[c]=target[c]||{code:c,desc:codeDesc(c)||"(descrizione dal catalogo)",qty:0,per:[]};x.qty++;x.per.push(`${r.s.nome}: ${a.msg}`)});
+    const k=procKey(a.comp);if(k)PROCS[k].onfield.forEach(([pp])=>{const comp=pp.replace("{n}",a.n||"0"),c=part(comp)?.code;
+      if(c&&!codes.includes(c)&&!need[c]){const x=spare[c]=spare[c]||{code:c,desc:codeDesc(c)||nm(comp),qty:1,per:[]};if(!x.per.includes(`${r.s.nome}: eventuale`))x.per.push(`${r.s.nome}: eventuale`)}})}));
+  Object.keys(need).forEach(c=>delete spare[c]);return {need:Object.values(need),spare:Object.values(spare)}}
+function kitCsv(k){const rows=[["tipo","codice","descrizione","quantita","per"]].concat(k.need.map(x=>["necessario",x.code,x.desc,x.qty,x.per.join(" | ")]),k.spare.map(x=>["di scorta",x.code,x.desc,x.qty,x.per.join(" | ")]));
+  return "﻿"+rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\r\n")}
+
+/* =================================================================== pagina Nomi e manuali */
+let CFGF="";
+function cfgPage(){const faults=[...new Map(RULES.map(r=>[r[6],r])).values()];
+  return crumb("Nomi e manuali")+`<div class="note">Le modifiche restano in questo browser. Con «Esporta» ottieni un file da passare ai colleghi o da caricare nel tool vero.</div>
+  <div class="card" style="margin-bottom:16px"><h5>📖 Guasti: descrizione, ricambio e manuale</h5><div class="bd">
+   <small>Il link può essere un indirizzo web, una pagina di un PDF (es. <code>file:///C:/Manuali/JP21.pdf#page=42</code>) o un percorso di rete.</small>
+   <table class="cfgt" style="margin-top:8px"><tr><th style="width:23%">Guasto</th><th style="width:30%">Descrizione mostrata</th><th style="width:16%">Ricambio per ripristinare</th><th>Link al manuale</th><th style="width:90px"></th></tr>
+   ${faults.map(r=>`<tr><td><b>${esc(lbl(r[6]))}</b><br><small>${esc(r[6])}</small></td><td><input data-msg="${esc(r[6])}" value="${esc(CFG.msgs[r[6]]||r[5])}"></td>
+   <td><input data-fp="${esc(r[6])}" data-comp="${esc(r[4].replace("{n}","0"))}" value="${esc(faultCode(r[6],r[4].replace("{n}","0")))}" placeholder="codice"></td><td><input data-man="${esc(r[6])}" value="${esc(CFG.manuals[r[6]]||"")}" placeholder="https://… oppure file:///…"></td><td>${fx(r[6],r[4].replace("{n}","0"))}</td></tr>`).join("")}</table></div></div>
+  <div class="cards"><div class="card"><h5>🔧 Componenti: nome e codice ricambio</h5><div class="bd"><table class="cfgt"><tr><th>Componente</th><th>Nome mostrato</th><th style="width:30%">Codice ricambio</th></tr>
+   ${compKeys().map(k=>`<tr><td><small>${esc(k)}</small></td><td><input data-name="${esc(k)}" value="${esc(nm(k))}"></td><td><input data-code="${esc(k)}" value="${esc(part(k)?.code||"")}" placeholder="da inserire"></td></tr>`).join("")}</table></div></div>
+  <div class="card"><h5>🏷 Etichette della pagina di stato e degli allarmi</h5><div class="bd">
+   <div class="ctl"><input id="rfrom" placeholder="trova (es. AUX)" style="flex:1;padding:5px"><input id="rto" placeholder="sostituisci con (es. PS4GAUX)" style="flex:1;padding:5px"><button class="btn btn-o" id="rgo">Applica a tutte</button></div>
+   <input id="lflt" placeholder="filtra…" value="${esc(CFGF)}" style="width:100%;padding:5px;margin-bottom:6px">
+   <table class="cfgt">${allVars().concat([...new Set(RULES.map(r=>r[6]))]).filter(v=>!CFGF||v.toLowerCase().includes(CFGF.toLowerCase())||lbl(v).toLowerCase().includes(CFGF.toLowerCase())).map(v=>`<tr><td style="width:45%"><small>${esc(v)}</small></td><td><input data-lbl="${esc(v)}" value="${esc(lbl(v))}"></td></tr>`).join("")}</table></div></div></div>
+  <div class="ctl" style="justify-content:flex-end;gap:8px;margin-top:4px"><button class="btn btn-o" id="cfgreset">Ripristina predefiniti</button>
+   <label class="btn btn-o" style="width:auto">Importa…<input type="file" id="cfgimp" accept=".json" style="display:none"></label><button class="btn btn-o" id="cfgexp">Esporta</button><button class="btn btn-p" id="cfgsave">Salva</button></div>`}
+function bindCfg(){if(R.page!=="cfg")return;
+  const collect=()=>{$$("[data-msg]").forEach(i=>{const r=RULES.find(r=>r[6]===i.dataset.msg),v=i.value.trim();v&&v!==r[5]?CFG.msgs[i.dataset.msg]=v:delete CFG.msgs[i.dataset.msg]});
+    $$("[data-fp]").forEach(i=>{CFG.faultParts=CFG.faultParts||{};const v=i.value.trim(),d=part(i.dataset.comp)?.code||"";v&&v!==d?CFG.faultParts[i.dataset.fp]=v:delete CFG.faultParts[i.dataset.fp]});
+    $$("[data-man]").forEach(i=>{const v=i.value.trim();v?CFG.manuals[i.dataset.man]=v:delete CFG.manuals[i.dataset.man]});
+    $$("[data-name]").forEach(i=>{const k=i.dataset.name,v=i.value.trim();v&&v!==defName(k)?CFG.names[k]=v:delete CFG.names[k]});
+    $$("[data-code]").forEach(i=>{const k=i.dataset.code,v=i.value.trim(),d=(PARTS[k]&&PARTS[k].code)||"";v&&v!==d?CFG.codes[k]=v:delete CFG.codes[k]});
+    $$("[data-lbl]").forEach(i=>{const v=i.value.trim();v&&v!==i.dataset.lbl?CFG.labels[i.dataset.lbl]=v:delete CFG.labels[i.dataset.lbl]})};
+  $("#cfgsave").onclick=()=>{collect();saveCfg();render();toast("Salvato")};
+  $("#lflt").oninput=e=>{collect();CFGF=e.target.value;const pos=e.target.selectionStart;render();const f=$("#lflt");f.focus();f.setSelectionRange(pos,pos)};
+  $("#rgo").onclick=()=>{const a=$("#rfrom").value,b=$("#rto").value;if(!a)return;collect();let n=0;
+    allVars().concat(RULES.map(r=>r[6])).forEach(v=>{const cur=lbl(v);if(cur.includes(a)){CFG.labels[v]=cur.split(a).join(b);n++}});saveCfg();render();toast(`Sostituito in ${n} etichette`)};
+  $("#cfgreset").onclick=()=>{if(!confirm("Ripristinare nomi, etichette, codici e link predefiniti?"))return;CFG=EMPTY_CFG();saveCfg();render();toast("Ripristinato")};
+  $("#cfgexp").onclick=()=>{collect();saveCfg();const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(CFG,null,2)],{type:"application/json"}));
+    a.download="manut21_nomi_e_manuali.json";document.body.appendChild(a);a.click();a.remove()};
+  $("#cfgimp").onchange=async e=>{try{const x=JSON.parse(await e.target.files[0].text());CFG=Object.assign(EMPTY_CFG(),x);saveCfg();render();toast("Configurazione importata")}catch(err){toast("File non valido")}}}
+
+/* =================================================================== eventi */
+function bind(){
+  bindCfg();
+  $$("[data-tile]").forEach(t=>t.onclick=()=>go("diag",t.dataset.tile));
+  $$("[data-gost]").forEach(a=>a.onclick=e=>{e.preventDefault();go("andamento",a.dataset.gost)});
+  $$("[data-gop]").forEach(a=>a.onclick=e=>{e.preventDefault();go(a.dataset.gop)});
+  $$("[data-df]").forEach(b=>b.onclick=()=>{DFILT.esito=b.dataset.df;render()});
+  $("#dq")&&($("#dq").oninput=e=>{DFILT.q=e.target.value;const pos=e.target.selectionStart;render();const f=$("#dq");f.focus();f.setSelectionRange(pos,pos)});
+  $("#hl")&&($("#hl").onchange=e=>{HL=e.target.checked;render()});
+  $("#kitcsv")&&($("#kitcsv").onclick=()=>{const rs=STATIONS.map(s=>({s,...evaluate(s)}));const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([kitCsv(kit(rs))],{type:"text/csv"}));a.download="ricambi_da_portare.csv";document.body.appendChild(a);a.click();a.remove()});
+  $$("[data-st]").forEach(el=>{if(el.tagName==="TR")el.onclick=e=>{if(e.target.closest("button"))return;go("diag",el.dataset.st)}});
+  $$("[data-an]").forEach(b=>b.onclick=e=>{e.stopPropagation();const s=STATIONS.find(x=>x.id===b.dataset.an);R.st=s.id;const a=evaluate(s).an.find(a=>procKey(a.comp));openMaint(s,a.comp,"Remote")});
+  $$("[data-anc]").forEach(b=>b.onclick=()=>openMaint(STATIONS.find(x=>x.id===R.st),b.dataset.anc,"Remote"));
+  $("#rerun")&&($("#rerun").onclick=()=>{$("#rerun").disabled=true;$("#rerun").textContent="Lettura di 8 colonnine…";setTimeout(()=>{render();toast("Diagnosi completata: 8 colonnine")},1400)});
+  const s=STATIONS.find(x=>x.id===R.st);
+  $$("button[data-ch]").forEach(b=>b.onclick=()=>{startCharge(s,+b.dataset.ch);render()});
+  $$("button[data-st]").forEach(b=>b.onclick=()=>{stopCharge(s,+b.dataset.st);render()});
+  $$("[data-mcb]").forEach(b=>b.onclick=()=>{const n=b.dataset.mcb;s.v[`SOCKET ${n} POWER BREAKER`]="CLOSE";if(s.v[`EVSE TASK ${n} STATUS`]==="FAULTED")s.v[`EVSE TASK ${n} STATUS`]="IDLE";toast("MCB richiuso (simulato)");render()});
+  $$("[data-rccb]").forEach(b=>b.onclick=()=>{s.v[`SOCKET ${b.dataset.rccb} DIFF.BREAKER`]="CLOSE";toast("RCCB richiuso (simulato)");render()});
+  $$("[data-fake]").forEach(b=>b.onclick=()=>toast(b.dataset.fake+": simulato, nessun comando inviato"));
+  $$("[data-prova]").forEach(b=>b.onclick=()=>{const c=b.dataset.prova,o=$("#pr-"+c);o.innerHTML=led("yellow",1);setTimeout(()=>{const ok=!(c==="07"&&s.v["AUX FAN POWER"]==="OFF");
+    o.innerHTML=led(ok?"green":"red");$("#provalog").innerHTML=`<div>${new Date().toLocaleTimeString("it-IT")} · comando ${c}: <b>${ok?"PASS":"FAIL"}</b>${c==="06"?` · 12V ${esc(s.v["AUX SUPPLY 12V"])}, 5V ${esc(s.v["AUX SUPPLY 5V"])}, T ${esc(s.v["AUX TEMPERATURE"])}`:""}${c==="07"?" · controllo termico ripristinato (TempContEn=1)":""}</div>`+($("#provalog").innerHTML.includes("Nessuna")?"":$("#provalog").innerHTML)},1500)});
+  $("#startm")&&($("#startm").onclick=()=>openMaint(s,$("#selan").value,$("#seltype").value));
+}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t.h);t.h=setTimeout(()=>t.classList.remove("on"),2600)}
+
+const[p0,s0]=location.hash.slice(1).split("/");tick();buildHistory();R={page:p0||"cruscotto",st:s0||null};render();setInterval(tick,2000);tick();
+</script>
+</body>
+</html>
