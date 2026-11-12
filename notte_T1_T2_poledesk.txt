@@ -1,0 +1,85 @@
+NOTTE T1+T2 - PoleDesk 1.17, scheda Distribuzione
+Una sola partenza alle 21:00, senza controllo base stabile (--base 0).
+Script: prova_schermo.sh 2.0.1, 35794 byte, md5 2ea9cae8dee5325dc2753e9e36d8a462
+
+======================================================================
+PACCHETTO "Notte T1+T2"  (schermo attaccato: 096, 004)
+======================================================================
+Cartella sulla colonnina:
+/home/root/test
+
+File da inviare (Aggiungi file):
+prova_schermo.sh   (eseguibile spuntato)
+seq_T1.conf
+seq_T2.conf
+
+--- Passo 1 - Invia file ---
+(lascia vuoto)
+
+--- Passo 2 - Comando ---   [continua se fallisce: SI]
+cd /home/root/test && sh prova_schermo.sh --ferma
+
+--- Passo 3 - Attendi ---
+15
+
+--- Passo 4 - Comando ---   [riuscito se contiene: Ripristino verificato]
+rm -rf /tmp/prova_schermo.lock*; cd /home/root/test && rm -rf .lock .programmata .piano .prova_in_corso && sh prova_schermo.sh --ripristina
+
+--- Passo 5 - Comando ---   [riuscito se contiene: Avvii]
+cd /home/root/test && sh prova_schermo.sh --alle 21:00 --base 0 --nome attaccato T1 T2
+
+--- Passo 6 - Comando ---   [riuscito se contiene: Piano programmato]
+cd /home/root/test && md5sum prova_schermo.sh && uptime && sh prova_schermo.sh --stato
+
+
+======================================================================
+PACCHETTO "Notte T1+T2 - tolto"  (senza schermo: 097)
+======================================================================
+Duplica il pacchetto sopra, rinomina, e cambia SOLO il passo 5:
+
+--- Passo 5 - Comando ---   [riuscito se contiene: Avvii]
+cd /home/root/test && sh prova_schermo.sh --alle 21:00 --base 0 --nome tolto T1 T2
+
+
+======================================================================
+LANCIO
+======================================================================
+1. "Notte T1+T2"          -> spunta 096 e 004 -> Esegui
+2. "Notte T1+T2 - tolto"  -> spunta 097       -> Esegui
+3. Ogni riga deve diventare "ok". Nel registro:
+   passo 1: tre righe "inviato ... verificato md5"
+   passo 4: Ripristino verificato: uscite spente, TempContEn = 1
+   passo 5: 1. T1 (200 min 0 s) / 2. T2 (46 min 0 s) / base stabile 0 min
+            sotto "Avvii" UNA sola riga: <data di oggi> 21:00
+   passo 6: 2ea9cae8dee5325dc2753e9e36d8a462
+            uptime: accesa da almeno 3 ore entro le 21:00
+            Piano programmato: sequenze [T1 T2 ]
+            TempContEn letto: 1
+
+Orari attesi: 21:00 T1 (3h20) -> ~00:20 pausa 60 min -> ~01:20 T2 (46 min) -> ~02:06 fine.
+Dopo le 21:00 NON rilanciare questi pacchetti (il passo 2 annulla il piano).
+
+
+======================================================================
+CONTROLLO, STOP, RACCOLTA (anche da MobaXterm)
+======================================================================
+Vedere la pianificazione:
+cd /home/root/test && sh prova_schermo.sh --stato
+
+Vedere cosa e' successo:
+cd /home/root/test && tail -n 15 programmata.log
+
+Fermare tutto (piano + prova in corso, con ripristino):
+cd /home/root/test && sh prova_schermo.sh --ferma
+
+Domattina, archivio dei dati:
+cd /home/root/test && sh prova_schermo.sh --archivio
+(oppure in PoleDesk il pacchetto "Prova schermo - raccogli i dati")
+
+
+======================================================================
+TEST VELOCE PRIMA DELLA NOTTE (facoltativo, circa 6 minuti, dati in collaudo/)
+======================================================================
+Passo 5 al posto di quello della notte:
+cd /home/root/test && sh prova_schermo.sh --subito --prova --scala 0.02 --nome attaccato T1 T2
+Dopo il test rilancia il pacchetto della notte.
