@@ -114,7 +114,7 @@ function procKey(comp){if(!comp)return [null,""];if(S.procedure[comp])return [co
 
 /* ---------------------------------------------------------------- avvio */
 async function loadState(){S=await api("/api/stato");$("#ver").textContent="v"+S.versione;
-  const i=S.impostazioni;$("#sshb").innerHTML=i.ssh_attivo?(S.paramiko?(i.ha_password?'<span class="badge bg-grn">SSH</span>':'<span class="badge bg-yel">SSH senza password</span>'):'<span class="badge bg-yel">solo pagina di stato</span>'):'';
+  const i=S.impostazioni;$("#sshb").innerHTML=i.ssh_attivo?(S.paramiko?(!i.senza_password?'<span class="badge bg-grn">SSH</span>':`<span class="badge bg-yel">SSH: ${i.senza_password} senza password</span>`):'<span class="badge bg-yel">solo pagina di stato</span>'):'';
   if(!SEL.size)S.colonnine.forEach(c=>SEL.add(c.id));if(!R.st&&S.colonnine[0])R.st=S.colonnine[0].id}
 function stName(id){const c=S.colonnine.find(x=>x.id===id);return c?(c.nome||c.ip):(RES[id]?.nome||id)}
 
@@ -402,12 +402,12 @@ async function saveCfg(C){await api("/api/config",C);await loadState();const rs=
 
 /* ---------------------------------------------------------------- Impostazioni */
 function impPage(){const i=S.impostazioni;return crumb("Impostazioni")+`<div class="cards">
-  <div class="card"><h5>📋 Elenco colonnine</h5><div class="bd"><table class="edit"><tr><th>Nome</th><th>IP</th><th>Porta web</th><th>Porta SSH</th><th>CUID atteso</th><th>Note</th><th></th></tr><tbody id="edrows"></tbody></table>
+  <div class="card"><h5>📋 Elenco colonnine</h5><div class="bd"><table class="edit"><tr><th>Nome</th><th>IP</th><th>Porta web</th><th>Porta SSH</th><th>CUID atteso</th><th>Note</th><th>Utente SSH</th><th>Password SSH</th><th></th></tr><tbody id="edrows"></tbody></table>
    <div class="ctl"><button class="btn btn-o" id="addrow">+ Aggiungi</button>${S.poledesk?`<button class="btn btn-o" id="imppd">Importa da PoleDesk</button>`:""}<span style="flex:1"></span><button class="btn btn-p" id="saverows">Salva elenco</button></div></div></div></div>
-  <div class="cards"><div class="card"><h5>🔐 Controlli SSH (sola lettura)</h5><div class="bd"><small>Stato dei servizi, disco ed errori recenti di CP.log. Con password vuota usa quella di PoleDesk.${S.paramiko?"":" Sul PC manca paramiko: si usa solo la pagina di stato."}</small>
+  <div class="cards"><div class="card"><h5>🔐 Controlli SSH (sola lettura)</h5><div class="bd"><small>Servizi, disco, memoria, orologio, errori di CP.log e PS4GAux.log, disconnessioni USB della testa. Per ogni colonnina la password si cerca in quest'ordine: 1) quella scritta nell'Elenco colonnine; 2) quella della stessa colonnina in PoleDesk; 3) la password generale qui sotto; 4) quella predefinita di PoleDesk.${S.paramiko?"":" Sul PC manca paramiko: si usa solo la pagina di stato."}</small>
    <div class="ctl"><label><input type="checkbox" id="sshon" ${i.ssh_attivo?"checked":""}> attivi</label></div>
    <div class="ctl"><label>Utente</label><input type="text" id="sshuser" value="${esc(i.utente||"root")}"></div>
-   <div class="ctl"><label>Password</label><input type="password" id="sshpw" placeholder="${i.ha_password?"(impostata)":"(non impostata)"}"></div>
+   <div class="ctl"><label>Password generale</label><input type="password" id="sshpw" placeholder="${i.ha_password?"(impostata)":"(non impostata)"}"></div>
    <div class="ctl"><label>In parallelo</label><input type="number" id="par" min="1" max="50" value="${i.parallelo||20}" style="width:80px"></div>
    <div class="ctl"><label>Aggiornamento (s)</label><input type="number" id="aggs" min="3" max="300" value="${i.aggiorna_s||10}" style="width:80px"></div>
    <button class="btn btn-p" id="saveimp">Salva</button></div></div>
@@ -443,10 +443,11 @@ function bind(){
       const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(C,null,2)],{type:"application/json"}));a.download="manut21_nomi_e_manuali.json";document.body.appendChild(a);a.click();a.remove()};
     $("#cfgimp").onchange=async e=>{try{const x=JSON.parse(await e.target.files[0].text());await saveCfg({names:x.names||{},labels:x.labels||{},msgs:x.msgs||{},manuals:x.manuals||{},faultParts:x.faultParts||{},codes:x.codes||{}});toast("Configurazione importata")}catch(err){toast("File non valido: "+err.message)}}}
   /* Impostazioni */
-  if(R.page==="imp"){const add=(c={})=>{const tr=document.createElement("tr");tr.innerHTML=["nome","ip","porta_web","porta_ssh","cuid_atteso","note"].map(k=>`<td><input data-k="${k}" value="${esc(c[k]||"")}" placeholder="${k==="porta_web"?"80":k==="porta_ssh"?"22":""}"></td>`).join("")+`<td><button class="btn btn-o btn-sm">✕</button></td>`;
+  if(R.page==="imp"){const add=(c={})=>{const tr=document.createElement("tr");tr.dataset.orig=c.id||"";tr.innerHTML=["nome","ip","porta_web","porta_ssh","cuid_atteso","note","utente_ssh"].map(k=>`<td><input data-k="${k}" value="${esc(c[k]||"")}" placeholder="${k==="porta_web"?"80":k==="porta_ssh"?"22":k==="utente_ssh"?esc(S.impostazioni.utente||"root"):""}"></td>`).join("")
+        +`<td><input type="password" data-k="password_ssh" autocomplete="new-password" placeholder="${c.ha_password_ssh?"(impostata)":c.fonte_ssh?"(usa: "+esc(c.fonte_ssh)+")":"(nessuna)"}" title="Vuoto = lascia com'è. Un trattino - cancella la password della colonnina."></td><td><button class="btn btn-o btn-sm">✕</button></td>`;
       tr.querySelector("button").onclick=()=>tr.remove();$("#edrows").appendChild(tr)};(S.colonnine.length?S.colonnine:[{}]).forEach(add);
     $("#addrow").onclick=()=>add();
-    $("#saverows").onclick=async()=>{const righe=$$("#edrows tr").map(tr=>Object.fromEntries([...tr.querySelectorAll("input")].map(i=>[i.dataset.k,i.value.trim()])));
+    $("#saverows").onclick=async()=>{const righe=$$("#edrows tr").map(tr=>({...Object.fromEntries([...tr.querySelectorAll("input")].map(i=>[i.dataset.k,i.value.trim()])),_orig:tr.dataset.orig}));
       try{await api("/api/colonnine",{righe});SEL.clear();RES={};KIT=null;await loadState();render();toast("Elenco salvato")}catch(e){toast(e.message)}};
     $("#imppd")&&($("#imppd").onclick=async()=>{try{const r=await api("/api/importa_poledesk",{});SEL.clear();await loadState();render();toast(`Importate ${r.aggiunte} colonnine`)}catch(e){toast(e.message)}});
     $("#saveimp").onclick=async()=>{try{await api("/api/impostazioni",{ssh_attivo:$("#sshon").checked,utente:$("#sshuser").value.trim()||"root",password:$("#sshpw").value,parallelo:+$("#par").value||20,aggiorna_s:+$("#aggs").value||10});await loadState();render();toast("Impostazioni salvate")}catch(e){toast(e.message)}};
