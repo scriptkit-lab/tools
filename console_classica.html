@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manutenzione 2.1</title>
+<style>
+:root{--side:#212529;--side2:#343a40;--top:#1b1e21;--bg:#f2f3f5;--card:#fff;--line:#dee2e6;--ink:#212529;--mute:#6c757d;--blue:#007bff;--red:#dc3545}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 "Segoe UI",system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+#top{height:56px;background:var(--top);color:#fff;display:flex;align-items:center;gap:12px;padding:0 16px;position:sticky;top:0;z-index:5}
+#top .brand{font-weight:700;font-size:18px}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700}
+.bg-red{background:var(--red);color:#fff}.bg-gry{background:#6c757d;color:#fff}.bg-grn{background:#28a745;color:#fff}.bg-yel{background:#ffc107;color:#212529}
+#clock{flex:1;text-align:center;color:#ffffff99}
+#wrap{display:flex;min-height:calc(100vh - 56px)}
+#side{width:240px;background:var(--side);padding:8px 0;flex-shrink:0}
+#side a{display:flex;align-items:center;gap:10px;color:#ffffff99;text-decoration:none;padding:11px 18px}
+#side a:hover{color:#fff}#side a.on{color:#fff;background:var(--side2)}
+#side .sec{color:#ffffff55;font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:14px 18px 4px}
+#side hr{border:0;border-top:1px solid #ffffff22;margin:8px 14px}#side .ic{width:18px;text-align:center}
+#main{flex:1;padding:16px 22px;min-width:0}
+.crumb{background:#e9ecef;border-radius:4px;padding:10px 14px;margin-bottom:16px;color:var(--mute);display:flex;align-items:center;gap:10px}
+.crumb b{color:var(--blue);font-weight:400}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:16px}.cards .card{margin-bottom:0}
+.card>h5{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);background:#f7f7f7;font-size:17px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card>.bd{padding:12px 16px}
+table{border-collapse:collapse;width:100%}td,th{padding:5px 6px;vertical-align:middle;text-align:left}
+.kv td:first-child{color:#343a40;font-size:14px;width:52%}
+.lines td{border-bottom:1px solid var(--line)}
+th{font-size:13px;color:var(--mute);font-weight:600;border-bottom:2px solid var(--line)}
+.led{display:inline-block;width:18px;height:18px;border-radius:50%;box-shadow:inset 0 -2px 3px #0003,0 0 0 2px #0001;vertical-align:middle}
+.led-green{background:radial-gradient(circle at 35% 35%,#7dff9a,#1e9e45)}.led-red{background:radial-gradient(circle at 35% 35%,#ff9a9a,#c21f2f)}
+.led-gray{background:radial-gradient(circle at 35% 35%,#e9ecef,#8c959d)}.led-yellow{background:radial-gradient(circle at 35% 35%,#fff3a3,#d9a400)}
+.blink{animation:bl 1s steps(2) infinite}@keyframes bl{50%{opacity:.25}}
+.prog{height:20px;background:#e9ecef;border-radius:4px;overflow:hidden}
+.prog>div{height:100%;color:#fff;font-weight:700;font-size:13px;padding-left:6px;line-height:20px}
+.btn{display:inline-block;border:1px solid transparent;padding:6px 14px;border-radius:4px;font:inherit;cursor:pointer;text-decoration:none;line-height:1.4}
+.btn-p{background:var(--blue);color:#fff}.btn-d{background:var(--red);color:#fff}.btn-g{background:#28a745;color:#fff}.btn-o{background:#fff;border-color:var(--line);color:var(--ink)}
+.btn-sm{padding:2px 8px;font-size:12px}.btn:disabled{opacity:.5;cursor:default}
+.ctl{display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap}.ctl>label:first-child{width:150px;color:#343a40}
+.flt td{border-bottom:1px solid var(--line);padding:9px 8px}.flt tr.clk{cursor:pointer}.flt tr.clk:hover td{background:#f1f5fb}
+.pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:12px;font-weight:700;white-space:nowrap}
+.p-GUASTO{background:#f8d7da;color:#842029}.p-ATTENZIONE{background:#fff3cd;color:#664d03}.p-OK{background:#d1e7dd;color:#0f5132}.p-INFO,.p-ATTESA{background:#e2e3e5;color:#41464b}
+.mute{color:var(--mute)}small{color:var(--mute)}
+.note{background:#fff3cd;border:1px solid #ffe69c;border-radius:4px;padding:8px 12px;margin-bottom:14px;font-size:14px}
+.steps{padding:0;margin:0}.steps li{padding:8px 10px;border-radius:4px;margin-bottom:6px;background:#e9ecef;list-style:none;display:flex;justify-content:space-between;gap:8px}
+.steps li.run{background:#cfe2ff}.steps li.pass{background:#d1e7dd}.steps li.fail{background:#f8d7da}
+.modal{position:fixed;inset:0;background:#0007;display:none;align-items:center;justify-content:center;z-index:20}.modal.on{display:flex}
+.mbox{background:#fff;border-radius:8px;width:min(1100px,94vw);max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.mbody{display:grid;grid-template-columns:360px 1fr;flex:1;min-height:420px;overflow:auto}
+.mleft{background:#f7f7f7;padding:16px;border-right:1px solid var(--line)}.mright{padding:16px}
+.mfoot{display:flex}.mfoot button{flex:1;padding:14px;font-size:17px;font-weight:600;border:0;cursor:pointer;color:#fff}
+.part{border:1px solid var(--line);border-radius:6px;padding:10px;margin-bottom:10px}
+.code{font-family:Consolas,monospace;font-weight:700;background:#e9ecef;padding:1px 6px;border-radius:3px}
+.spc{font-size:12px;padding:1px 6px;border:1px solid #ffda6a;border-radius:3px;background:#fff8e1;color:#7a5b00;font-family:Consolas,monospace;font-weight:700;white-space:nowrap}
+.man{font-size:12px;text-decoration:none;padding:1px 6px;border:1px solid #9ec5fe;border-radius:3px;background:#e7f1ff;color:#0a58ca;white-space:nowrap}
+.sumrow{display:flex;gap:18px;margin:4px 0 14px;flex-wrap:wrap;align-items:center}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin:6px 0}.bar>div{height:100%;background:var(--blue);width:0;transition:width .3s}
+.dtab td{padding:3px 8px;border:2px solid #fff;background:#eceeef;font-size:14px}.dtab th{background:#343a40;color:#fff;text-align:center;padding:6px;border:2px solid #fff}
+.dtab td.dk{width:24%}.dtab td.dv{width:26%}.dv-GUASTO{background:#f8d7da!important;color:#842029;font-weight:700}.dv-ATTENZIONE{background:#fff3cd!important;color:#664d03;font-weight:700}
+.cfgt input{width:100%;padding:4px 6px;border:1px solid var(--line);border-radius:4px;font:inherit;font-size:13px}.cfgt td{padding:4px;border-bottom:1px solid var(--line);font-size:13px}
+.edit input{width:100%;padding:4px;border:1px solid var(--line);border-radius:4px;font:inherit}
+.chk{display:inline-block;width:16px;height:16px;border:2px solid #6c757d;border-radius:3px}
+.empty{padding:30px;text-align:center;color:var(--mute)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-left:5px solid #2a78d6;border-radius:4px;padding:10px 14px}.kpi-ok{border-left-color:#28a745}.kpi-bad{border-left-color:#dc3545}.kpi-warn{border-left-color:#e0a800}
+.kl{font-size:13px;color:var(--mute)}.kv2{font-size:28px;font-weight:700;line-height:1.2}.kv2 small{font-size:15px;color:var(--mute);font-weight:400}.ks{font-size:12px;color:var(--mute)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.tile{border:1px solid var(--line);border-left:6px solid #adb5bd;border-radius:4px;padding:8px 10px;cursor:pointer;background:#fff;min-height:108px;display:flex;flex-direction:column;gap:2px}
+.tile:hover{box-shadow:0 2px 8px #0002}.t-GUASTO{border-left-color:#dc3545;background:#fff8f8}.t-ATTENZIONE{border-left-color:#e0a800;background:#fffdf4}.t-OK{border-left-color:#28a745}
+.tt{display:flex;justify-content:space-between;gap:6px;align-items:center}.tm{font-size:13px;flex:1}.tb{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sig{font-size:13px;background:#eef2f7;border-radius:10px;padding:0 6px}
+.cbars{table-layout:fixed}.cbars td{padding:4px 6px;font-size:14px}.cb{display:flex;gap:2px;height:14px}.cbg{background:#dc3545;border-radius:0 3px 3px 0;height:14px}.cba{background:#e0a800;border-radius:0 3px 3px 0;height:14px}
+.leg{display:flex;gap:16px;margin-top:6px;font-size:12px;color:var(--mute)}.leg i{display:inline-block;width:12px;height:10px;vertical-align:middle;border-radius:2px}
+.smalls{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.chart{position:relative;border:1px solid var(--line);border-radius:4px;padding:6px 8px}.ct{display:flex;justify-content:space-between;font-size:13px;color:#343a40}.ct b{font-size:15px}.vbad{color:#842029}
+.chart svg{width:100%;height:auto;display:block}.ln{fill:none;stroke:#2a78d6;stroke-width:2;stroke-linejoin:round}.lp{fill:#2a78d6;stroke:#fff;stroke-width:2}
+.thr{stroke:#dc3545;stroke-width:1;stroke-dasharray:4 3;opacity:.7}.thl{font-size:10px;fill:#842029}.grid{stroke:#e9ecef}.axl{font-size:10px;fill:#6c757d}
+.cx{stroke:#6c757d;stroke-width:1}.cxp{fill:#2a78d6;stroke:#fff;stroke-width:2}.tip{display:none;position:absolute;top:24px;background:#212529;color:#fff;font-size:12px;padding:3px 7px;border-radius:4px;pointer-events:none;white-space:nowrap}
+.ebars{width:100%;height:auto}.eb{fill:#2a78d6}
+.toast{pointer-events:none;position:fixed;right:16px;bottom:16px;background:#212529;color:#fff;padding:10px 14px;border-radius:6px;opacity:0;transition:.2s;z-index:30;max-width:520px}.toast.on{opacity:.95}
+select,input[type=text],input[type=password],input[type=number]{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:4px}
+@media print{#top,#side,.noprint,.crumb,.note,.toast{display:none!important}#main{padding:0}.card{break-inside:avoid;border:0}body{background:#fff}}
+@media(max-width:800px){#side{width:62px}#side a span,#side .sec,#stselbox{display:none}.mbody{grid-template-columns:1fr}}
+tr.warn td{background:#fff8e1}details{border:1px solid #dee2e6;border-radius:6px;margin:8px 0;padding:6px 10px}details summary{cursor:pointer;padding:4px 0}
+</style>
+</head>
+<body>
+<div id="top"><span class="brand">Manutenzione 2.1</span><span class="badge bg-gry">SOLA LETTURA</span><span id="sshb"></span>
+  <span id="clock"></span><small style="color:#ffffff88" id="ver"></small></div>
+<div id="wrap"><nav id="side"></nav><main id="main"><div class="empty">Caricamento…</div></main></div>
+<div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=v=>{const m=String(v).match(/-?\d+(?:[.,]\d+)?/);return m?parseFloat(m[0].replace(",",".")):null};
+let S=null,RES={},JOB=null,KIT=null,STAMP=null,SEL=new Set(),R={page:"cruscotto",st:null},MAINT=null,AUTO=false,AUTOT=null,HL=true,CFGF="";
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t.h);t.h=setTimeout(()=>t.classList.remove("on"),3500)}
+async function api(p,b){const r=await fetch(p,b===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)});
+  const j=await r.json();if(!r.ok)throw new Error(j.errore||r.status);return j}
+
+/* ---------------------------------------------------------------- nomi, etichette, ricambi, manuali */
+const CFG=()=>S.config;
+function defName(k){return k?k.charAt(0)+k.slice(1).toLowerCase():""}
+function nm(k){return k?(CFG().names[k]||defName(k)):""}
+function lbl(v){return CFG().labels[v]||v}
+function partOf(comp){const r=(S.ricambi||[]).find(x=>(x.componente||"").toUpperCase()===(comp||"").toUpperCase());return r&&r.codice?{code:r.codice,desc:r.descrizione||""}:null}
+function man(url){return url?`<a class="man noprint" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(url)}">📖 Manuale</a>`:""}
+function fx(a){return (a.ricambio?`<span class="spc" title="Ricambio da usare per ripristinare">🔧 ${esc(a.ricambio)}</span> `:"")+man(a.manuale)}
+function procKey(comp){if(!comp)return [null,""];if(S.procedure[comp])return [comp,""];const m=comp.match(/^(.*) PRESA ([01])$/);
+  if(m&&S.procedure[m[1]+" PRESA {n}"])return [m[1]+" PRESA {n}",m[2]];return [null,""]}
+
+/* ---------------------------------------------------------------- avvio */
+async function loadState(){S=await api("/api/stato");$("#ver").textContent="v"+S.versione;
+  const i=S.impostazioni;$("#sshb").innerHTML=i.ssh_attivo?(S.paramiko?(!i.senza_password?'<span class="badge bg-grn">SSH</span>':`<span class="badge bg-yel">SSH: ${i.senza_password} senza password</span>`):'<span class="badge bg-yel">solo pagina di stato</span>'):'';
+  if(!SEL.size)S.colonnine.forEach(c=>SEL.add(c.id));if(!R.st&&S.colonnine[0])R.st=S.colonnine[0].id}
+function stName(id){const c=S.colonnine.find(x=>x.id===id);return c?(c.nome||c.ip):(RES[id]?.nome||id)}
+
+/* ---------------------------------------------------------------- navigazione */
+function go(page,st){R={page,st:st??R.st};location.hash=page+(R.st?"/"+encodeURIComponent(R.st):"");render()}
+window.onhashchange=()=>{const[p,s]=location.hash.slice(1).split("/");const st=s?decodeURIComponent(s):R.st;if(p!==R.page||st!==R.st){R={page:p||"cruscotto",st};render()}};
+function side(){const item=(p,ic,t)=>`<a href="#" data-p="${p}" class="${R.page===p?"on":""}"><span class="ic">${ic}</span><span>${t}</span></a>`;
+  const opts=Object.values(RES).filter(r=>r.id.startsWith("file:")).map(r=>({id:r.id,nome:r.nome})).concat(S.colonnine.map(c=>({id:c.id,nome:c.nome||c.ip})));
+  $("#side").innerHTML=item("cruscotto","◉","Cruscotto")+item("flotta","▦","Flotta")+item("report","☰","Report di flotta")+item("registro","📒","Registro manutenzione")
+   +`<hr><div class="sec">Colonnina</div><div style="padding:0 14px 6px" id="stselbox"><select id="stsel" style="width:100%;background:#343a40;color:#fff;border-color:#495057">${opts.map(x=>`<option value="${esc(x.id)}" ${x.id===R.st?"selected":""}>${esc(x.nome)}${RES[x.id]?" · "+RES[x.id].esito:""}</option>`).join("")||"<option>nessuna</option>"}</select></div>`
+   +item("diag","▤","Pagina diagnostica")+item("dashboard","◷","Dashboard")+item("andamento","📈","Andamento")+item("sistema","⚙","System")+item("conf","🧾","Configurazione")+item("sx","⚡","Left Socket")+item("dx","⚡","Right Socket")
+   +item("alarms","🔔","Alarms")+item("prove","♥","Prove AUX")+item("maint","🔧","Maintenance")
+   +`<hr>`+item("cfg","✎","Nomi e manuali")+item("imp","⚙","Impostazioni");
+  $$("#side a[data-p]").forEach(a=>a.onclick=e=>{e.preventDefault();go(a.dataset.p)});
+  $("#stsel").onchange=e=>{const pg=["cruscotto","flotta","report","registro","cfg","imp"].includes(R.page)?"diag":R.page;go(pg,e.target.value)}}
+const STPAGES=["diag","dashboard","andamento","sistema","conf","sx","dx","alarms","prove","maint"];
+function render(){if(!S)return;side();const r=RES[R.st];
+  const P={cruscotto,andamento,flotta,report,registro,diag:diagPage,dashboard,sistema,conf:confPage,sx:()=>socket(0),dx:()=>socket(1),alarms,prove,maint,cfg:cfgPage,imp:impPage}[R.page]||cruscotto;
+  $("#main").innerHTML=STPAGES.includes(R.page)&&!r?crumb(pageTitle())+noData():P(r);bind();setAuto()}
+function pageTitle(){return {andamento:"Andamento",diag:"Pagina diagnostica",dashboard:"Dashboard",sistema:"System",conf:"Configurazione",sx:"Left Socket",dx:"Right Socket",alarms:"Alarms",prove:"Prove AUX",maint:"Maintenance"}[R.page]||""}
+function crumb(t){const st=STPAGES.includes(R.page);const r=RES[R.st];
+  return `<div class="crumb"><span><b>Home</b> / ${st?esc(stName(R.st))+" / ":""}${t}</span>${st&&r?`<span class="pill p-${r.esito}">${r.esito}</span><small>${esc(r.ip)} · CUID ${esc(r.cuid||"-")} · letta alle ${esc(r.ora||"")}</small>`:""}
+   <span style="flex:1"></span>${st&&!String(R.st).startsWith("file:")?`<label class="noprint" style="font-size:13px"><input type="checkbox" id="auto" ${AUTO?"checked":""}> aggiorna ogni ${S.impostazioni.aggiorna_s||10} s</label><button class="btn btn-o btn-sm noprint" id="readnow">↻ Leggi ora</button>`:""}</div>`}
+function noData(){return `<div class="card"><div class="bd empty">Nessuna lettura per questa colonnina.<br><br><button class="btn btn-p" id="readnow2">↻ Leggi ora</button></div></div>`}
+async function readOne(id){try{const r=await api("/api/diagnosi_una",{id});RES[id]=r;if(R.page!=="andamento")render()}catch(e){toast(e.message)}}
+function setAuto(){clearInterval(AUTOT);if(AUTO&&STPAGES.includes(R.page)&&!MAINT&&!String(R.st).startsWith("file:"))AUTOT=setInterval(()=>{if(!MAINT)readOne(R.st)},(S.impostazioni.aggiorna_s||10)*1000)}
+
+/* ---------------------------------------------------------------- tabelle stile JPWeb */
+function led(c,bl){return `<span class="led led-${c}${bl?" blink":""}"></span>`}
+function kv(keys,r){const v=r.valori||{},mk=r.segni||{};return `<table class="kv">${keys.filter(k=>k in v).map(k=>{const x=v[k];let cell=esc(x);
+  if(/STATUS$|CONNECTION$/.test(k)&&!/USER|EVSE|PWM/.test(k))cell=`${led(x==="CONNECTED"?"green":x==="DISABLED"?"gray":"red")} <small>${esc(x)}</small>`;
+  else if(/POWER BREAKER|DIFF.BREAKER/.test(k))cell=`${led(x==="CLOSE"?"green":"red")} <small>${esc(x)}</small>`;
+  else if(/POWER SWITCH/.test(k))cell=`${led(x==="CLOSE"?"green":"gray")} <small>${esc(x)}</small>`;
+  else if(/^AUX (RFID|FAN|HEATER|PANEL) POWER$/.test(k))cell=`${led(x==="ON"?"green":"gray")} <small>${esc(x)}</small>`;
+  else if(k==="AUX FAULT")cell=`${led(x==="00000000"?"green":"red")} <small>${esc(x)}</small>`;
+  else if(k==="ANTITAMPER OK STATUS")cell=`${led(x==="CLOSED"?"green":"red")} <small>${esc(x)}</small>`;
+  else if(k==="AC POWER")cell=`${led(x==="ONLINE"?"green":"red")} <small>${esc(x)}</small>`;
+  else if(k==="MODEM SIGNAL QUALITY"){const c=num(x)||0,p=c===99?0:100*c/31,col=c>22?"#28a745":c>12?"#ffc107":"#dc3545";cell=`<div class="prog"><div style="width:${Math.max(p,8)}%;background:${col}">${esc(x)}</div></div>`}
+  else if(/CHARGE CURRENT|CURRENT L1/.test(k)){const c=num(x)||0;cell=`<div class="prog"><div style="width:${Math.max(100*c/32,c?8:0)}%;background:${c>16?"#28a745":c>6?"#ffc107":"#dc3545"}">${esc(x)}</div></div>`}
+  else if(mk[k])cell=`<b style="color:${mk[k]==="GUASTO"?"#842029":"#664d03"}">${esc(x)}</b>`;
+  return `<tr><td>${esc(lbl(k))}</td><td>${cell}</td></tr>`}).join("")}</table>`}
+function card(t,body,ic=""){return `<div class="card"><h5>${ic} ${t}</h5><div class="bd">${body}</div></div>`}
+function anList(r){return r.anomalie.length?`<table class="lines">${r.anomalie.map(a=>`<tr><td style="width:110px"><span class="pill p-${a.gravita}">${a.gravita}</span></td><td>${esc(a.messaggio)} ${fx(a)}${a.componente?`<br><small>${esc(nm(a.componente))}</small>`:""}</td>
+  <td style="width:90px">${procKey(a.componente)[0]?`<button class="btn btn-d btn-sm noprint" data-anc="${esc(a.componente)}">Analysis</button>`:""}</td></tr>`).join("")}</table>`:'<span class="mute">Nessuna anomalia rilevata dalle regole.</span>'}
+
+
+/* ---------------------------------------------------------------- Cruscotto, segnali, andamenti */
+let DASH=null,DFILT={esito:"",q:""},TREND={};
+const SIGICON={persistenza:"⏱",trend:"📉",flotta:"↔",inattiva:"💤"};
+const SIGNAME={persistenza:"guasto persistente",trend:"andamento verso la soglia",flotta:"fuori dalla flotta",inattiva:"nessuna energia erogata"};
+async function loadDash(){try{const rs=Object.values(RES).filter(r=>!r.id.startsWith("file:"));DASH=await api("/api/cruscotto",{risultati:rs.length?rs:null});if(R.page==="cruscotto")render()}catch(e){toast(e.message)}}
+function sigs(id){return (DASH&&DASH.segnali[id])||[]}
+function sigBadges(id){const s=sigs(id);if(!s.length)return "";const by={};s.forEach(x=>by[x.tipo]=(by[x.tipo]||0)+1);
+  return Object.entries(by).map(([t,n])=>`<span class="sig" title="${esc(SIGNAME[t])}">${SIGICON[t]}${n>1?n:""}</span>`).join("")}
+function sigList(list,withSt){return list.length?`<table class="lines">${list.map(x=>`<tr><td style="width:34px;font-size:18px" title="${esc(SIGNAME[x.tipo])}">${SIGICON[x.tipo]}</td>
+  ${withSt?`<td style="width:170px"><a href="#" data-gost="${esc(x.st)}">${esc(stName(x.st))}</a></td>`:""}<td>${esc(x.messaggio)}</td><td style="width:110px"><span class="pill p-${x.gravita}">${x.gravita==="INFO"?"SEGNALE":x.gravita}</span></td></tr>`).join("")}</table>`:'<span class="mute">Nessun segnale.</span>'}
+function kpiTile(label,val,sub,tone){return `<div class="kpi${tone?" kpi-"+tone:""}"><div class="kl">${label}</div><div class="kv2">${val}</div><div class="ks">${sub||"&nbsp;"}</div></div>`}
+function cruscotto(){
+  const rs=Object.values(RES).filter(r=>!r.id.startsWith("file:"));
+  if(!rs.length)return crumb("Cruscotto")+`<div class="card"><div class="bd empty">Nessuna diagnosi ancora.<br><br><button class="btn btn-p" data-p2="flotta">Vai alla Flotta e avvia la prima diagnosi</button></div></div>`;
+  if(!DASH)return crumb("Cruscotto")+`<div class="empty">Calcolo del cruscotto…</div>`;
+  const k=DASH.kpi,e=k.esiti,pct=(a,b)=>b?Math.round(100*a/b):0;
+  const allSig=Object.entries(DASH.segnali).flatMap(([st,l])=>l.map(x=>({...x,st})));
+  const ord={GUASTO:3,ATTENZIONE:2,INFO:1};allSig.sort((a,b)=>(ord[b.gravita]-ord[a.gravita])||((a.tipo==="trend"?a.giorni:999)-(b.tipo==="trend"?b.giorni:999)));
+  const pred=allSig.filter(x=>x.tipo!=="persistenza");
+  const maxc=Math.max(1,...DASH.componenti.map(c=>c.GUASTO+c.ATTENZIONE));
+  let tiles=rs.slice().sort((a,b)=>({GUASTO:3,ATTENZIONE:2,OK:1}[b.esito]-{GUASTO:3,ATTENZIONE:2,OK:1}[a.esito])||String(a.nome).localeCompare(b.nome));
+  if(DFILT.esito==="SEGNALI")tiles=tiles.filter(r=>sigs(r.id).length);else if(DFILT.esito)tiles=tiles.filter(r=>r.esito===DFILT.esito);
+  if(DFILT.q)tiles=tiles.filter(r=>(r.nome+" "+r.ip+" "+r.cuid+" "+r.anomalie.map(a=>a.messaggio).join(" ")).toLowerCase().includes(DFILT.q.toLowerCase()));
+  const fb=(v,t,n)=>`<button class="btn btn-sm ${DFILT.esito===v?"btn-p":"btn-o"}" data-df="${v}">${t}${n!=null?" · "+n:""}</button>`;
+  return crumb("Cruscotto")+`<div class="kpis">
+   ${kpiTile("Colonnine senza guasti",`${e.OK+e.ATTENZIONE}<small>/${k.colonnine}</small>`,`${pct(e.OK+e.ATTENZIONE,k.colonnine)}% senza guasti`,e.GUASTO?"":"ok")}
+   ${kpiTile("Prese disponibili",`${k.prese_disponibili}<small>/${k.prese}</small>`,`${k.in_carica} in carica ora`)}
+   ${kpiTile("In guasto",e.GUASTO,`${e.ATTENZIONE} in attenzione`,e.GUASTO?"bad":"ok")}
+   ${kpiTile("Segnali predittivi",pred.length,"prima che diventino guasti",pred.length?"warn":"")}
+   ${kpiTile("Disponibilità 7 giorni",k.disponibilita_7g==null?"-":k.disponibilita_7g+"<small>%</small>",`${k.giri_7g} letture`)}
+   ${kpiTile("Energia erogata 24 h",k.energia_24h_kwh+"<small> kWh</small>",`${k.energia_7g_kwh} kWh in 7 giorni`)}
+   ${kpiTile("Ricambi da portare",k.ricambi_necessari,`<a href="#" data-p2="report">vedi lista</a>`)}
+  </div>
+  <div class="card"><h5>▦ Colonnine <span style="flex:1"></span>${fb("","Tutte",rs.length)}${fb("GUASTO","Guasto",e.GUASTO)}${fb("ATTENZIONE","Attenzione",e.ATTENZIONE)}${fb("OK","OK",e.OK)}${fb("SEGNALI","Con segnali",Object.keys(DASH.segnali).length)}
+   <input type="text" id="dq" placeholder="cerca nome, CUID, guasto…" value="${esc(DFILT.q)}" style="width:220px"></h5><div class="bd"><div class="tiles">
+   ${tiles.map(r=>{const top=r.anomalie.find(a=>a.gravita!=="INFO");return `<div class="tile t-${r.esito}" data-gost="${esc(r.id)}"><div class="tt"><b>${esc(r.nome||r.ip)}</b><span class="pill p-${r.esito}">${r.esito}</span></div>
+     <small>${esc(r.cuid||r.ip)}</small><div class="tm">${top?esc(top.messaggio):'<span class="mute">nessuna anomalia</span>'}${r.anomalie.filter(a=>a.gravita!=="INFO").length>1?` <small>+${r.anomalie.filter(a=>a.gravita!=="INFO").length-1}</small>`:""}</div>
+     <div class="tb">${sigBadges(r.id)}${top&&top.ricambio?`<span class="spc">🔧 ${esc(top.ricambio)}</span>`:""}</div></div>`}).join("")||'<div class="mute">Nessuna colonnina con questo filtro.</div>'}</div></div></div>
+  <div class="cards" style="grid-template-columns:minmax(0,1.7fr) minmax(0,1fr)"><div class="card"><h5>🔮 Segnali predittivi <small>andamenti verso la soglia, colonnine fuori dalla flotta, prese che non erogano</small></h5><div class="bd">${sigList(pred,true)}</div></div>
+   <div class="card"><h5>🔧 Guasti per componente</h5><div class="bd">${DASH.componenti.length?`<table class="cbars">${DASH.componenti.map(c=>`<tr><td style="width:38%">${esc(nm(c.componente))}</td><td style="width:42%"><div class="cb">
+     ${c.GUASTO?`<div class="cbg" style="width:${100*c.GUASTO/maxc}%" title="${c.GUASTO} in guasto"></div>`:""}${c.ATTENZIONE?`<div class="cba" style="width:${100*c.ATTENZIONE/maxc}%" title="${c.ATTENZIONE} in attenzione"></div>`:""}</div></td>
+     <td style="width:20%"><small>${c.GUASTO?`<b>${c.GUASTO}</b> guasto `:""}${c.ATTENZIONE?`${c.ATTENZIONE} attenz.`:""}</small></td></tr>`).join("")}</table>
+     <div class="leg"><span><i class="cbg"></i> guasto</span><span><i class="cba"></i> attenzione</span></div>`:'<span class="mute">Nessun guasto.</span>'}</div></div></div>
+  <div class="card"><h5>⏱ Guasti aperti da più tempo</h5><div class="bd">${sigList(allSig.filter(x=>x.tipo==="persistenza").sort((a,b)=>b.giorni-a.giorni).slice(0,12),true)}</div></div>`}
+
+/* andamento di una colonnina */
+function andamento(r){setTimeout(()=>drawTrend(R.st),0);
+  return crumb("Andamento")+`<div class="card"><h5>🔮 Segnali di questa colonnina</h5><div class="bd">${sigList(sigs(R.st))}</div></div><div id="trendbox"><div class="empty">Caricamento dello storico…</div></div>`}
+async function drawTrend(id){let d=TREND[id];if(!d){try{d=TREND[id]=await api("/api/andamento",{id,risultato:RES[id]})}catch(e){toast(e.message);return}}
+  const box=$("#trendbox");if(!box||R.st!==id)return;const pts=d.punti||[];
+  if(pts.length<2){box.innerHTML=`<div class="card"><div class="bd empty">Storico insufficiente: servono almeno due diagnosi in momenti diversi. Ogni «Avvia diagnosi» aggiunge un punto.</div></div>`;return}
+  const sv=new Set(sigs(id).map(x=>x.variabile));const vars=Object.keys(d.limiti).filter(v=>pts.some(p=>v in p.v)).sort((a,b)=>(sv.has(b)?1:0)-(sv.has(a)?1:0));
+  const charts=vars.map(v=>lineChart(v,pts.filter(p=>v in p.v).map(p=>({t:p.t,y:p.v[v]})),d.limiti[v]));
+  box.innerHTML=`<div class="card"><h5>📈 Andamento <small>${pts.length} letture dal ${fmtT(pts[0].t)} al ${fmtT(pts[pts.length-1].t)} · linee tratteggiate = soglie delle regole</small></h5><div class="bd"><div class="smalls">${charts.join("")}</div></div></div>
+   <div class="cards"><div class="card"><h5>⚡ Energia erogata al giorno</h5><div class="bd">${energyBars(pts)}</div></div><div class="card"><h5>🕑 Cronologia</h5><div class="bd">${timeline(pts)}</div></div></div>`;
+  bindCharts()}
+function fmtT(t){const d=new Date(t);return d.toLocaleDateString("it-IT",{day:"2-digit",month:"2-digit"})+" "+d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"})}
+function lineChart(title,pts,lim){const W=360,H=150,L=40,Rr=10,T=12,B=22;const ts=pts.map(p=>+new Date(p.t)),ys=pts.map(p=>p.y);
+  let lo=Math.min(...ys),hi=Math.max(...ys);const[l0,h0]=lim||[];[l0,h0].forEach(x=>{if(x!=null&&Math.abs(x-(lo+hi)/2)<(hi-lo+1)*3){lo=Math.min(lo,x);hi=Math.max(hi,x)}});
+  if(hi===lo){hi+=1;lo-=1}const pad=(hi-lo)*.12;lo-=pad;hi+=pad;const t0=Math.min(...ts),t1=Math.max(...ts)||t0+1;
+  const X=t=>L+(W-L-Rr)*(t-t0)/((t1-t0)||1),Y=y=>T+(H-T-B)*(1-(y-lo)/(hi-lo));
+  const path=pts.map((p,i)=>`${i?"L":"M"}${X(ts[i]).toFixed(1)},${Y(p.y).toFixed(1)}`).join("");
+  const thr=[[l0,"min"],[h0,"max"]].filter(([x])=>x!=null&&x>=lo&&x<=hi).map(([x,n])=>`<line x1="${L}" x2="${W-Rr}" y1="${Y(x)}" y2="${Y(x)}" class="thr"/><text x="${W-Rr-2}" y="${Y(x)-3}" text-anchor="end" class="thl">${n} ${x}</text>`).join("");
+  const ticks=[lo+pad,(lo+hi)/2,hi-pad].map(v=>`<text x="${L-5}" y="${Y(v)+4}" text-anchor="end" class="axl">${+v.toFixed(2)}</text><line x1="${L}" x2="${W-Rr}" y1="${Y(v)}" y2="${Y(v)}" class="grid"/>`).join("");
+  const last=pts[pts.length-1];const out=(l0!=null&&last.y<l0)||(h0!=null&&last.y>h0);
+  const data=esc(JSON.stringify(pts.map((p,i)=>[X(ts[i]),Y(p.y),fmtT(p.t),p.y])));
+  return `<div class="chart"><div class="ct"><span>${esc(lbl(title))}</span><b class="${out?"vbad":""}">${last.y}</b></div>
+   <svg viewBox="0 0 ${W} ${H}" data-pts="${data}"><g>${ticks}${thr}</g><path d="${path}" class="ln"/><circle cx="${X(ts[ts.length-1])}" cy="${Y(last.y)}" r="4" class="lp"/>
+   <text x="${L}" y="${H-5}" class="axl">${fmtT(pts[0].t).split(" ")[0]}</text><text x="${W-Rr}" y="${H-5}" text-anchor="end" class="axl">${fmtT(last.t).split(" ")[0]}</text>
+   <line class="cx" y1="${T}" y2="${H-B}" x1="-10" x2="-10"/><circle class="cxp" r="4" cx="-10" cy="-10"/><rect x="${L}" y="0" width="${W-L-Rr}" height="${H}" fill="transparent" class="hit"/></svg><div class="tip"></div></div>`}
+function bindCharts(){$$(".chart svg").forEach(svg=>{const pts=JSON.parse(svg.dataset.pts),tip=svg.parentNode.querySelector(".tip"),cx=svg.querySelector(".cx"),cp=svg.querySelector(".cxp");
+  svg.querySelector(".hit").onmousemove=e=>{const b=svg.getBoundingClientRect(),x=(e.clientX-b.left)*svg.viewBox.baseVal.width/b.width;
+    let best=pts[0];pts.forEach(p=>{if(Math.abs(p[0]-x)<Math.abs(best[0]-x))best=p});cx.setAttribute("x1",best[0]);cx.setAttribute("x2",best[0]);cp.setAttribute("cx",best[0]);cp.setAttribute("cy",best[1]);
+    tip.style.display="block";tip.innerHTML=`<b>${best[3]}</b> · ${best[2]}`;tip.style.left=Math.min(b.width-150,best[0]*b.width/svg.viewBox.baseVal.width)+"px"};
+  svg.querySelector(".hit").onmouseleave=()=>{tip.style.display="none";cx.setAttribute("x1",-10);cx.setAttribute("x2",-10);cp.setAttribute("cx",-10)}})}
+function energyBars(pts){const day={};pts.forEach(p=>{const e=(p.v["METER 0 TOTAL ACTIVE ENERGY"]||0)+(p.v["METER 1 TOTAL ACTIVE ENERGY"]||0);if(!e)return;const k=p.t.slice(0,10);day[k]=day[k]||[e,e];day[k][0]=Math.min(day[k][0],e);day[k][1]=Math.max(day[k][1],e)});
+  const ks=Object.keys(day).sort();const vals=ks.map((k,i)=>i?Math.max(0,(day[k][1]-day[ks[i-1]][1])/1000):Math.max(0,(day[k][1]-day[k][0])/1000));
+  if(!ks.length)return '<span class="mute">Nessun dato di energia.</span>';const mx=Math.max(1,...vals),W=360,H=130,bw=(W-10)/ks.length;
+  return `<svg viewBox="0 0 ${W} ${H+18}" class="ebars">${vals.map((v,i)=>`<rect x="${5+i*bw+1}" y="${H-H*v/mx}" width="${Math.max(1,bw-2)}" height="${Math.max(v?2:0,H*v/mx)}" rx="2" class="eb"><title>${ks[i].split("-").reverse().join("/")}: ${v.toFixed(1)} kWh</title></rect>`).join("")}
+   <text x="5" y="${H+14}" class="axl">${ks[0].split("-").reverse().join("/")}</text><text x="${W-5}" y="${H+14}" text-anchor="end" class="axl">${ks[ks.length-1].split("-").reverse().join("/")}</text></svg>
+   <small>Media ${(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1)} kWh/giorno · massimo ${mx.toFixed(1)} kWh</small>`}
+function timeline(pts){const ev=[];for(let i=1;i<pts.length;i++){const a=new Set(pts[i-1].guasti),b=new Set(pts[i].guasti);const add=[...b].filter(x=>!a.has(x)),rem=[...a].filter(x=>!b.has(x));
+    if(add.length||rem.length||pts[i].esito!==pts[i-1].esito)ev.push({t:pts[i].t,da:pts[i-1].esito,a:pts[i].esito,add,rem})}
+  const name=g=>{const[k,n]=g.split("|");return lbl(k)+(n?` (presa ${n})`:"")};
+  return ev.length?`<table class="lines">${ev.reverse().slice(0,20).map(e=>`<tr><td style="width:110px"><small>${fmtT(e.t)}</small></td><td>${e.da!==e.a?`<span class="pill p-${e.da}">${e.da}</span> → <span class="pill p-${e.a}">${e.a}</span><br>`:""}
+   ${e.add.map(g=>`<div>🔴 compare: ${esc(name(g))}</div>`).join("")}${e.rem.map(g=>`<div>🟢 rientra: ${esc(name(g))}</div>`).join("")}</td></tr>`).join("")}</table>`:'<span class="mute">Nessun cambiamento nello storico.</span>'}
+
+/* ---------------------------------------------------------------- Flotta */
+function flotta(){const rows=S.colonnine.map(c=>({c,r:RES[c.id]}));const ord={GUASTO:3,ATTENZIONE:2,OK:1};
+  if(Object.keys(RES).length)rows.sort((a,b)=>(ord[b.r?.esito]||0)-(ord[a.r?.esito]||0));
+  const rs=Object.values(RES).filter(r=>!r.id.startsWith("file:"));const c=k=>rs.filter(r=>r.esito===k).length;const running=JOB&&!JOB.fine;
+  return crumb("Flotta")+`<div class="card"><h5>▦ Diagnosi di flotta <span style="flex:1"></span><span class="mute" style="font-size:14px;font-weight:400" id="selinfo"></span>
+   <button class="btn btn-p" id="go" ${running?"disabled":""}>▶ Avvia diagnosi</button></h5><div class="bd">
+   ${running||JOB?`<div class="bar"><div style="width:${JOB?100*JOB.fatti/JOB.totale:0}%"></div></div><small>${running?`${JOB.fatti} di ${JOB.totale} colonnine…`:`Fatto: ${JOB.totale} colonnine in ${JOB.durata} s`}</small>`:""}
+   ${rs.length?`<div class="sumrow"><span><span class="pill p-GUASTO">GUASTO</span> ${c("GUASTO")}</span><span><span class="pill p-ATTENZIONE">ATTENZIONE</span> ${c("ATTENZIONE")}</span><span><span class="pill p-OK">OK</span> ${c("OK")}</span>
+    ${STAMP?`<a class="btn btn-o btn-sm" href="#" data-p2="report">Report e ricambi</a>`:""}</div>`:""}
+   ${S.colonnine.length?`<table class="flt"><tr><th style="width:30px"><input type="checkbox" id="all"></th><th>Esito</th><th>Colonnina</th><th>CUID</th><th>Anomalie · ricambio · manuale</th><th></th></tr>
+   ${rows.map(({c,r})=>{const es=r?r.esito:(running&&JOB.in_corso.includes(c.id)?"ATTESA":"");
+    return `<tr class="clk" data-st="${esc(c.id)}"><td><input type="checkbox" data-c="${esc(c.id)}" ${SEL.has(c.id)?"checked":""}></td><td>${es?`<span class="pill p-${es}">${es==="ATTESA"?"…":es}</span>`:""}</td>
+    <td>${esc(c.nome||"")}<br><small>${esc(c.ip)}${c.porta_web?":"+esc(c.porta_web):""}</small></td><td><small>${esc(r?.cuid||c.cuid_atteso||"")}</small><div>${sigBadges(c.id)}</div></td>
+    <td>${r?(r.anomalie.filter(a=>a.gravita!=="INFO").map(a=>`<div>${a.gravita==="GUASTO"?"🔴":"🟡"} ${esc(a.messaggio)} ${fx(a)}</div>`).join("")||'<span class="mute">nessuna</span>'):""}</td>
+    <td>${r&&r.anomalie.some(a=>procKey(a.componente)[0])?`<button class="btn btn-d btn-sm" data-an="${esc(c.id)}">Analysis</button>`:""}</td></tr>`}).join("")}</table>`
+   :`<div class="empty">Nessuna colonnina in elenco. Aggiungile da <a href="#" data-p2="imp">Impostazioni</a>${S.poledesk?" (anche importandole da PoleDesk)":""}.</div>`}</div></div>`}
+
+/* ---------------------------------------------------------------- Report */
+function report(){const rs=Object.values(RES).filter(r=>!r.id.startsWith("file:"));
+  if(!rs.length)return crumb("Report di flotta")+`<div class="card"><div class="bd empty">Avvia una diagnosi dalla Flotta oppure apri un giro dalla lista qui sotto.</div></div>`+runsCard();
+  const ord={GUASTO:2,ATTENZIONE:1,OK:0};rs.sort((a,b)=>ord[b.esito]-ord[a.esito]);const K=KIT||{necessari:[],scorta:[]};const c=k=>rs.filter(r=>r.esito===k).length;
+  const tab=(list,t)=>list.length?`<table class="lines"><tr><th style="width:44px">Preso</th><th>Codice</th><th>Descrizione</th><th>Q.tà</th><th>Per</th></tr>${list.map(x=>`<tr><td><span class="chk"></span></td><td><span class="code">${esc(x.codice)}</span></td><td>${esc(x.descrizione||"(descrizione dal catalogo)")}</td><td><b>${x.quantita}</b></td><td><small>${x.per.map(esc).join("<br>")}</small></td></tr>`).join("")}</table>`:`<span class="mute">Nessun ricambio ${t}.</span>`;
+  return crumb("Report di flotta")+`<div class="card"><h5>☰ Report di flotta ${STAMP?"· "+fmtStamp(STAMP):""}<span style="flex:1"></span>
+   ${STAMP?`<a class="btn btn-o noprint" href="/csv/kit_${STAMP}">Lista ricambi (CSV)</a><a class="btn btn-o noprint" href="/csv/${STAMP}">Report (CSV)</a><a class="btn btn-o noprint" href="/report/report_${STAMP}.html" target="_blank">Report HTML</a>`:""}
+   <button class="btn btn-o noprint" onclick="window.print()">Stampa / PDF</button></h5><div class="bd">
+   <div class="sumrow"><span><span class="pill p-GUASTO">GUASTO</span> ${c("GUASTO")}</span><span><span class="pill p-ATTENZIONE">ATTENZIONE</span> ${c("ATTENZIONE")}</span><span><span class="pill p-OK">OK</span> ${c("OK")}</span><small>${rs.length} colonnine</small></div>
+   <h4 style="margin:8px 0">📦 Ricambi da portare</h4>${tab(K.necessari,"necessario")}
+   <h4 style="margin:16px 0 8px">🧰 Di scorta <small>(guasti in attenzione e ricambi eventuali delle procedure On-Field)</small></h4>${tab(K.scorta,"di scorta")}</div></div>
+  <div class="card"><h5>🔎 Dettaglio per colonnina</h5><div class="bd"><table class="flt"><tr><th>Esito</th><th>Colonnina</th><th>CUID</th><th>Anomalie, ricambio da usare, manuale</th></tr>
+  ${rs.map(r=>`<tr><td><span class="pill p-${r.esito}">${r.esito}</span></td><td>${esc(r.nome||"")}<br><small>${esc(r.ip)}</small></td><td><small>${esc(r.cuid||"-")}</small></td>
+  <td>${r.anomalie.map(a=>`<div><b class="${a.gravita==="GUASTO"?"":"mute"}">${a.gravita}</b> ${esc(a.messaggio)}${a.componente?` · <small>${esc(nm(a.componente))}</small>`:""} ${fx(a)}</div>`).join("")||'<span class="mute">nessuna anomalia</span>'}</td></tr>`).join("")}</table></div></div>`+runsCard()}
+function fmtStamp(g){return g.replace(/^(\d{4})(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)$/,"$3/$2/$1 $4:$5")}
+function runsCard(){return `<div class="card noprint"><h5>🗂 Giri precedenti</h5><div class="bd">${(S.giri||[]).length?`<table class="lines">${S.giri.map(g=>`<tr><td>${fmtStamp(g)}</td><td style="text-align:right"><button class="btn btn-o btn-sm" data-g="${g}">Apri</button></td></tr>`).join("")}</table>`:'<span class="mute">Nessun giro salvato.</span>'}</div></div>`}
+
+/* ---------------------------------------------------------------- Pagine colonnina */
+function diagPage(r){const mk=HL?r.segni||{}:{};const v=r.valori||{};const tip={};(r.anomalie||[]).forEach(a=>tip[a.variabile]=a.messaggio);
+  const cell=k=>k?`<td class="dk">${esc(lbl(k))}</td><td class="dv${mk[k]?" dv-"+mk[k]:""}" ${tip[k]?`title="${esc(tip[k])}"`:""}>${esc(v[k]??"")}${mk[k]?(mk[k]==="GUASTO"?" ⛔":" ⚠"):""}</td>`:"<td></td><td></td>";
+  const layout=(r.layout&&r.layout.length)?r.layout:Object.keys(v).filter(k=>!k.startsWith("_")).reduce((a,k,i)=>{i%2?a[a.length-1].push(k):a.push([k]);return a},[]);
+  return crumb("Pagina diagnostica")+(r.errore?`<div class="note">Pagina non letta: ${esc(r.errore)}</div>`:"")+`<div class="card"><h5>▤ Pagina di stato completa <small>(come «Informazioni Diagnostiche» della colonnina)</small><span style="flex:1"></span>
+   <label style="font-size:14px;font-weight:400"><input type="checkbox" id="hl" ${HL?"checked":""}> evidenzia anomalie</label></h5><div class="bd">
+   <div style="text-align:center;font-size:22px;font-weight:700;margin:4px 0">Informazioni Diagnostiche</div>${r.titolo?`<div style="text-align:center;margin-bottom:10px;font-size:22px;font-weight:700;color:#0d6efd;text-decoration:underline">${esc(r.titolo)}</div>`:""}
+   <table class="dtab"><tr><th>Descrizione</th><th>Valore</th><th>Descrizione</th><th>Valore</th></tr>${layout.map(row=>`<tr>${cell(row[0])}${cell(row[1])}</tr>`).join("")}</table>
+   ${r.anomalie.length?`<h4 style="margin:14px 0 6px">Anomalie</h4>`+anList(r):""}</div></div>`}
+function dashboard(r){return crumb("Dashboard")+`<div class="cards">`
+  +card("Versions",kv(["CP VERS","CM_VERS","RVE_USR_VERS","RVE_AUX_VERS","RVE_RFID_VERS","DISPLAY_VERS","CUID","ACTIVE FLAG"],r),"⚙")
+  +card("E-Meter SCK0",kv(["METER 0 TOTAL ACTIVE ENERGY","METER 0 ISTANT POWER SUPPLY","METER 0 SESSION ACTIVE ENERGY","METER 0 CURRENT L1"],r),"⚡")
+  +card("E-Meter SCK1",kv(["METER 1 TOTAL ACTIVE ENERGY","METER 1 ISTANT POWER SUPPLY","METER 1 SESSION ACTIVE ENERGY","METER 1 CURRENT L1"],r),"⚡")
+  +card("Connessioni",kv(["DISPLAY STATUS","AUX CONNECTION","RFID CONNECTION","BLUETOOTH CONNECTION","MODEM STATUS","MODEM SIGNAL QUALITY","PPP0 ADDRESS"],r),"📶")
+  +"</div>"+card("Anomalie",anList(r),"🔔")+(sigs(R.st).length?card("Segnali predittivi",sigList(sigs(R.st)),"🔮"):"")}
+function sistema(r){const ssh=Object.keys(r.valori||{}).filter(k=>k.startsWith("_SSH"));
+  return crumb("System")+`<div class="cards">`
+  +card("Alimentazioni",kv(["AC POWER","MAIN POWER VOLTAGE","SEC POWER VOLTAGE","SUPERCAP VOLTAGE","AUX SUPPLY 12V","AUX SUPPLY 5V","AUX SUPPLY USB"],r),"🔌")
+  +card("Temperature e CPU",kv(["TEMPERATURE","CPU-TEMPERATURE","CPU-FREQ","AUX TEMPERATURE"],r),"🌡")
+  +card("Testa (scheda AUX)",kv(["AUX CONNECTION","AUX FAULT","AUX LEDS CURRENT","AUX LUX","AUX RFID POWER","AUX FAN POWER","AUX HEATER POWER","AUX PANEL POWER","ANTITAMPER OK STATUS","USER STATUS"],r),"💡")
+  +card("Controlli via SSH",ssh.length?`<table class="kv">${ssh.map(k=>`<tr><td>${esc(k.slice(5)||"stato")}</td><td>${esc(r.valori[k])}</td></tr>`).join("")}</table>`:'<span class="mute">non eseguiti</span>',"🖥")+"</div>"}
+/* ---------------------------------------------------------------- Configurazione (file .ini letti via SSH) */
+let CONFQ="",CONFDIFF=false;
+const KEYCONF=/phase|fas[ei]|current|corrente|ampere|\bamp|socket|presa|type|tipo|power|potenza|kw|ocpp|url|server|host|port|lang|mode|modo|meter|contator|max|min|limit/i;
+function confPage(r){const v=r.valori||{};
+  const pageKeys=Object.keys(v).filter(k=>!k.startsWith("_")&&/PHASE|MAX CURRENT|CHARGE CURRENT|SOCKET TYPE|BOOKING|LANGUAGE|ACTIVE FLAG/.test(k));
+  const top=card("Dalla pagina di stato",pageKeys.length?kv(pageKeys,r):'<span class="mute">nessun dato di configurazione nella pagina</span>',"📄");
+  if(!r.ini)return crumb("Configurazione")+`<div class="cards">${top}</div><div class="note">I file di configurazione (<b>.ini</b> in /crve: CP_main.ini, hardware.ini, settings.ini, parameters.ini…) si leggono via SSH in sola lettura. ${v._SSH?"SSH: "+esc(v._SSH)+(v["_SSH NOTA"]?" · "+esc(v["_SSH NOTA"]):""):"SSH non eseguito su questa lettura."} Rileggi la colonnina con SSH attivo e una password valida.</div>`;
+  /* valore più frequente nelle altre colonnine lette con SSH */
+  const others=Object.values(RES).filter(x=>x.id!==r.id&&x.ini);const maj={};
+  others.forEach(o=>Object.entries(o.ini).forEach(([f,rows])=>{const fn=f.split("/").pop();rows.forEach(([sec,k,val])=>{const key=fn+"|"+sec+"|"+k;(maj[key]=maj[key]||{})[val]=(maj[key][val]||0)+1})}));
+  const majOf=key=>{const m=maj[key];if(!m)return null;const e=Object.entries(m).sort((a,b)=>b[1]-a[1])[0];return {v:e[0],n:e[1],tot:Object.values(m).reduce((a,b)=>a+b,0)}};
+  const q=CONFQ.toLowerCase();let ndiff=0;const main=[];
+  const files=Object.entries(r.ini).map(([f,rows])=>{const fn=f.split("/").pop();
+    const trs=rows.map(([sec,k,val])=>{const m=majOf(fn+"|"+sec+"|"+k),diff=m&&m.v!==val;if(diff)ndiff++;
+      if(KEYCONF.test(k))main.push([fn,sec,k,val,diff,m]);
+      if(q&&!(fn+" "+sec+" "+k+" "+val).toLowerCase().includes(q))return "";if(CONFDIFF&&!diff)return "";
+      return `<tr class="${diff?"warn":""}"><td><small class="mute">${esc(sec)}</small></td><td>${esc(k)}</td><td><b>${esc(val)}</b></td><td><small>${m?(diff?`altre: <b>${esc(m.v)}</b> (${m.n} su ${m.tot})`:`uguale alle altre (${m.tot})`):""}</small></td></tr>`}).join("");
+    return trs?`<details ${q||CONFDIFF?"open":""}><summary><b>${esc(fn)}</b> <small class="mute">${esc(f)} · ${rows.length} voci</small></summary><table class="lines">${trs}</table></details>`:""}).join("");
+  const mainT=main.length?`<table class="lines">${main.map(([fn,sec,k,val,diff,m])=>`<tr class="${diff?"warn":""}"><td><small class="mute">${esc(fn)} · ${esc(sec)}</small></td><td>${esc(k)}</td><td><b>${esc(val)}</b></td><td><small>${diff?"altre: <b>"+esc(m.v)+"</b>":""}</small></td></tr>`).join("")}</table>`:'<span class="mute">nessuna voce riconosciuta</span>';
+  return crumb("Configurazione")+`<div class="cards">${top}${card("Voci principali dai file .ini",mainT,"⭐")}</div>
+   ${card(`File di configurazione <small class="mute">${Object.keys(r.ini).length} file · ${others.length?ndiff+" voci diverse dalle altre "+others.length+" colonnine":"nessun'altra colonnina letta con SSH per il confronto"}</small>`,
+     `<div class="ctl noprint"><input type="text" id="confq" placeholder="cerca file, sezione, chiave o valore" value="${esc(CONFQ)}" style="flex:1"><label><input type="checkbox" id="confdiff" ${CONFDIFF?"checked":""}> solo le differenze</label></div>${files||'<span class="mute">nessuna voce con questi filtri</span>'}
+      <small>Letti via SSH in sola lettura. Password, chiavi e certificati sono nascosti (••••).</small>`,"🧾")}`}
+function socket(n){const r=RES[R.st];const k=a=>a.map(x=>x.replace("{n}",n));
+  return crumb(n?"Right Socket":"Left Socket")+`<div class="cards">`
+  +card(`Status ${n?"Right":"Left"} Socket`,kv(k(["EVSE TASK {n} STATUS","EVSE TASK {n} END CHARGE RESULT","EVSE TASK {n} SOCKET IN USE","SOCKET TYPE {n}","SOCKET {n} PROXIMITY","SOCKET {n} CONTROL PILOT","SOCKET {n} PWM STATUS","SOCKET {n} POWER SWITCH","SOCKET {n} POWER BREAKER","SOCKET {n} DIFF.BREAKER","EVSE TASK {n} TEMPERATURE"]),r),"🚘")
+  +card(`E-Meter SCK${n}`,kv(k(["METER {n} TOTAL ACTIVE ENERGY","METER {n} TOTAL REACTIVE ENERGY","METER {n} ISTANT POWER SUPPLY","METER {n} SESSION ACTIVE ENERGY","METER {n} CURRENT L1","EVSE {n} MAX CURRENT","EVSE {n} CHARGE CURRENT","EVSE {n} PHASE NUMBER"]),r),"⚡")
+  +card("Anomalie della presa",anList({...r,anomalie:r.anomalie.filter(a=>a.n===String(n))}),"🔔")+"</div><small>Comandi alla presa non disponibili: lo strumento è in sola lettura.</small>"}
+function alarms(r){const grp=(t,sc,kind)=>{const list=S.guasti.filter(g=>(sc==="G"?!g.presa:g.presa)&&(kind==="A"?g.gravita==="GUASTO":g.gravita==="ATTENZIONE"));
+    if(!list.length)return "";
+    const rows=list.map(g=>{const hit=r.anomalie.find(a=>a.guasto===g.guasto&&(sc==="G"?!a.n:a.n===sc));
+      return `<tr><td style="font-size:14px">${esc(lbl(g.guasto))}${hit?`<br>${fx(hit)}`:""}</td><td style="width:130px">${led(hit?(kind==="A"?"red":"yellow"):"green")}
+      ${hit&&procKey(hit.componente)[0]?` <button class="btn btn-d btn-sm" data-anc="${esc(hit.componente)}">Analysis</button>`:""}</td></tr>`}).join("");
+    return card(t,`<table class="lines">${rows}</table>`,kind==="A"?"🚨":"⚠")};
+  return crumb("Alarms")+`<div class="cards">${grp("Global Faults","G","A")}${grp("Left Socket Faults","0","A")}${grp("Right Socket Faults","1","A")}
+   ${grp("Global Warnings","G","W")}${grp("Left Socket Warnings","0","W")}${grp("Right Socket Warnings","1","W")}</div><small>Allarmi ricavati dalle regole (regole.csv) sui valori della pagina di stato: la 2.1 non ha un elenco allarmi come la 2.2.</small>`}
+function prove(){return crumb("Prove AUX")+`<div class="note">Le prove attive sulla scheda AUX (lettura stato 06, cicalino 08, test LED 10, ventola e riscaldatore 07) arrivano con il livello 1, dopo la verifica della numerazione dei comandi su una colonnina di prova. Questa versione è in sola lettura.</div>`}
+
+/* ---------------------------------------------------------------- Maintenance */
+function maint(r){const comps=[...new Set(r.anomalie.map(a=>a.componente))].filter(c=>procKey(c)[0]);
+  const all=Object.keys(S.procedure).flatMap(k=>k.includes("{n}")?[k.replace("{n}","0"),k.replace("{n}","1")]:[k]);
+  const ev=(S.registro||[]).filter(l=>l.colonnina===R.st||(r.cuid&&l.cuid===r.cuid));
+  return crumb("Maintenance")+`<div class="cards"><div class="card"><h5>🔧 Avvia un'analisi</h5><div class="bd">
+   <div class="ctl"><label>Analisi</label><select id="selan" style="flex:1">${(comps.length?comps:all).map(c=>`<option value="${esc(c)}">${esc(nm(c))}</option>`).join("")}</select></div>
+   <div class="ctl"><label>Tipo</label><select id="seltype" style="flex:1"><option>Remote</option><option>On-Field</option></select></div>
+   <button class="btn btn-p" id="startm">START</button> <small>${comps.length?"Proposte le analisi per le anomalie attive.":"Nessuna anomalia attiva: elenco completo."}</small></div></div>
+   <div class="card"><h5>📒 Registro di questa colonnina</h5><div class="bd">${regTable(ev)}</div></div></div>`}
+function regTable(ev,withSt){return ev.length?`<table class="lines"><tr><th>Data</th>${withSt?"<th>Colonnina</th>":""}<th>Analisi</th><th>Tipo</th><th>Esito</th><th>Ricambi</th><th>Note</th></tr>${ev.map(l=>`<tr><td><small>${esc(l.data)}</small></td>${withSt?`<td>${esc(l.nome||"")}<br><small>${esc(l.cuid||"")}</small></td>`:""}<td>${esc(nm(l.analisi))}</td><td>${esc(l.tipo)}</td>
+  <td><span class="pill p-${l.esito==="RISOLTO"?"OK":l.esito==="SOSTITUZIONE"?"ATTENZIONE":"GUASTO"}">${esc(l.esito)}</span></td><td>${(l.ricambi||[]).map(p=>`<span class="code">${esc(p)}</span>`).join(" ")||"-"}</td><td><small>${esc(l.note||"")}</small></td></tr>`).join("")}</table>`:'<span class="mute">Nessun evento.</span>'}
+function registro(){return crumb("Registro manutenzione")+card("Registro manutenzione · tutte le colonnine",regTable(S.registro||[],true),"📒")}
+
+function openMaint(comp,type){const r=RES[R.st];if(!r)return;const[k,n]=procKey(comp);if(!k)return;const P=S.procedure[k],sub=x=>String(x||"").replace(/\{n\}/g,n);
+  const a=r.anomalie.find(a=>a.componente===comp)||{};
+  MAINT={st:R.st,comp,type,n,a,steps:(P.remote||[]).map(s=>({t:sub(s.titolo),tipo:s.tipo,variabile:sub(s.variabile),atteso:sub(s.atteso),secondi:s.secondi,st:"",val:""})),
+    parts:(P.onfield||[]).map(o=>({p:sub(o.componente),q:o.domanda,ans:null})),phase:type==="Remote"?"remote":"onfield",note:""};clearInterval(AUTOT);drawModal()}
+function partBox(p){const x=partOf(p);return `<div class="part"><b>${esc(nm(p))}</b><br>${x?`<span class="code">${esc(x.code)}</span> ${esc(x.desc)}`:'<i class="mute">codice da inserire (Nomi e manuali o ricambi.csv)</i>'}</div>`}
+function drawModal(){const M=MAINT,m=$("#modal");if(!M){m.classList.remove("on");return}m.classList.add("on");let left,right,foot;
+  const head=`${esc(nm(M.comp))} ${fx(M.a)}`;
+  if(M.phase==="remote"){const done=M.steps.length&&M.steps.every(x=>x.st==="pass"||x.st==="fail"),fail=M.steps.some(x=>x.st==="fail"),cur=M.steps.find(x=>x.st==="run"||x.st==="ask");
+    left=`<h4 style="margin-top:0">Test List</h4><ul class="steps">${M.steps.map(x=>`<li class="${x.st==="ask"?"run":x.st}"><span>${esc(x.t)}<br><small>${x.tipo}${x.val!==""?" · letto: "+esc(x.val):""}</small></span><span>${x.st==="pass"?"✔":x.st==="fail"?"✖":x.st?"…":""}</span></li>`).join("")||"<li>Nessun passo remoto</li>"}</ul>`;
+    right=`<h4 style="margin-top:0">Test Results · ${head}</h4>`+(cur?(cur.st==="ask"?`<p style="font-size:18px">${esc(cur.t)}</p>`:`<p>Running test: <b>${esc(cur.t)}</b></p><p id="mwait">Please wait...</p>`)
+      :done?(fail?`<p style="font-size:18px">⚠ Il problema <b>persiste</b>: serve intervento in campo.</p><p>Ricambi probabili:</p>${M.parts.map(p=>partBox(p.p)).join("")}`:`<p style="font-size:18px">✔ <b>ISSUE FIXED</b>: le verifiche da remoto sono tutte superate.</p>`)
+      :`<p>${M.steps.length} verifiche da remoto: rileggono la pagina di stato della colonnina, senza comandi.</p><p class="mute">Premi Start.</p>`);
+    foot=cur?(cur.st==="ask"?`<button style="background:#dc3545" data-ask="0">NO</button><button style="background:#28a745" data-ask="1">YES</button>`:`<button style="background:#6c757d" disabled>…</button>`)
+      :done?`<button style="background:#dc3545" id="mclose">EXIT</button>${fail?`<button style="background:#28a745" id="mnext">NEXT → On-Field</button>`:`<button style="background:#007bff" id="mdone">Done</button>`}`
+      :`<button style="background:#6c757d" id="mclose">Chiudi</button><button style="background:#007bff" id="mstart">Start</button>`}
+  else{const cur=M.parts.find(p=>p.ans===null);
+    left=`<h4 style="margin-top:0">Ricambi da verificare</h4>${M.parts.map(p=>`<div style="padding:6px 0">${p.ans===null?"○":p.ans?"✔":"✖ sostituito"} ${esc(nm(p.p))}</div>`).join("")}`;
+    right=cur?`<h4 style="margin-top:0">${head}</h4>${partBox(cur.p)}<p style="font-size:18px;margin-top:18px">${esc(cur.q)}</p>`
+      :`<h4 style="margin-top:0">Fine procedura On-Field · ${head}</h4><p>Ricambi sostituiti: ${M.parts.filter(p=>p.ans===false).map(p=>`<span class="code">${esc(partOf(p.p)?.code||p.p)}</span> ${esc(nm(p.p))}`).join(", ")||"nessuno"}</p>
+       <p><label>Note per il registro<br><input type="text" id="mnote" style="width:100%" placeholder="es. sostituito cavo, colonnina tornata in servizio"></label></p>`;
+    foot=cur?`<button style="background:#6c757d" id="mclose">Chiudi</button><button style="background:#dc3545" data-ans="0">NO → sostituisci</button><button style="background:#28a745" data-ans="1">YES</button>`:`<button style="background:#007bff" id="mdone">Done</button>`}
+  $("#mbox").innerHTML=`<div class="mbody"><div class="mleft">${left}</div><div class="mright">${right}</div></div><div class="mfoot">${foot}</div>`;
+  $("#mstart")&&($("#mstart").onclick=runRemote);$("#mclose")&&($("#mclose").onclick=()=>{MAINT=null;drawModal();render()});
+  $("#mnext")&&($("#mnext").onclick=()=>{M.phase="onfield";drawModal()});$("#mdone")&&($("#mdone").onclick=finishMaint);
+  $$("[data-ans]").forEach(b=>b.onclick=()=>{M.parts.find(p=>p.ans===null).ans=b.dataset.ans==="1";drawModal()});
+  $$("[data-ask]").forEach(b=>b.onclick=()=>{const s=M.steps.find(x=>x.st==="ask");s.st=b.dataset.ask==="1"?"pass":"fail";M.i++;M.next()})}
+function runRemote(){const M=MAINT;M.i=0;
+  M.next=async()=>{if(MAINT!==M)return;if(M.i>=M.steps.length){drawModal();return}const x=M.steps[M.i];
+    if(x.tipo==="ASK"){x.st="ask";drawModal();return}
+    x.st="run";drawModal();
+    if(x.tipo==="WAIT"){let s=+x.secondi||10;const t=setInterval(()=>{s--;const w=$("#mwait");if(w)w.textContent=`Attendo ${s} s…`;if(s<=0){clearInterval(t);x.st="pass";M.i++;M.next()}},1000);return}
+    try{const r=await api("/api/verifica",{id:M.st,variabile:x.variabile,atteso:x.atteso});x.val=r.valore??"-";x.st=r.esito==="PASS"?"pass":"fail"}
+    catch(e){x.val="errore: "+e.message;x.st="fail"}
+    M.i++;M.next()};M.next()}
+async function finishMaint(){const M=MAINT,r=RES[M.st],fail=M.steps.some(x=>x.st==="fail"),repl=M.parts.filter(p=>p.ans===false);
+  const esito=M.phase==="remote"&&!fail?"RISOLTO":repl.length?"SOSTITUZIONE":"ASSISTENZA";
+  const note=$("#mnote")?.value||"";
+  try{await api("/api/registro",{colonnina:M.st,nome:stName(M.st),cuid:r?.cuid||"",analisi:M.comp,tipo:M.phase==="remote"?"Remote":"On-Field",esito,
+    ricambi:repl.map(p=>partOf(p.p)?.code||p.p),passi:M.steps.map(x=>`${x.t}: ${x.st.toUpperCase()}${x.val!==""?" ("+x.val+")":""}`),note})}catch(e){toast(e.message)}
+  MAINT=null;drawModal();await loadState();toast(`Registrato: ${esito}`);if(!String(M.st).startsWith("file:"))readOne(M.st);go("maint",M.st)}
+
+/* ---------------------------------------------------------------- Nomi e manuali */
+function cfgPage(){const C=CFG(),comps=new Set();S.guasti.forEach(g=>{if(g.componente)(g.componente.includes("{n}")?[g.componente.replace("{n}","0"),g.componente.replace("{n}","1")]:[g.componente]).forEach(x=>comps.add(x))});
+  (S.ricambi||[]).forEach(r=>r.componente&&comps.add(r.componente.toUpperCase()));
+  const vars=new Set();Object.values(RES).forEach(r=>Object.keys(r.valori||{}).filter(k=>!k.startsWith("_")).forEach(k=>vars.add(k)));S.guasti.forEach(g=>vars.add(g.guasto));
+  const defCode=g=>partOf(g.componente.replace("{n}","0"))?.code||"";
+  return crumb("Nomi e manuali")+`<div class="note">Valgono per tutte le colonnine e per i report. I codici ricambio dei componenti si salvano in <b>ricambi.csv</b> (modificabile anche con Excel); il resto in configurazione.json. «Importa» accetta anche il file esportato dal mockup.</div>
+  <div class="card"><h5>📖 Guasti: descrizione, ricambio e manuale</h5><div class="bd"><small>Nella descrizione puoi usare {valore}. Ricambio: uno o più codici separati da virgola; vuoto = codice del componente. Link: web, PDF con pagina (file:///C:/Manuali/JP21.pdf#page=42) o percorso di rete.</small>
+   <table class="cfgt" style="margin-top:8px"><tr><th style="width:22%">Guasto</th><th style="width:30%">Descrizione mostrata</th><th style="width:16%">Ricambio per ripristinare</th><th>Link al manuale</th></tr>
+   ${S.guasti.map(g=>`<tr><td><b>${esc(lbl(g.guasto))}</b><br><small>${esc(g.guasto)} · ${esc(g.gravita)}</small></td><td><input data-msg="${esc(g.guasto)}" data-def="${esc(g.messaggio)}" value="${esc(C.msgs[g.guasto]||g.messaggio)}"></td>
+   <td><input data-fp="${esc(g.guasto)}" value="${esc(C.faultParts[g.guasto]||"")}" placeholder="${esc(defCode(g)||"codice")}"></td><td><input data-man="${esc(g.guasto)}" value="${esc(C.manuals[g.guasto]||"")}" placeholder="https://… oppure file:///…"></td></tr>`).join("")}</table></div></div>
+  <div class="cards"><div class="card"><h5>🔧 Componenti: nome e codice ricambio</h5><div class="bd"><table class="cfgt"><tr><th>Componente</th><th>Nome mostrato</th><th style="width:30%">Codice ricambio</th></tr>
+   ${[...comps].sort().map(k=>`<tr><td><small>${esc(k)}</small></td><td><input data-name="${esc(k)}" value="${esc(nm(k))}"></td><td><input data-code="${esc(k)}" value="${esc(partOf(k)?.code||"")}" placeholder="da inserire"></td></tr>`).join("")}</table></div></div>
+  <div class="card"><h5>🏷 Etichette della pagina di stato e degli allarmi</h5><div class="bd">
+   <div class="ctl"><input id="rfrom" placeholder="trova (es. AUX)" style="flex:1"><input id="rto" placeholder="sostituisci con (es. PS4GAUX)" style="flex:1"><button class="btn btn-o" id="rgo">Applica a tutte</button></div>
+   <input id="lflt" placeholder="filtra…" value="${esc(CFGF)}" style="width:100%;margin-bottom:6px">${vars.size<10?'<small>Le voci della pagina compaiono dopo la prima lettura di una colonnina.</small>':""}
+   <table class="cfgt">${[...vars].filter(v=>!CFGF||(v+lbl(v)).toLowerCase().includes(CFGF.toLowerCase())).map(v=>`<tr><td style="width:45%"><small>${esc(v)}</small></td><td><input data-lbl="${esc(v)}" value="${esc(lbl(v))}"></td></tr>`).join("")}</table></div></div></div>
+  <div class="ctl" style="justify-content:flex-end"><button class="btn btn-o" id="cfgreset">Ripristina predefiniti</button><label class="btn btn-o">Importa…<input type="file" id="cfgimp" accept=".json" style="display:none"></label>
+   <button class="btn btn-o" id="cfgexp">Esporta</button><button class="btn btn-p" id="cfgsave">Salva</button></div>`}
+function collectCfg(){const C=JSON.parse(JSON.stringify(CFG()));C.codes={};
+  $$("[data-msg]").forEach(i=>{const v=i.value.trim();v&&v!==i.dataset.def?C.msgs[i.dataset.msg]=v:delete C.msgs[i.dataset.msg]});
+  $$("[data-fp]").forEach(i=>{const v=i.value.trim();v?C.faultParts[i.dataset.fp]=v:delete C.faultParts[i.dataset.fp]});
+  $$("[data-man]").forEach(i=>{const v=i.value.trim();v?C.manuals[i.dataset.man]=v:delete C.manuals[i.dataset.man]});
+  $$("[data-name]").forEach(i=>{const k=i.dataset.name,v=i.value.trim();v&&v!==defName(k)?C.names[k]=v:delete C.names[k]});
+  $$("[data-code]").forEach(i=>{const k=i.dataset.code,v=i.value.trim();if(v!==(partOf(k)?.code||""))C.codes[k]=v});
+  $$("[data-lbl]").forEach(i=>{const v=i.value.trim();v&&v!==i.dataset.lbl?C.labels[i.dataset.lbl]=v:delete C.labels[i.dataset.lbl]});return C}
+async function saveCfg(C){await api("/api/config",C);await loadState();const rs=Object.values(RES);
+  if(rs.length){const j=await api("/api/rivaluta",{risultati:rs});j.risultati.forEach(r=>RES[r.id]=r);KIT=j.kit}render()}
+
+/* ---------------------------------------------------------------- Impostazioni */
+function impPage(){const i=S.impostazioni;return crumb("Impostazioni")+`<div class="cards">
+  <div class="card"><h5>📋 Elenco colonnine</h5><div class="bd"><table class="edit"><tr><th>Nome</th><th>IP</th><th>Porta web</th><th>Porta SSH</th><th>CUID atteso</th><th>Note</th><th>Utente SSH</th><th>Password SSH</th><th title="IP della scheda di rete del PC da cui uscire: serve quando più colonnine con lo stesso IP sono collegate a schede diverse">Scheda di rete PC</th><th></th></tr><tbody id="edrows"></tbody></table>
+   <div class="ctl"><button class="btn btn-o" id="addrow">+ Aggiungi</button>${S.poledesk?`<button class="btn btn-o" id="imppd">Importa da PoleDesk</button>`:""}<span style="flex:1"></span><button class="btn btn-p" id="saverows">Salva elenco</button></div></div></div></div>
+  <div class="cards"><div class="card"><h5>🔐 Controlli SSH (sola lettura)</h5><div class="bd"><small>Servizi, disco, memoria, orologio, errori di CP.log e PS4GAux.log, disconnessioni USB della testa. Password provate in quest'ordine, fino alla prima accettata: quella che ha già funzionato per questo CUID; la riga dell'elenco con lo stesso CUID atteso; la riga stessa; le colonnine PoleDesk con lo stesso indirizzo e la stessa scheda di rete; le altre righe con lo stesso indirizzo; la generale; la predefinita di PoleDesk. Così le colonnine del banco prova con lo stesso IP e password diverse si riconoscono da sole. Se sono collegate insieme a schede di rete diverse, indica la scheda in «Scheda di rete PC».${S.paramiko?"":" Sul PC manca paramiko: si usa solo la pagina di stato."}</small>
+   <div class="ctl"><label><input type="checkbox" id="sshon" ${i.ssh_attivo?"checked":""}> attivi</label></div>
+   <div class="ctl"><label>Utente</label><input type="text" id="sshuser" value="${esc(i.utente||"root")}"></div>
+   <div class="ctl"><label>Password generale</label><input type="password" id="sshpw" placeholder="${i.ha_password?"(impostata)":"(non impostata)"}"></div>
+   <div class="ctl"><label>In parallelo</label><input type="number" id="par" min="1" max="50" value="${i.parallelo||20}" style="width:80px"></div>
+   <div class="ctl"><label>Aggiornamento (s)</label><input type="number" id="aggs" min="3" max="300" value="${i.aggiorna_s||10}" style="width:80px"></div>
+   <button class="btn btn-p" id="saveimp">Salva</button></div></div>
+  <div class="card"><h5>🗂 File e prove</h5><div class="bd"><table class="lines">
+   ${[["regole","regole.csv","soglie e regole sintomo → guasto"],["ricambi","ricambi.csv","componente → codice ricambio"],["procedure","procedure.json","passi Remote e On-Field"],["colonnine","colonnine.csv","elenco colonnine"],["dati","Cartella dati",esc(S.dati)]]
+     .map(([k,t,d])=>`<tr><td><b>${t}</b><br><small>${d}</small></td><td style="text-align:right"><button class="btn btn-o btn-sm" data-open="${k}">Apri</button></td></tr>`).join("")}</table>
+   <div class="ctl" style="margin-top:12px"><label class="btn btn-o">Analizza pagina salvata…<input type="file" id="fileh" accept=".html,.htm" style="display:none"></label><small>per provare le regole su un 00_pagina_stato.html raccolto in precedenza</small></div></div></div></div>`}
+
+/* ---------------------------------------------------------------- eventi */
+function bind(){
+  $$("[data-p2]").forEach(a=>a.onclick=e=>{e.preventDefault();go(a.dataset.p2)});
+  $$("[data-gost]").forEach(a=>a.onclick=e=>{e.preventDefault();go(R.page==="cruscotto"&&a.classList.contains("tile")?"diag":"andamento",a.dataset.gost)});
+  $$("[data-df]").forEach(b=>b.onclick=()=>{DFILT.esito=b.dataset.df;render()});
+  $("#dq")&&($("#dq").oninput=e=>{DFILT.q=e.target.value;const pos=e.target.selectionStart;render();const f=$("#dq");f.focus();f.setSelectionRange(pos,pos)});
+  $("#readnow")&&($("#readnow").onclick=()=>readOne(R.st));$("#readnow2")&&($("#readnow2").onclick=()=>readOne(R.st));
+  $("#auto")&&($("#auto").onchange=e=>{AUTO=e.target.checked;setAuto()});
+  $("#hl")&&($("#hl").onchange=e=>{HL=e.target.checked;render()});
+  $$("tr.clk[data-st]").forEach(tr=>tr.onclick=e=>{if(e.target.closest("button,input"))return;go("diag",tr.dataset.st)});
+  $$("input[data-c]").forEach(i=>i.onclick=e=>{e.stopPropagation();i.checked?SEL.add(i.dataset.c):SEL.delete(i.dataset.c);selInfo()});
+  $("#all")&&($("#all").onclick=e=>{e.target.checked?S.colonnine.forEach(c=>SEL.add(c.id)):SEL.clear();render()});selInfo();
+  $("#go")&&($("#go").onclick=startRun);
+  $$("[data-an]").forEach(b=>b.onclick=e=>{e.stopPropagation();R.st=b.dataset.an;const a=RES[R.st].anomalie.find(a=>procKey(a.componente)[0]);openMaint(a.componente,"Remote")});
+  $$("[data-anc]").forEach(b=>b.onclick=()=>openMaint(b.dataset.anc,"Remote"));
+  $("#startm")&&($("#startm").onclick=()=>openMaint($("#selan").value,$("#seltype").value));
+  $$("[data-g]").forEach(b=>b.onclick=async()=>{const j=await api("/api/giro/"+b.dataset.g);RES={};j.risultati.forEach(r=>RES[r.id]=r);KIT=j.kit;STAMP=j.stamp;JOB=null;loadDash();render()});
+  /* Nomi e manuali */
+  if(R.page==="conf"){const q=$("#confq");if(q)q.oninput=e=>{CONFQ=e.target.value;const p=e.target.selectionStart;render();const f=$("#confq");f.focus();f.setSelectionRange(p,p)};
+    const d=$("#confdiff");if(d)d.onchange=e=>{CONFDIFF=e.target.checked;render()}}
+  if(R.page==="cfg"){$("#cfgsave").onclick=async()=>{try{await saveCfg(collectCfg());toast("Salvato")}catch(e){toast(e.message)}};
+    $("#lflt").oninput=e=>{CFGF=e.target.value;const pos=e.target.selectionStart;render();const f=$("#lflt");f.focus();f.setSelectionRange(pos,pos)};
+    $("#rgo").onclick=async()=>{const a=$("#rfrom").value,b=$("#rto").value;if(!a)return;const C=collectCfg();let n=0;
+      $$("[data-lbl]").forEach(i=>{const k=i.dataset.lbl,cur=C.labels[k]||k;if(cur.includes(a)){C.labels[k]=cur.split(a).join(b);n++}});await saveCfg(C);toast(`Sostituito in ${n} etichette`)};
+    $("#cfgreset").onclick=async()=>{if(!confirm("Ripristinare nomi, etichette, descrizioni e link predefiniti? I codici in ricambi.csv restano."))return;await saveCfg({names:{},labels:{},msgs:{},manuals:{},faultParts:{}});toast("Ripristinato")};
+    $("#cfgexp").onclick=()=>{const C=collectCfg();(S.ricambi||[]).forEach(r=>{if(r.codice&&!(r.componente in C.codes))C.codes[r.componente]=r.codice});
+      const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(C,null,2)],{type:"application/json"}));a.download="manut21_nomi_e_manuali.json";document.body.appendChild(a);a.click();a.remove()};
+    $("#cfgimp").onchange=async e=>{try{const x=JSON.parse(await e.target.files[0].text());await saveCfg({names:x.names||{},labels:x.labels||{},msgs:x.msgs||{},manuals:x.manuals||{},faultParts:x.faultParts||{},codes:x.codes||{}});toast("Configurazione importata")}catch(err){toast("File non valido: "+err.message)}}}
+  /* Impostazioni */
+  if(R.page==="imp"){const add=(c={})=>{const tr=document.createElement("tr");tr.dataset.orig=c.id||"";tr.innerHTML=["nome","ip","porta_web","porta_ssh","cuid_atteso","note","utente_ssh"].map(k=>`<td><input data-k="${k}" value="${esc(c[k]||"")}" placeholder="${k==="porta_web"?"80":k==="porta_ssh"?"22":k==="utente_ssh"?esc(S.impostazioni.utente||"root"):""}"></td>`).join("")
+        +`<td><input type="password" data-k="password_ssh" autocomplete="new-password" placeholder="${c.ha_password_ssh?"(impostata)":c.fonte_ssh?"(usa: "+esc(c.fonte_ssh)+")":"(nessuna)"}" title="Vuoto = lascia com'è. Un trattino - cancella la password della colonnina."></td><td><input data-k="scheda_pc" value="${esc(c.scheda_pc||"")}" placeholder="(automatica)" title="Es. 192.168.0.100 per la porta del PC, 192.168.0.101 per l'adattatore USB"></td><td><button class="btn btn-o btn-sm">✕</button></td>`;
+      tr.querySelector("button").onclick=()=>tr.remove();$("#edrows").appendChild(tr)};(S.colonnine.length?S.colonnine:[{}]).forEach(add);
+    $("#addrow").onclick=()=>add();
+    $("#saverows").onclick=async()=>{const righe=$$("#edrows tr").map(tr=>({...Object.fromEntries([...tr.querySelectorAll("input")].map(i=>[i.dataset.k,i.value.trim()])),_orig:tr.dataset.orig}));
+      try{await api("/api/colonnine",{righe});SEL.clear();RES={};KIT=null;await loadState();render();toast("Elenco salvato")}catch(e){toast(e.message)}};
+    $("#imppd")&&($("#imppd").onclick=async()=>{try{const r=await api("/api/importa_poledesk",{});SEL.clear();await loadState();render();toast(`Importate ${r.aggiunte} colonnine`)}catch(e){toast(e.message)}});
+    $("#saveimp").onclick=async()=>{try{await api("/api/impostazioni",{ssh_attivo:$("#sshon").checked,utente:$("#sshuser").value.trim()||"root",password:$("#sshpw").value,parallelo:+$("#par").value||20,aggiorna_s:+$("#aggs").value||10});await loadState();render();toast("Impostazioni salvate")}catch(e){toast(e.message)}};
+    $$("[data-open]").forEach(b=>b.onclick=async()=>{try{const r=await api("/api/apri",{cosa:b.dataset.open});toast("Aperto: "+r.percorso)}catch(e){toast(e.message)}});
+    $("#fileh").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const r=await api("/api/analizza_html",{html:await f.text(),nome:f.name});RES[r.id]=r;go("diag",r.id)}catch(err){toast(err.message)}}}
+}
+function selInfo(){const s=$("#selinfo");if(s)s.textContent=`${SEL.size} di ${S.colonnine.length} selezionate`;const g=$("#go");if(g)g.disabled=!SEL.size||(JOB&&!JOB.fine)}
+async function startRun(){try{const j=await api("/api/avvia",{ids:[...SEL]});RES=Object.fromEntries(Object.entries(RES).filter(([k])=>k.startsWith("file:")));KIT=null;STAMP=null;
+  JOB={id:j.id,fine:false,in_corso:[...SEL],fatti:0,totale:SEL.size};render();poll()}catch(e){toast(e.message)}}
+async function poll(){try{JOB=await api("/api/job/"+JOB.id)}catch(e){toast(e.message);return}
+  JOB.risultati.forEach(r=>RES[r.id]=r);if(JOB.fine){KIT=JOB.kit;STAMP=JOB.stamp;S.giri=[STAMP,...(S.giri||[])];TREND={};loadDash()}
+  if(R.page==="flotta"||JOB.fine)render();if(!JOB.fine)setTimeout(poll,700);else toast(`Diagnosi completata: ${JOB.totale} colonnine`)}
+
+setInterval(()=>$("#clock").textContent=new Date().toLocaleString("it-IT"),1000);
+(async()=>{try{await loadState();if(S.giri&&S.giri[0]){try{const j=await api("/api/giro/"+S.giri[0]);j.risultati.forEach(r=>RES[r.id]=r);KIT=j.kit;STAMP=j.stamp}catch(e){}}loadDash();const[p,s]=location.hash.slice(1).split("/");if(p)R.page=p;if(s)R.st=decodeURIComponent(s);render()}catch(e){$("#main").innerHTML=`<div class="empty">Errore: ${esc(e.message)}</div>`}})();
+</script>
+</body>
+</html>

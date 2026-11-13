@@ -18,6 +18,7 @@ import io
 import json
 import os
 import re
+import socket
 import threading
 import time
 import uuid
@@ -26,13 +27,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 
-VERSION = "0.3.1"
+VERSION = "0.4.0"
 APP = "Manutenzione 2.1"
 BASE = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("MANUT21_DATA") or Path.home() / "Manut21" / "dati")
 PD_DATA = Path(os.environ.get("POLEDESK_DATA") or Path.home() / "PoleDesk" / "data")
 F_STATIONS, F_RULES, F_PARTS = DATA / "colonnine.csv", DATA / "regole.csv", DATA / "ricambi.csv"
 F_SETTINGS, F_CONFIG, F_PROCS, F_LOG = DATA / "impostazioni.json", DATA / "configurazione.json", DATA / "procedure.json", DATA / "registro.json"
+F_KB = DATA / "guasti.json"
 RUNS_DIR, REPORT_DIR = DATA / "giri", DATA / "report"
 for d in (DATA, RUNS_DIR, REPORT_DIR):
     d.mkdir(parents=True, exist_ok=True)
@@ -53,7 +55,7 @@ SEV_ORDER = {"GUASTO": 3, "ATTENZIONE": 2, "INFO": 1, "OK": 0}
 DEFAULT_SETTINGS = {"ssh_attivo": True, "utente": "root", "password": "", "parallelo": 20,
                     "timeout_http": 8, "timeout_ssh": 12, "porta": 8770, "aggiorna_s": 10}
 
-STATION_COLS = ["nome", "ip", "porta_web", "porta_ssh", "cuid_atteso", "note", "utente_ssh", "password_ssh"]
+STATION_COLS = ["nome", "ip", "porta_web", "porta_ssh", "cuid_atteso", "note", "utente_ssh", "password_ssh", "scheda_pc", "regione", "comune", "indirizzo", "installata"]
 
 NEW_RULES = {"USB", "MEM", "CLK"}  # regole introdotte nella 0.3.1
 RULE_COLS = ["id", "guasto", "variabile", "condizione", "valore", "e_se_variabile", "e_se_condizione", "e_se_valore",
@@ -98,7 +100,12 @@ DEFAULT_RULES = [
 ]
 DEFAULT_GUASTO = {r[0]: r[1] for r in DEFAULT_RULES}
 
-PART_COLS = ["componente", "codice", "descrizione", "foto", "note"]
+PART_COLS = ["componente", "codice", "descrizione", "foto", "note", "pezzi", "tasso_annuo", "preventivo_anni", "costo", "approvv_gg"]
+# Valori di partenza per il piano ricambi (stime, da correggere): % di pezzi guasti all'anno, sostituzione preventiva ogni N anni.
+DEFAULT_RATES = {"DISPLAY": (2.5, 0), "CAVO DISPLAY": (1.5, 0), "SCHEDA AUX TESTA": (1.8, 0), "VENTOLA TESTA": (3, 5), "CAVO USB TESTA": (1, 0),
+                 "MAGNETOTERMICO PRESA 0": (0.8, 0), "MAGNETOTERMICO PRESA 1": (0.8, 0), "DIFFERENZIALE PRESA 0": (0.7, 0), "DIFFERENZIALE PRESA 1": (0.7, 0),
+                 "CONTATTORE PRESA 0": (0.9, 0), "CONTATTORE PRESA 1": (0.9, 0), "MODEM": (1.2, 0), "ANTENNA MODEM": (1, 0), "LETTORE RFID": (1.5, 0),
+                 "ANTITAMPER": (1, 0), "SUPERCAP": (0.6, 6), "ALIMENTATORE 24V": (0.5, 0)}
 
 # Procedure di manutenzione per componente ({n} = presa). Passi Remote: WEB (rilegge la pagina di stato
 # e confronta), ASK (domanda al tecnico/operatore da remoto), WAIT (secondi). On-Field: ricambi e domande.
@@ -143,7 +150,81 @@ DEFAULT_PROCS = {
         "onfield": [{"componente": "ANTITAMPER", "domanda": "Il pannello è chiuso correttamente e il microinterruttore è integro?"}]},
 }
 
-EMPTY_CFG = {"names": {}, "labels": {}, "msgs": {}, "manuals": {}, "codes": {}, "faultParts": {}}
+EMPTY_CFG = {"names": {}, "labels": {}, "msgs": {}, "manuals": {}, "codes": {}, "faultParts": {}, "ui": {}}
+
+
+def _E(c, r, a):
+    return {"c": c, "r": r, "a": a}
+
+
+# Per ogni errore interno (colonna "guasto" di regole.csv): testi per il campo, ricambi (nomi dei componenti di ricambi.csv,
+# {n} = presa) e albero di ricerca del guasto. Nodo: q = domanda; si/no = indice del nodo seguente o esito {c causa, r ricambi, a azione}.
+DEFAULT_KB = {
+ "ALARM PAGE UNREACHABLE": {"titolo": "Colonnina non raggiungibile", "spiega": "Non si riesce a leggere la colonnina: può essere spenta, senza rete o con la scheda principale bloccata.",
+   "causa": "Colonnina spenta, rete assente, scheda principale bloccata.", "passi": ["Verifica che la colonnina sia accesa", "Controlla l'interruttore generale", "Riavvia; se non riparte, secondo livello"], "ricambi": [],
+   "albero": [{"q": "La colonnina è accesa (luci o schermo)?", "si": 1, "no": _E("Colonnina spenta", [], "Controlla l'interruttore generale")},
+              {"q": "Dopo un riavvio la colonnina torna raggiungibile?", "si": _E("Blocco della scheda principale", [], "Nessun ricambio; se si ripete, secondo livello"), "no": _E("Guasto della scheda principale o della rete", [], "Apri una richiesta di secondo livello")}]},
+ "ALARM DISPLAY COMMUNICATION": {"titolo": "Schermo non comunica", "spiega": "La colonnina non riesce a parlare con lo schermo: il cliente non vede istruzioni e stato.",
+   "causa": "Cavo dello schermo scollegato o danneggiato; più raramente schermo guasto.", "passi": ["Guarda se lo schermo è acceso", "Controlla il connettore del cavo schermo lato scheda", "Se il cavo è a posto, sostituisci lo schermo"], "ricambi": ["CAVO DISPLAY", "DISPLAY"],
+   "albero": [{"q": "Lo schermo è acceso (si vede la retroilluminazione)?", "si": 1, "no": 2},
+              {"q": "Il connettore del cavo schermo sulla scheda è inserito bene e integro?", "si": _E("Schermo guasto", ["DISPLAY"], "Sostituisci lo schermo"), "no": _E("Cavo schermo scollegato o danneggiato", ["CAVO DISPLAY"], "Reinserisci il connettore; se il cavo è danneggiato sostituiscilo")},
+              {"q": "Arrivano i 12 V al connettore dello schermo?", "si": _E("Schermo guasto", ["DISPLAY"], "Sostituisci lo schermo"), "no": _E("Cablaggio di alimentazione dello schermo interrotto", ["CAVO DISPLAY"], "Sostituisci il cablaggio schermo")}]},
+ "ALARM AUX COMMUNICATION": {"titolo": "Scheda della testa non comunica", "spiega": "La colonnina non comunica con la scheda PS4GAUX della testa: luci e controllo termico non funzionano.",
+   "causa": "Cavo verso la testa scollegato; scheda spenta o guasta.", "passi": ["Controlla il cavo tra scheda principale e testa", "Riavvia la colonnina", "Se non torna, sostituisci la scheda PS4GAUX"], "ricambi": ["SCHEDA AUX TESTA"],
+   "albero": [{"q": "Il cavo tra scheda principale e testa è collegato?", "si": 1, "no": _E("Cavo della testa scollegato", [], "Ricollega il cavo e riavvia")},
+              {"q": "Dopo un riavvio la scheda della testa torna a comunicare?", "si": _E("Blocco temporaneo della scheda della testa", [], "Nessun ricambio; se si ripete, programma la sostituzione"), "no": _E("Scheda PS4GAUX guasta", ["SCHEDA AUX TESTA"], "Sostituisci la scheda PS4GAUX")}]},
+ "ALARM AUX FAULT": {"titolo": "Guasto scheda della testa (PS4GAUX)", "spiega": "La scheda della testa (luci, ventola, riscaldatore, sensori) segnala un guasto.",
+   "causa": "Alimentazione 12 V bassa, ventola bloccata o scheda guasta.", "passi": ["Verifica che la ventola della testa giri", "Misura i 12 V in ingresso alla scheda", "Se i 12 V sono corretti, sostituisci la scheda PS4GAUX"], "ricambi": ["VENTOLA TESTA", "SCHEDA AUX TESTA"],
+   "albero": [{"q": "La ventola della testa gira?", "si": 1, "no": _E("Ventola della testa bloccata o guasta", ["VENTOLA TESTA"], "Sostituisci la ventola")},
+              {"q": "In ingresso alla scheda PS4GAUX misuri tra 11,4 e 13,2 V?", "si": _E("Scheda PS4GAUX guasta", ["SCHEDA AUX TESTA"], "Sostituisci la scheda PS4GAUX"), "no": _E("Alimentazione 12 V della testa bassa", ["ALIMENTATORE 24V"], "Controlla il cablaggio e sostituisci l'alimentatore")}]},
+ "ALARM RFID COMMUNICATION": {"titolo": "Lettore tessere non funziona", "spiega": "Il lettore RFID non risponde: i clienti non possono avviare la ricarica con la tessera.",
+   "causa": "Lettore scollegato o guasto.", "passi": ["Avvicina una tessera di prova", "Controlla il connettore del lettore", "Sostituisci il lettore RFID"], "ricambi": ["LETTORE RFID"],
+   "albero": [{"q": "Avvicinando una tessera di prova, il lettore suona o si illumina?", "si": _E("Lettore funzionante, comunicazione interrotta", [], "Controlla il connettore del lettore e riavvia"), "no": 1},
+              {"q": "Il connettore del lettore è inserito e integro?", "si": _E("Lettore RFID guasto", ["LETTORE RFID"], "Sostituisci il lettore"), "no": _E("Lettore scollegato", [], "Ricollega il lettore")}]},
+ "WARNING MODEM": {"titolo": "Colonnina non collegata alla rete dati", "spiega": "Il modem non è connesso: la colonnina non comunica con il sistema centrale.",
+   "causa": "Antenna scollegata o danneggiata, copertura scarsa, modem o SIM guasti.", "passi": ["Controlla antenna e cavo antenna", "Riavvia il modem", "Se non si connette, sostituisci il modem"], "ricambi": ["ANTENNA MODEM", "MODEM"],
+   "albero": [{"q": "L'antenna e il suo cavo sono integri e ben avvitati?", "si": 1, "no": _E("Antenna o cavo antenna danneggiati", ["ANTENNA MODEM"], "Sostituisci l'antenna")},
+              {"q": "Dopo il riavvio del modem si connette?", "si": _E("Blocco temporaneo del modem", [], "Nessun ricambio; se si ripete, programma la sostituzione"), "no": _E("Modem o SIM guasti", ["MODEM"], "Prova un'altra SIM; se non basta sostituisci il modem")}]},
+ "WARNING MODEM SIGNAL": {"titolo": "Segnale del modem debole", "spiega": "Il modem è connesso ma con segnale scarso: la comunicazione può cadere.", "causa": "Antenna danneggiata o mal posizionata, copertura scarsa.",
+   "passi": ["Controlla antenna e cavo antenna", "Verifica la copertura sul posto"], "ricambi": ["ANTENNA MODEM"],
+   "albero": [{"q": "L'antenna e il suo cavo sono integri e ben avvitati?", "si": _E("Copertura scarsa nel sito", [], "Valuta un'antenna esterna o un cambio operatore"), "no": _E("Antenna o cavo antenna danneggiati", ["ANTENNA MODEM"], "Sostituisci l'antenna")}]},
+ "ALARM AC POWER": {"titolo": "Manca la rete elettrica", "spiega": "La colonnina non riceve alimentazione di rete.", "causa": "Interruttore a monte aperto, guasto di rete o alimentatore guasto.",
+   "passi": ["Verifica l'interruttore generale a monte", "Misura la tensione in ingresso", "Se la rete c'è, sostituisci l'alimentatore"], "ricambi": ["ALIMENTATORE 24V"],
+   "albero": [{"q": "L'interruttore generale a monte è chiuso?", "si": 1, "no": _E("Interruttore a monte aperto", [], "Richiudi; se scatta di nuovo, fai verificare l'impianto")},
+              {"q": "C'è la tensione di rete (230 V) in ingresso alla colonnina?", "si": _E("Alimentatore guasto", ["ALIMENTATORE 24V"], "Sostituisci l'alimentatore"), "no": _E("Manca la rete a monte", [], "Segnala al distributore o al gestore dell'impianto")}]},
+ "WARNING SUPERCAP": {"titolo": "Supercondensatore scarico", "spiega": "Il supercondensatore di backup ha tensione bassa: in caso di mancanza rete la colonnina non chiude bene le sessioni.",
+   "causa": "Supercap a fine vita.", "passi": ["Programma la sostituzione del supercap"], "ricambi": ["SUPERCAP"], "albero": []},
+ "WARNING ANTITAMPER": {"titolo": "Sportello aperto (antitamper)", "spiega": "Il sensore antieffrazione segnala uno sportello aperto o forzato.", "causa": "Sportello non chiuso bene, effrazione, microinterruttore guasto.",
+   "passi": ["Chiudi correttamente lo sportello", "Verifica segni di effrazione", "Se resta aperto a sportello chiuso, sostituisci il microinterruttore"], "ricambi": ["ANTITAMPER"],
+   "albero": [{"q": "Lo sportello è chiuso correttamente?", "si": 1, "no": _E("Sportello non chiuso", [], "Chiudi lo sportello")},
+              {"q": "Ci sono segni di effrazione?", "si": _E("Effrazione", [], "Documenta con foto e apri una segnalazione di sicurezza"), "no": _E("Microinterruttore antitamper guasto", ["ANTITAMPER"], "Sostituisci il microinterruttore")}]},
+ "ALARM BREAKER OPEN": {"titolo": "Magnetotermico aperto", "spiega": "La protezione della presa è scattata: la presa non eroga energia.", "causa": "Sovraccarico o corto (veicolo o cavo del cliente); magnetotermico difettoso.",
+   "passi": ["Ispeziona presa e cavo per segni di bruciatura", "Richiudi il magnetotermico", "Se scatta di nuovo a vuoto, sostituiscilo"], "ricambi": ["MAGNETOTERMICO PRESA {n}"],
+   "albero": [{"q": "Il magnetotermico della presa è abbassato?", "si": 1, "no": _E("Contatto di segnalazione del magnetotermico guasto", ["MAGNETOTERMICO PRESA {n}"], "Sostituisci il magnetotermico")},
+              {"q": "Presa o cavo hanno segni di bruciatura o danni?", "si": _E("Presa danneggiata", [], "Metti la presa fuori servizio e apri una richiesta di secondo livello"), "no": 2},
+              {"q": "Richiuso il magnetotermico, resta chiuso senza veicolo collegato?", "si": _E("Scatto causato dal veicolo o dal cavo del cliente", [], "Richiudi e fai una ricarica di prova"), "no": _E("Magnetotermico difettoso", ["MAGNETOTERMICO PRESA {n}"], "Sostituisci il magnetotermico")}]},
+ "ALARM RCCB OPEN": {"titolo": "Differenziale aperto", "spiega": "Il differenziale della presa è scattato per una dispersione verso terra.", "causa": "Dispersione su veicolo o cavo, umidità nella presa, differenziale difettoso.",
+   "passi": ["Controlla che la presa sia asciutta e pulita", "Richiudi il differenziale e premi il tasto di prova", "Se non resta chiuso a vuoto, sostituiscilo"], "ricambi": ["DIFFERENZIALE PRESA {n}"],
+   "albero": [{"q": "Il differenziale della presa è abbassato?", "si": 1, "no": _E("Contatto di segnalazione del differenziale guasto", ["DIFFERENZIALE PRESA {n}"], "Sostituisci il differenziale")},
+              {"q": "C'è umidità o sporco dentro la presa?", "si": _E("Dispersione per umidità nella presa", [], "Asciuga e pulisci la presa, richiudi e prova"), "no": 2},
+              {"q": "Richiuso, resta chiuso senza veicolo e scatta col tasto di prova?", "si": _E("Dispersione del veicolo del cliente", [], "Richiudi e fai una ricarica di prova"), "no": _E("Differenziale difettoso", ["DIFFERENZIALE PRESA {n}"], "Sostituisci il differenziale")}]},
+ "ALARM CONTACTOR FAILURE": {"titolo": "Contattore incollato", "spiega": "Il contattore risulta chiuso senza ricarica: la presa potrebbe restare in tensione. Da mettere fuori servizio.",
+   "causa": "Contatti saldati per usura o picchi di corrente.", "passi": ["Metti la presa fuori servizio", "Togli tensione e verifica il contattore", "Sostituisci il contattore"], "ricambi": ["CONTATTORE PRESA {n}"],
+   "albero": [{"q": "Senza veicolo collegato, il contattore risulta chiuso (lo senti o lo vedi)?", "si": _E("Contatti del contattore incollati", ["CONTATTORE PRESA {n}"], "Presa fuori servizio, togli tensione e sostituisci il contattore"), "no": 1},
+              {"q": "Il cavetto di ritorno stato del contattore è collegato?", "si": _E("Contatto di segnalazione del contattore guasto", ["CONTATTORE PRESA {n}"], "Sostituisci il contattore"), "no": _E("Cavetto di ritorno stato scollegato", [], "Ricollega il cavetto e riavvia")}]},
+ "WARNING AUX USB": {"titolo": "Scheda della testa si scollega", "spiega": "Il collegamento USB con la scheda della testa cade e si riconnette: è il primo segnale del guasto «scheda della testa non comunica».",
+   "causa": "Connettore USB allentato, cavo danneggiato o convertitore USB della testa difettoso.", "passi": ["Controlla il cavo USB ai due lati", "Se è danneggiato sostituiscilo", "Se le disconnessioni continuano, sostituisci la scheda PS4GAUX"], "ricambi": ["CAVO USB TESTA", "SCHEDA AUX TESTA"],
+   "albero": [{"q": "Il cavo USB tra scheda principale e testa è ben inserito ai due lati?", "si": 1, "no": _E("Connettore USB allentato", [], "Reinserisci il cavo e verifica nei giorni successivi")},
+              {"q": "Il cavo è integro (nessuna piega, schiacciamento o pin ossidato)?", "si": _E("Convertitore USB della scheda della testa difettoso", ["SCHEDA AUX TESTA"], "Sostituisci la scheda PS4GAUX"), "no": _E("Cavo USB della testa danneggiato", ["CAVO USB TESTA"], "Sostituisci il cavo USB della testa")}]},
+}
+
+
+def knowledge():
+    """Base di conoscenza: valori predefiniti sovrascritti da guasti.json (modificabile dalla Configurazione)."""
+    kb = json.loads(json.dumps(DEFAULT_KB))
+    for k, v in (load_json(F_KB, {}) or {}).items():
+        kb[k] = {**kb.get(k, {}), **v}
+    return kb
 
 
 def write_csv(path, cols, rows):
@@ -198,6 +279,20 @@ def ensure_files():
             for x in p["onfield"]:
                 comps.update(expand_n(x["componente"]))
         write_csv(F_PARTS, PART_COLS, [(c, "", "", "", "") for c in sorted(comps)])
+    rows = read_csv(F_PARTS)
+    have = {r.get("componente", "").upper() for r in rows}
+    changed = False
+    for comp in DEFAULT_RATES:
+        if comp not in have:
+            rows.append({"componente": comp})
+            changed = True
+    for r in rows:
+        dr = DEFAULT_RATES.get((r.get("componente") or "").upper())
+        if dr and not r.get("tasso_annuo"):
+            r["tasso_annuo"], r["preventivo_anni"], r["pezzi"] = str(dr[0]), str(dr[1]), r.get("pezzi") or "1"
+            changed = True
+    if changed or (F_PARTS.exists() and "tasso_annuo" not in F_PARTS.read_text(encoding="utf-8-sig").splitlines()[0]):
+        write_csv(F_PARTS, PART_COLS, [[r.get(c, "") or "" for c in PART_COLS] for r in rows])
     if not F_STATIONS.exists():
         write_csv(F_STATIONS, STATION_COLS, [])
     if not F_PROCS.exists():
@@ -241,13 +336,14 @@ def import_poledesk():
     if pd is None:
         raise ValueError(f"anagrafica di PoleDesk non trovata in {PD_DATA}")
     cur = read_csv(F_STATIONS)
-    have = {r.get("ip") for r in cur}
+    have = {(r.get("ip"), r.get("scheda_pc") or "", r.get("nome") or "") for r in cur}
     added = 0
     for s in pd:
         ip = (s.get("host") or "").strip()
-        if ip and ip not in have:
-            cur.append({"nome": s.get("name", ""), "ip": ip, "porta_ssh": str(s.get("port") or ""), "note": "da PoleDesk"})
-            have.add(ip)
+        k = (ip, (s.get("source_ip") or "").strip(), s.get("name", ""))
+        if ip and k not in have:
+            cur.append({"nome": s.get("name", ""), "ip": ip, "porta_ssh": str(s.get("port") or ""), "scheda_pc": k[1], "note": "da PoleDesk"})
+            have.add(k)
             added += 1
     write_csv(F_STATIONS, STATION_COLS, [[r.get(c, "") for c in STATION_COLS] for r in cur])
     return added
@@ -327,15 +423,16 @@ def num(v):
     return float(m.group().replace(",", ".")) if m else None
 
 
-def http_get(host, port, path="/", timeout=8):
-    c = http.client.HTTPConnection(host, int(port or 80), timeout=timeout)
+def http_get(host, port, path="/", timeout=8, src=""):
+    kw = {"source_address": (src, 0)} if src else {}
+    c = http.client.HTTPConnection(host, int(port or 80), timeout=timeout, **kw)
     c.request("GET", path, headers={"User-Agent": "Manut21"})
     r = c.getresponse()
     return r.status, r.read()
 
 
 def read_page(st, cfg):
-    code, body = http_get(st["ip"], st.get("porta_web") or 80, "/", int(cfg.get("timeout_http") or 8))
+    code, body = http_get(st["ip"], st.get("porta_web") or 80, "/", int(cfg.get("timeout_http") or 8), (st.get("scheda_pc") or "").strip())
     text = body.decode("utf-8", "replace")
     if code != 200:
         raise OSError(f"HTTP {code}")
@@ -346,30 +443,57 @@ def read_page(st, cfg):
 
 
 # ------------------------------------------------------------------ controlli SSH (sola lettura)
-def poledesk_station(st):
-    """Colonnina corrispondente nell'anagrafica di PoleDesk (stesso indirizzo; a parità, stessa porta SSH)."""
-    pd = load_json(PD_DATA / "stations.json", []) or []
-    host = (st.get("ip") or "").strip().lower()
-    same = [x for x in pd if (x.get("host") or "").strip().lower() == host]
-    port = str(st.get("porta_ssh") or 22)
-    return next((x for x in same if str(x.get("port") or 22) == port), same[0] if same else None)
+def _same_link(a_host, a_src, b_host, b_src):
+    return (a_host or "").strip().lower() == (b_host or "").strip().lower() and (a_src or "").strip() == (b_src or "").strip()
+
+
+LAST_OK = {}  # CUID o indirizzo -> chiave delle credenziali che hanno funzionato l'ultima volta
+
+
+def ssh_candidates(st, cfg, cuid=""):
+    """Credenziali da provare, in ordine. Con più colonnine sullo stesso indirizzo (banco prova) si provano tutte
+    quelle note per quell'indirizzo: prima quella che ha già funzionato per questo CUID, poi quella della riga
+    con CUID atteso uguale, poi la riga stessa, PoleDesk, le altre righe, la generale, la predefinita di PoleDesk."""
+    pd, pds = poledesk_settings(), load_json(PD_DATA / "stations.json", []) or []
+    host, src, port = st.get("ip"), st.get("scheda_pc") or "", str(st.get("porta_ssh") or 22)
+    duser = cfg.get("utente") or pd.get("default_username") or "root"
+    rows = [r for r in read_csv(F_STATIONS) if _same_link(r.get("ip"), r.get("scheda_pc"), host, src)]
+    out = []
+
+    def add(user, pw, key, label):
+        if pw or key:
+            out.append({"utente": user or duser, "password": pw or None, "chiave": key or None, "fonte": label})
+    for r in rows:
+        if cuid and r.get("cuid_atteso") == cuid and r.get("password_ssh"):
+            add(r.get("utente_ssh"), r["password_ssh"], None, f"elenco: {r.get('nome') or r.get('ip')} (CUID)")
+    if st.get("password_ssh"):
+        add(st.get("utente_ssh"), st["password_ssh"], None, "elenco: questa colonnina")
+    nome = (st.get("nome") or "").strip().lower()
+    for x in sorted(pds, key=lambda x: 0 if (x.get("name") or "").strip().lower() == nome else 1):
+        if _same_link(x.get("host"), x.get("source_ip"), host, src) and str(x.get("port") or 22) == port:
+            add(x.get("username") or pd.get("default_username"), x.get("password"), x.get("key_path"), f"PoleDesk: {x.get('name') or x.get('host')}")
+    for r in rows:
+        if r.get("password_ssh"):
+            add(r.get("utente_ssh"), r["password_ssh"], None, f"elenco: {r.get('nome') or r.get('ip')}")
+    add(st.get("utente_ssh") or duser, cfg.get("password"), None, "generale")
+    add(st.get("utente_ssh") or pd.get("default_username"), pd.get("default_password"), pd.get("default_key_path"), "PoleDesk (predefinita)")
+    seen, uniq = set(), []
+    for c in out:
+        k = (c["utente"], c["password"], c["chiave"])
+        if k not in seen:
+            seen.add(k)
+            uniq.append(c)
+    last = LAST_OK.get(cuid or f"{host}|{src}")
+    uniq.sort(key=lambda c: 0 if (c["utente"], c["password"], c["chiave"]) == last else 1)
+    return uniq
 
 
 def ssh_credentials(st, cfg):
-    """Ordine: password della colonnina in colonnine.csv → stessa colonnina in PoleDesk →
-    password generale delle impostazioni → password predefinita di PoleDesk. Restituisce (utente, password, chiave, fonte)."""
-    pds, pd = poledesk_station(st), poledesk_settings()
-    if st.get("password_ssh"):
-        return st.get("utente_ssh") or cfg.get("utente") or "root", st["password_ssh"], None, "colonnina"
-    if pds and (pds.get("password") or pds.get("key_path")):
-        return (pds.get("username") or pd.get("default_username") or cfg.get("utente") or "root",
-                pds.get("password") or None, pds.get("key_path") or None, "PoleDesk (colonnina)")
-    user = st.get("utente_ssh") or cfg.get("utente") or pd.get("default_username") or "root"
-    if cfg.get("password"):
-        return user, cfg["password"], None, "generale"
-    if pd.get("default_password") or pd.get("default_key_path"):
-        return user, pd.get("default_password") or None, pd.get("default_key_path") or None, "PoleDesk (generale)"
-    return user, None, None, ""
+    """Per la pagina Impostazioni: da dove arriverà la password (prima fonte) e quante alternative ci sono."""
+    c = ssh_candidates(st, cfg)
+    if not c:
+        return None, None, None, ""
+    return c[0]["utente"], c[0]["password"], c[0]["chiave"], c[0]["fonte"] + (f" (+{len(c) - 1} da provare)" if len(c) > 1 else "")
 
 
 SSH_PARTS = [
@@ -385,38 +509,73 @@ SSH_PARTS = [
     ("mem", "grep MemAvailable /proc/meminfo"),
     ("ora", "date +%s"),
     ("ppp", "cat /sys/class/net/ppp0/statistics/rx_bytes /sys/class/net/ppp0/statistics/tx_bytes 2>/dev/null"),
+    ("ini", "for f in $(find /crve -maxdepth 3 -name '*.ini' -size -64k 2>/dev/null | sort | head -n 30); do echo \"### $f\"; cat \"$f\"; echo; done"),
 ]
+SECRET = re.compile(r"pass|pwd|secret|token|psk|apikey|auth|cert|private", re.I)
+
+
+def parse_ini(text):
+    """Testo di più file .ini (separati da '### percorso') -> {file: [[sezione, chiave, valore], ...]}. Segreti mascherati."""
+    files, cur, sec = {}, None, ""
+    for line in text.splitlines():
+        if line.startswith("### "):
+            cur, sec = line[4:].strip(), ""
+            files[cur] = []
+            continue
+        t = line.strip()
+        if cur is None or not t or t[0] in ";#":
+            continue
+        if t.startswith("[") and t.endswith("]"):
+            sec = t[1:-1].strip()
+        elif "=" in t:
+            k, v = t.split("=", 1)
+            k, v = k.strip(), v.strip()
+            files[cur].append([sec, k, "••••" if SECRET.search(k) and v else v])
+    return files
 SSH_CMD = "; echo ---; ".join(c for _, c in SSH_PARTS)
 
 
-def ssh_checks(st, cfg):
+def ssh_checks(st, cfg, cuid=""):
     if not paramiko:
-        return {"_SSH": "NON DISPONIBILE", "_SSH NOTA": "libreria paramiko assente sul PC"}
-    user, pw, key, src = ssh_credentials(st, cfg)
-    if not (pw or key):
-        return {"_SSH": "NON CONFIGURATO", "_SSH NOTA": "nessuna password SSH per questa colonnina"}
-    c = paramiko.SSHClient()
-    c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        return {"_SSH": "NON DISPONIBILE", "_SSH NOTA": "libreria paramiko assente sul PC"}, None
+    cands = ssh_candidates(st, cfg, cuid)
+    if not cands:
+        return {"_SSH": "NON CONFIGURATO", "_SSH NOTA": "nessuna password SSH per questa colonnina"}, None
     t = int(cfg.get("timeout_ssh") or 12)
-    try:
-        c.connect(st["ip"], port=int(st.get("porta_ssh") or 22), username=user, password=pw, key_filename=key,
-                  look_for_keys=False, allow_agent=False, timeout=t, banner_timeout=t, auth_timeout=t)
-        t0 = time.time()
-        _, so, _ = c.exec_command(SSH_CMD, timeout=t + 10)
-        out = so.read(200_000).decode("utf-8", "replace")
-        t1 = time.time()
-    except Exception as e:
-        msg = str(e)[:200]
-        if "Authentication" in msg:
-            msg = f"password rifiutata (fonte: {src})"
-        return {"_SSH": "ERRORE", "_SSH NOTA": msg, "_SSH CREDENZIALI": src}
-    finally:
+    src, port = (st.get("scheda_pc") or "").strip(), int(st.get("porta_ssh") or 22)
+    out, used, tried, err = None, None, [], ""
+    for cand in cands[:8]:
+        c = paramiko.SSHClient()
+        c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
-            c.close()
-        except Exception:
-            pass
+            sock = socket.create_connection((st["ip"], port), timeout=t, source_address=(src, 0)) if src else None
+            c.connect(st["ip"], port=port, sock=sock, username=cand["utente"], password=cand["password"], key_filename=cand["chiave"],
+                      look_for_keys=False, allow_agent=False, timeout=t, banner_timeout=t, auth_timeout=t)
+            t0 = time.time()
+            _, so, _ = c.exec_command(SSH_CMD, timeout=t + 10)
+            out = so.read(800_000).decode("utf-8", "replace")
+            t1 = time.time()
+            used = cand
+            break
+        except Exception as e:
+            tried.append(cand["fonte"])
+            err = str(e)[:200]
+            if "Authentication" not in err and "authentication" not in err:
+                break  # rete o timeout: inutile provare altre password
+        finally:
+            try:
+                c.close()
+            except Exception:
+                pass
+    if used is None:
+        if "uthentication" in err:
+            err = "password rifiutata; provate: " + ", ".join(tried)
+        elif src and ("99" in err or "10049" in err or "assign" in err):
+            err = f"la scheda di rete {src} non è presente su questo PC"
+        return {"_SSH": "ERRORE", "_SSH NOTA": err[:300], "_SSH CREDENZIALI": ", ".join(tried)}, None
+    LAST_OK[cuid or f"{st['ip']}|{src}"] = (used["utente"], used["password"], used["chiave"])
     p = dict(zip([k for k, _ in SSH_PARTS], [x.strip() for x in out.split("---")]))
-    res = {"_SSH": "OK", "_SSH CREDENZIALI": src}
+    res = {"_SSH": "OK", "_SSH CREDENZIALI": used["fonte"] + (f" (dopo {len(tried)} rifiutate)" if tried else "")}
     for name, val in zip(["CP_MAIN", "PS4GAUX", "RFID", "CM_MAIN"], (p.get("servizi", "").splitlines() + ["?"] * 4)[:4]):
         res[f"_SSH {name}"] = val.strip()
     m = re.search(r"(\d+)%", p.get("disco", ""))
@@ -438,7 +597,9 @@ def ssh_checks(st, cfg):
     b = (p.get("ppp") or "").split()
     if len(b) == 2 and all(x.isdigit() for x in b):
         res["_SSH DATI MODEM MB (RX/TX)"] = f"{int(b[0]) / 1e6:.1f} / {int(b[1]) / 1e6:.1f}"
-    return res
+    ini = parse_ini(p.get("ini") or "")
+    res["_SSH FILE INI LETTI"] = str(len(ini))
+    return res, ini
 
 
 # ------------------------------------------------------------------ regole
@@ -729,6 +890,42 @@ def fleet_outliers(results):
     return out
 
 
+_LCACHE = {"key": None, "data": None}
+
+
+def latest_by_station(max_runs=400):
+    """Ultima lettura di ogni colonnina dell'elenco, cercando in tutti i giri (non solo nell'ultimo).
+    Abbinamento per indirizzo, porta e nome: regge anche se l'elenco viene riordinato."""
+    runs = sorted((p for p in RUNS_DIR.iterdir() if p.is_dir() and run_time(p.name)), reverse=True)[:max_runs]
+    sts = stations()
+    key = (tuple(p.name for p in runs[:3]), len(runs), sum(1 for _ in runs[0].glob("*.json")) if runs else 0,
+           tuple((s["id"], s.get("nome")) for s in sts))
+    if _LCACHE["key"] == key:
+        return _LCACHE["data"]
+    want = {(s["ip"], str(s.get("porta_web") or 80), s.get("nome", "")): s for s in sts}
+    by_addr = {}
+    for s in sts:
+        by_addr.setdefault((s["ip"], str(s.get("porta_web") or 80)), []).append(s)
+    out = {}
+    for d in runs:
+        for p in d.glob("*.json"):
+            try:
+                r = json.loads(p.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            addr = (r.get("ip"), str(r.get("porta_web") or 80))
+            st = want.get(addr + (r.get("nome", ""),))
+            if not st and len(by_addr.get(addr, [])) == 1:
+                st = by_addr[addr][0]
+            if st and st["id"] not in out:
+                r["id"], r["nome"], r["giro"] = st["id"], st.get("nome", ""), d.name
+                out[st["id"]] = r
+        if len(out) == len(sts):
+            break
+    _LCACHE.update(key=key, data=out)
+    return out
+
+
 def latest_results():
     runs = sorted((p for p in RUNS_DIR.iterdir() if p.is_dir() and run_time(p.name)), reverse=True)
     for d in runs:
@@ -741,7 +938,8 @@ def latest_results():
 def dashboard_data(results=None):
     stamp = ""
     if not results:
-        stamp, results = latest_results()
+        results = list(latest_by_station().values())
+        stamp = max((r.get("giro", "") for r in results), default="")
     results = [r for r in results if not str(r.get("id", "")).startswith("file:")]
     hist = history()
     # energia della flotta: ultime 24 h e 7 giorni
@@ -818,24 +1016,27 @@ def station_trend(sid, current=None):
 # ------------------------------------------------------------------ diagnosi
 def diagnose(st, cfg, rundir=None):
     t0 = time.time()
-    vals, title, layout, err, text = {}, "", [], "", ""
+    vals, title, layout, err, text, ini = {}, "", [], "", "", None
     try:
         text, vals, title, layout = read_page(st, cfg)
         vals["_PAGINA"] = "OK"
     except Exception as e:
         err = str(e)[:200]
+        if st.get("scheda_pc") and getattr(e, "errno", None) in (99, 10049):
+            err = f"la scheda di rete {st['scheda_pc']} non è presente su questo PC (colonna «Scheda di rete PC»)"
         vals["_PAGINA"] = "NON RAGGIUNGIBILE"
     cuid = vals.get("CUID", "")
     vals["_CUID_DIVERSO"] = "SI" if st.get("cuid_atteso") and cuid and cuid != st["cuid_atteso"] else "NO"
     if cfg.get("ssh_attivo") and vals["_PAGINA"] == "OK":
-        vals.update(ssh_checks(st, cfg))
+        sv, ini = ssh_checks(st, cfg, cuid)
+        vals.update(sv)
     overall, found, marks = evaluate(vals)
     for f in found:
         if f["id"] == "CUID":
             f["messaggio"] = f"All'IP risponde {cuid}, attesa {st['cuid_atteso']}"
     res = {"id": st["id"], "nome": st.get("nome", ""), "ip": st["ip"], "porta_web": st.get("porta_web", ""),
            "cuid": cuid, "titolo": title, "esito": overall, "anomalie": found, "segni": marks, "valori": vals,
-           "layout": layout, "errore": err, "secondi": round(time.time() - t0, 1), "ora": dt.datetime.now().strftime("%H:%M:%S")}
+           "layout": layout, "ini": ini, "errore": err, "secondi": round(time.time() - t0, 1), "ora": dt.datetime.now().strftime("%H:%M:%S")}
     if rundir:
         key = re.sub(r"[^A-Za-z0-9._-]+", "_", f"{cuid or 'senza-cuid'}_{st['ip']}_{st.get('porta_web') or 80}")
         (rundir / f"{key}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -985,7 +1186,7 @@ def verify_step(body):
 def add_log(body):
     with LOCK:
         log = load_json(F_LOG, [])
-        ev = {k: body.get(k) for k in ("colonnina", "nome", "cuid", "analisi", "tipo", "esito", "ricambi", "passi", "note")}
+        ev = {k: body.get(k) for k in ("colonnina", "nome", "cuid", "analisi", "tipo", "esito", "ricambi", "passi", "note", "causa", "problema")}
         ev["data"] = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log.insert(0, ev)
         save_json(F_LOG, log[:2000])
@@ -1016,7 +1217,7 @@ def route(method, path, body):
                 "impostazioni": {**cfg, "password": "", "ha_password": bool(cfg.get("password") or poledesk_settings().get("default_password")),
                                  "senza_password": sum(1 for x in sts if not x["fonte_ssh"])},
                 "paramiko": PARAMIKO, "poledesk": (PD_DATA / "stations.json").exists(),
-                "giri": sorted([p.name for p in RUNS_DIR.iterdir() if p.is_dir()], reverse=True)[:30],
+                "giri": sorted([p.name for p in RUNS_DIR.iterdir() if p.is_dir()], reverse=True)[:30], "kb": knowledge(),
                 "config": config(), "ricambi": read_csv(F_PARTS), "procedure": procedures(),
                 "guasti": fault_list(),
                 "registro": load_json(F_LOG, [])[:300]}
@@ -1031,7 +1232,33 @@ def route(method, path, body):
     if method == "POST" and path == "/api/avvia":
         return {"id": start_run(body.get("ids") or [])["id"]}
     if method == "POST" and path == "/api/diagnosi_una":
-        return diagnose(station(body.get("id", "")), settings())
+        stamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+        rd = RUNS_DIR / stamp
+        rd.mkdir(parents=True, exist_ok=True)
+        return diagnose(station(body.get("id", "")), settings(), rd)
+    if method == "GET" and path == "/api/ultimi":
+        lat = latest_by_station()
+        slim = [{k: v for k, v in r.items() if k not in ("layout", "ini")} for r in lat.values()]
+        cr = dashboard_data(list(lat.values()))
+        cr["stamp"] = max((r.get("giro", "") for r in lat.values()), default="")
+        return {"risultati": slim, "cruscotto": cr}
+    if method == "POST" and path == "/api/risultato":
+        return latest_by_station().get(body.get("id", "")) or {}
+    if method == "GET" and path == "/api/ini_flotta":
+        return {k: r["ini"] for k, r in latest_by_station().items() if r.get("ini")}
+    if method == "POST" and path == "/api/kb":
+        kb = body.get("kb") if isinstance(body.get("kb"), dict) else {}
+        save_json(F_KB, kb)
+        return {"kb": knowledge()}
+    if method == "POST" and path == "/api/ricambi":
+        rows = body.get("righe") or []
+        write_csv(F_PARTS, PART_COLS, [[str(r.get(c, "") or "").strip() for c in PART_COLS] for r in rows if str(r.get("componente", "")).strip()])
+        return {"ok": True}
+    if method == "POST" and path == "/api/ui":
+        cfg = config()
+        cfg["ui"] = body.get("ui") if isinstance(body.get("ui"), dict) else {}
+        save_json(F_CONFIG, cfg)
+        return {"ok": True}
     if method == "POST" and path == "/api/cruscotto":
         return dashboard_data(body.get("risultati") or None)
     if method == "POST" and path == "/api/andamento":
@@ -1101,6 +1328,8 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         if method == "GET" and u.path in ("/", "/index.html"):
             return self._send(200, (BASE / "console.html").read_bytes(), "text/html; charset=utf-8")
+        if method == "GET" and u.path == "/classica" and (BASE / "console_classica.html").exists():
+            return self._send(200, (BASE / "console_classica.html").read_bytes(), "text/html; charset=utf-8")
         if method == "GET" and u.path.startswith("/report/"):
             p = REPORT_DIR / Path(unquote(u.path)).name
             if p.exists() and p.suffix == ".html":
