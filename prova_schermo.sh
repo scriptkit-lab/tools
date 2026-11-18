@@ -1,5 +1,5 @@
 #!/bin/sh
-# prova_schermo.sh 2.5.2 — acquisizione dati per il rilevamento del distacco dello schermo, sulla colonnina.
+# prova_schermo.sh 2.6.1 — acquisizione dati per il rilevamento del distacco dello schermo, sulla colonnina.
 #
 # Tutti i parametri stanno in prova_schermo.conf (creato dal generatore). Senza file valgono i valori qui sotto.
 # Un altro file di impostazioni: CONF=/percorso/altro.conf sh prova_schermo.sh ...
@@ -42,7 +42,7 @@
 #      e nessuna prova attiva, ripristina;
 #   5. soglie di sicurezza, ricarica, FAULT e pagina muta interrompono subito la prova.
 
-VERSIONE="2.5.2"
+VERSIONE="2.6.1"
 CONF="${CONF:-$(cd "$(dirname "$0")" 2>/dev/null && pwd)/prova_schermo.conf}"
 [ -f "$CONF" ] && . "$CONF"
 BASE="${DIR:-/home/root/test}"       # blocco, segnali e piano stanno qui anche se una sequenza sposta i dati altrove
@@ -83,7 +83,7 @@ Misura 2;misura;300;0;1
 : "${MIN_UPTIME_H:=3}"; : "${USER_OK=IDLE}"; : "${CHARGE_RX:=}"     # USER_OK="" = nessun controllo dello stato
 : "${REST_MIN:=60}"
 : "${STABLE_MIN:=30}"; : "${STABLE_TOL:=0.3}"; : "${PRE_WAIT_MIN:=60}"
-: "${DRIFT_MAX:=0.05}"; : "${HEATER_TOL_S:=15}"; : "${LED_MAX:=1.0}"
+: "${DRIFT_MAX:=0.05}"; : "${HEATER_TOL_S:=15}"; : "${LED_MAX:=1.0}"; : "${LED_VAR_MAX:=0.1}"   # A: variazione massima della barra LED
 : "${WATCHDOG_MARGIN_MIN:=15}"
 : "${DISPLAY_FLAG:=DISPLAY CONNECTED}"; : "${DISPLAY_OK:=^(CONNECTED|ON|OK|TRUE|YES|1)$}"
 : "${PSG_FLAG:=PSG4X CONNECTED}"; : "${PSG_OK:=^(CONNECTED|ON|OK|TRUE|YES|1)$}"
@@ -96,7 +96,10 @@ Misura 2;misura;300;0;1
 : "${CONFIG_DEFAULT:=campo}"
 : "${LATE_MAX_MIN:=30}"
 # controllo continuo durante la prova: uscite lette = comandate (rinvio del comando) e TempContEn = 0 (ripristino)
-: "${OUT_CHECK:=1}"; : "${OUT_SETTLE_S:=15}"; : "${TC_CHECK_S:=60}"; : "${CMD_QUIET_S:=10}"
+: "${OUT_CHECK:=1}"; : "${OUT_SETTLE_S:=15}"; : "${CMD_QUIET_S:=10}"
+# TC_CHECK_S: lettura periodica di TempContEn dal file comando. SPENTA (0): sulla colonnina vera scrivere la lettura
+# nel file comando fa tornare le uscite in automatico (dente di sega su AUX, 18/11). Non riattivare.
+: "${TC_CHECK_S:=0}"
 : "${V5_NAME:=AUX SUPPLY 5V}"; : "${AUX_FAULT_OK:=^(0|NO|FALSE|OK|NONE|NO FAULT)?$}"
 : "${DIAG_PING_KO_PCT:=80}"; : "${DIAG_FAULT_PCT:=50}"
 [ -n "$IP_SCHERMO" ] && DISPLAY_IP="$IP_SCHERMO"      # dal comando (--ip-schermo) o dall'ambiente: vale su .conf e sequenze
@@ -276,7 +279,16 @@ sample() {                           # una riga nel CSV; controlli di sicurezza 
     # colonnina libera per tutta la prova: un cambio di stato (ricarica, prenotazione) la rende non confrontabile
     if [ -n "$USER_OK" ] && [ -n "$USERST" ] && [ "$USERST" != "$USER_OK" ]; then RESULT="interrotta"; REASON="colonnina non libera (USER STATUS = $USERST)"; exit 6; fi
     if [ -n "$CHARGE_RX" ] && echo "$EVSE0 $EVSE1" | grep -q -E "$CHARGE_RX"; then RESULT="interrotta"; REASON="inizio di una ricarica"; exit 6; fi
-    [ "$PH" -ge 1 ] && { check_uscite; check_tc; }
+    [ "$PH" -ge 1 ] && { check_uscite; check_tc; check_led; }
+}
+LED0=""
+check_led() {                        # barra LED: deve restare costante (scalda quanto la scaldiglia); ogni cambio finisce nel log e nel CSV
+    l="$(num "$(get_value "AUX LEDS CURRENT")")"; [ -n "$l" ] || return 0
+    [ -z "$LED0" ] && { LED0=$l; return 0; }
+    if awk -v a="$l" -v b="$LED0" -v m="$LED_VAR_MAX" 'BEGIN { d = a - b; if (d < 0) d = -d; exit !(d > m) }'; then
+        log "ATTENZIONE: barra LED cambiata da $LED0 A a $l A durante la prova (la prova non sarà valida)"
+        EVQ="$EVQ LED=$LED0>$l"; LED0=$l
+    fi
 }
 onoff() { case "$(echo "$1" | tr 'a-z' 'A-Z')" in ON*|TRUE*|YES*) echo 1;; OFF*|FALSE*|NO*) echo 0;; *) awk -v v="$1" 'BEGIN { gsub(",", ".", v); print (v + 0 > 0) ? 1 : 0 }';; esac; }
 EVQ=""; OUT_BAD=0; TC_PEND=""; TC_T=0; TC_LAST=0; TC_NR=0; RESEND=0; STEP_T=0
@@ -286,11 +298,14 @@ check_uscite() {                     # scaldiglia e ventola lette come comandate
     h=$(onoff "$HPW"); f=$(onoff "$FPW")
     if [ "$h" != "$CH" ] || [ "$f" != "$CF" ]; then OUT_BAD=$((OUT_BAD + 1)); else OUT_BAD=0; fi
     if [ "$OUT_BAD" -ge 2 ] && [ $((NOW - LAST_SEND)) -ge 15 ]; then
-        log "ATTENZIONE: uscite lette scaldiglia $h ventola $f, comandate $CH/$CF (passo $PHNAME): comando rinviato"
-        send "07;0$CF;0$CH;01;00;01"; EVQ="$EVQ uscite_rinviate"; OUT_BAD=0
+        # uscite diverse dal comando: di solito è il controllo termico automatico tornato attivo.
+        # Si rimanda TempContEn = 0 e, al campione successivo, il comando del passo (solo comandi, nessuna lettura).
+        log "ATTENZIONE: uscite lette scaldiglia $h ventola $f, comandate $CH/$CF (passo $PHNAME): TempContEn 0 e comando del passo rinviati"
+        send "05;00;TempContEn;0"; RESEND=1; EVQ="$EVQ uscite_rinviate"; OUT_BAD=0
     fi
 }
-check_tc() {                         # TempContEn deve restare 0: lettura senza attesa, mai a ridosso di un comando
+check_tc() {                         # rinvio del comando del passo; lettura periodica di TempContEn solo se TC_CHECK_S > 0 (spenta)
+    if [ "$RESEND" = 1 ] && [ -z "$TC_PEND" ]; then [ $((NOW - LAST_SEND)) -ge 5 ] && { send "07;0$CF;0$CH;01;00;01"; RESEND=0; }; return 0; fi
     [ "$TC_CHECK_S" -gt 0 ] && [ -f "$AUXLOG" ] || return 0
     if [ -n "$TC_PEND" ]; then
         sz=$(wc -c < "$AUXLOG" 2>/dev/null); [ "${sz:-0}" -lt "$TC_PEND" ] && TC_PEND=0
@@ -660,7 +675,7 @@ esac
 analyse() {
     ROLES=""; i=1
     while [ "$i" -le "$NS" ]; do eval "ROLES=\"\$ROLES \$i:\$SR_$i:\$SS_$i\""; i=$((i + 1)); done
-    A=$(awk -F';' -v roles="$ROLES" -v htol="$HEATER_TOL_S" -v dmax="$DRIFT_MAX" -v lmax="$LED_MAX" -v uok="$USER_OK" -v cmax="$C_MAX" -v iv="$INTERVAL" '
+    A=$(awk -F';' -v roles="$ROLES" -v htol="$HEATER_TOL_S" -v dmax="$DRIFT_MAX" -v lmax="$LED_MAX" -v lvar="$LED_VAR_MAX" -v uok="$USER_OK" -v cmax="$C_MAX" -v iv="$INTERVAL" '
     function on(v) { v = toupper(v); if (v ~ /^(ON|TRUE|YES)/) return 1; if (v ~ /^OFF/) return 0; return (v + 0 > 0) }
     function slope(a, b,   k, c, sx, sy, mx, my, nu, de) { c = 0; sx = 0; sy = 0
         for (k = 1; k <= n; k++) if (t[k] >= a && t[k] < b) { sx += t[k]; sy += T[k]; c++ }
@@ -674,6 +689,7 @@ analyse() {
         if ($24 != "") { dn++; dd += $24 } if ($26 != "") { pn++; pp += $26 }
         if ($27 != "") { gn++; if ($27 != "ko") { g++; gm += $27 } }
         if ($13 != "" && (lm == "" || $13 + 0 > lm)) lm = $13 + 0
+        if ($13 != "" && (ln == "" || $13 + 0 < ln)) ln = $13 + 0
         if ($30 ~ /TempContEn/) ntc++; if ($30 ~ /uscite_rinviate/) nus++
         if (uok != "" && $17 != "" && $17 != uok) ub = $17
         if ($22 != 1 || $10 == "" || $10 == 0) next
@@ -681,6 +697,7 @@ analyse() {
     END {
         why = ""; valid = 1; d1 = ""; d2 = ""
         if (lm != "" && lm >= lmax) { valid = 0; why = why sprintf(" corrente LED %.2f A (massimo %s);", lm, lmax) }
+        if (lm != "" && ln != "" && lm - ln > lvar) { valid = 0; why = why sprintf(" barra LED variata durante la prova (da %.2f a %.2f A);", ln, lm) }
         if (ub != "") { valid = 0; why = why " colonnina non libera (USER STATUS " ub ");" }
         if (ntc) { valid = 0; why = why " TempContEn tornato attivo " ntc " volte durante la prova (ripristinato);" }
         if (nus) why = why " uscite non conformi, comando rinviato " nus " volte;"
@@ -853,17 +870,20 @@ if [ "$STABLE_MIN" -gt 0 ]; then
     log "Attendo la base stabile: escursione di AUX (massimo − minimo) entro $STABLE_TOL °C per $STABLE_MIN min (attesa massima $((PW / 60)) min $((PW % 60)) s)"
     while [ "$(now)" -lt $((T1 + PW)) ]; do
         sample
-        R=$(awk -F';' -v w="$WIN" -v tol="$STABLE_TOL" -v t="$(now)" 'NR > 1 && $10 != "" && $1 >= t - w { if (f == "") f = $1; if (lo == "" || $10 < lo) lo = $10; if (hi == "" || $10 > hi) hi = $10 }
-            END { c = (f == "") ? 0 : t - f; printf "%d %s %d\n", (f != "" && c >= w * 0.95 && hi - lo <= tol) ? 1 : 0, (f == "" ? "" : sprintf("%.2f", hi - lo)), c }' "$CSV")
-        set -- $R; OKW=$1; SPAN=$2; COV=$3
+        R=$(awk -F';' -v w="$WIN" -v tol="$STABLE_TOL" -v lv="$LED_VAR_MAX" -v t="$(now)" 'NR > 1 && $10 != "" && $1 >= t - w { if (f == "") f = $1; if (lo == "" || $10 < lo) lo = $10; if (hi == "" || $10 > hi) hi = $10
+                if ($13 != "") { if (ll == "" || $13 + 0 < ll) ll = $13 + 0; if (lh == "" || $13 + 0 > lh) lh = $13 + 0 } }
+            END { c = (f == "") ? 0 : t - f; dl = (ll == "") ? 0 : lh - ll
+                  printf "%d %s %d %.2f\n", (f != "" && c >= w * 0.95 && hi - lo <= tol && dl <= lv) ? 1 : 0, (f == "" ? "-" : sprintf("%.2f", hi - lo)), c, dl }' "$CSV")
+        set -- $R; OKW=$1; SPAN=$2; COV=$3; LSPAN=$4
         [ "$OKW" = 1 ] && break
         pace "$T1" ""
     done
     if [ "$OKW" != 1 ]; then
         if [ "$COV" -lt $((WIN * 95 / 100)) ]; then fail_start "base non verificata: in $((PW / 60)) min di attesa massima non si è riempita la finestra di $STABLE_MIN min (letti $COV s; aumenta l'attesa massima)"
+        elif awk -v a="$LSPAN" -v m="$LED_VAR_MAX" 'BEGIN { exit !(a > m) }'; then fail_start "base non stabile dopo $((PW / 60)) min: la barra LED è cambiata di $LSPAN A negli ultimi $STABLE_MIN min (limite $LED_VAR_MAX A)"
         else fail_start "base non stabile dopo $((PW / 60)) min: escursione di AUX ${SPAN:-?} °C negli ultimi $STABLE_MIN min, limite $STABLE_TOL °C"; fi
     fi
-    log "Base stabile: escursione ${SPAN} °C negli ultimi $STABLE_MIN min."
+    log "Base stabile: escursione ${SPAN} °C e barra LED ferma (±$LSPAN A) negli ultimi $STABLE_MIN min."
 fi
 
 # ---------------- prova: guardiano, controllo termico sospeso, passi agganciati all'orario T0
@@ -879,14 +899,14 @@ WDS=$((TOTAL + WATCHDOG_MARGIN_MIN * 60))
   echo "$(date '+%Y-%m-%d %H:%M:%S') guardiano a tempo: ripristino dopo $WDS s (prova T0=$T0 non chiusa)" >> "$GLOG" ) </dev/null >/dev/null 2>&1 &
 echo $! > "$BASE/.wd_pid"
 log "Guardiano a tempo: ripristino automatico tra $((WDS / 60)) min se la prova non si chiude."
-log "Limiti di sicurezza di questa sequenza: AUX TEMPERATURE ≤ $AUX_MAX °C, TEMPERATURE ≤ $TEMP_MAX °C, LED < $LED_MAX A per la validità."
+log "Limiti di sicurezza di questa sequenza: AUX TEMPERATURE ≤ $AUX_MAX °C, TEMPERATURE ≤ $TEMP_MAX °C; validità: LED < $LED_MAX A e costante entro $LED_VAR_MAX A."
 echo "$(date '+%Y-%m-%d %H:%M') $CUID" > "$MARK"; DISABLED=1
 send "05;00;TempContEn;0"; sleep 2
 # verifica all'avvio: TempContEn deve risultare 0 (fino a 3 tentativi); se il log di PS4GAux non risponde la prova continua
 if [ -f "$AUXLOG" ]; then
     k=1; v=$(tc_read)
     while [ -n "$v" ] && [ "$v" != 0 ] && [ "$k" -lt 3 ]; do send "05;00;TempContEn;0"; sleep 2; v=$(tc_read); k=$((k + 1)); done
-    if [ -z "$v" ]; then log "TempContEn: nessuna risposta alla verifica iniziale (la prova continua; controllo ogni ${TC_CHECK_S} s)"
+    if [ -z "$v" ]; then log "TempContEn: nessuna risposta alla verifica iniziale (la prova continua)"
     elif [ "$v" != 0 ]; then RESULT="interrotta"; REASON="TempContEn non disattivabile (letto $v dopo 3 tentativi)"; exit 7
     else log "TempContEn verificato a 0: controllo termico automatico disattivato."; fi
     TC_LAST=$(now)

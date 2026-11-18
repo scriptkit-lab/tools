@@ -377,7 +377,7 @@ a.btn{text-decoration:none;color:inherit}
             <div class="row"><label class="f">STACCATO con almeno<input id="soMinV" type="number" min="1" style="width:70px"></label><span class="hint" style="align-self:end">condizioni vere</span>
               <label class="f">calcolabili minime<input id="soMinC" type="number" min="1" style="width:70px"></label></div>
             <div class="hint"><b>Validità</b> (se una manca: prova non valida, da ripetere)</div>
-            <div class="row"><label class="f">LED < A<input id="soLed" style="width:70px"></label><label class="f">USER STATUS<input id="soUser" style="width:80px"></label>
+            <div class="row"><label class="f">LED < A<input id="soLed" style="width:70px"></label><label class="f">LED costante ± A<input id="soLedV" style="width:70px"></label><label class="f">USER STATUS<input id="soUser" style="width:80px"></label>
               <label class="f">|deriva| ≤ °C/min<input id="soDer" style="width:70px"></label><label class="f">C ≤<input id="soC" style="width:60px"></label><label class="f">tolleranza tempi s<input id="soTol" style="width:60px"></label></div>
             <div class="hint"><b>Diagnostica</b> (pagina Campo)</div>
             <div class="row"><label class="f">minuti<input id="soDm" type="number" min="1" max="10" style="width:60px"></label><label class="f">ping falliti ≥ %<input id="soDp" style="width:60px"></label>
@@ -655,7 +655,7 @@ a.btn{text-decoration:none;color:inherit}
               <button class="btn" id="pgPng" title="Scarica i grafici come immagine">PNG</button></h3>
             <div class="b" style="display:grid;gap:6px"><canvas id="pgC1" style="height:360px;width:100%"></canvas>
               <div class="row" style="justify-content:space-between"><b style="font:600 13px var(--ui)" id="pgC2t">Derivata di AUX (°C/min)</b>
-                <span class="row" style="gap:8px"><select id="pgV2" aria-label="Secondo grafico"><option value="d">derivata di AUX (°C/min)</option><option value="delta">Δ = TEMPERATURE − AUX (°C)</option></select><label class="row" style="gap:4px">finestra ±<input id="pgW" type="number" min="5" value="15" style="width:56px">s</label></span></div>
+                <span class="row" style="gap:8px"><select id="pgV2" aria-label="Secondo grafico"><option value="d">derivata di AUX (°C/min)</option><option value="delta">Δ = TEMPERATURE − AUX (°C)</option><option value="led">corrente barra LED (A)</option></select><label class="row" style="gap:4px">finestra ±<input id="pgW" type="number" min="5" value="15" style="width:56px">s</label></span></div>
               <canvas id="pgC2" style="height:190px;width:100%"></canvas>
               <div id="pgHover" class="hint" style="min-height:18px"></div></div></div>
           <div class="card"><h3>Prove nel grafico</h3><div id="pgLegend" style="overflow-x:auto"><div class="empty">Seleziona una o più prove a sinistra.</div></div></div>
@@ -1936,7 +1936,7 @@ function pgSeries(){const al=$("#pgAlign").value,w=+$("#pgW").value||15,v2=$("#p
   return PG.sel.map((f,k)=>{const d=PG.data[f];if(!d||!d.t.length)return null;
     const o=al==="clock"?0:al==="ton"&&d.t_on&&d.t_on[0]?d.t_on[0]:d.t[0];
     const x=d.t.map(t=>al==="clock"?(t-new Date(t*1000).setHours(0,0,0,0)/1000)/60:(t-o)/60);
-    const y2=v2==="d"?d.t.map((_,i)=>pgSlope(d.t,d.aux,i,w)):d.t.map((_,i)=>d.temp[i]!=null&&d.aux[i]!=null?d.temp[i]-d.aux[i]:null);
+    const y2=v2==="d"?d.t.map((_,i)=>pgSlope(d.t,d.aux,i,w)):v2==="led"?d.t.map((_,i)=>d.led&&d.led[i]!=null?d.led[i]:null):d.t.map((_,i)=>d.temp[i]!=null&&d.aux[i]!=null?d.temp[i]-d.aux[i]:null);
     const tx=t=>al==="clock"?(t-new Date(t*1000).setHours(0,0,0,0)/1000)/60:(t-o)/60;return {f,d,col:PG_COL[k%8],x,y2,tx,ph:d.phases.map(p=>({...p,x0:al==="clock"?(p.t0-new Date(p.t0*1000).setHours(0,0,0,0)/1000)/60:(p.t0-o)/60,x1:al==="clock"?(p.t1-new Date(p.t1*1000).setHours(0,0,0,0)/1000)/60:(p.t1-o)/60}))}}).filter(Boolean)}
 function pgAxis(g,css,W,H,L,R,T,B,x0,x1,y0,y1,fmtX){const mut=css.getPropertyValue("--muted"),ln=css.getPropertyValue("--line");g.strokeStyle=ln;g.lineWidth=1;g.fillStyle=mut;g.font="11px "+css.getPropertyValue("--body");
   const X=v=>L+(v-x0)/((x1-x0)||1)*(W-L-R),Y=v=>T+(1-(v-y0)/((y1-y0)||1))*(H-T-B);
@@ -1944,7 +1944,7 @@ function pgAxis(g,css,W,H,L,R,T,B,x0,x1,y0,y1,fmtX){const mut=css.getPropertyVal
   g.textBaseline="top";g.textAlign="center";const st=Math.max(1,Math.ceil((x1-x0)/10));for(let v=Math.ceil(x0/st)*st;v<=x1;v+=st)g.fillText(fmtX(v),X(v),H-B+5);return{X,Y}}
 function pgCanvas(cv){const dpr=devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;cv.width=W*dpr;cv.height=H*dpr;const g=cv.getContext("2d");g.scale(dpr,dpr);return{g,W,H}}
 function pgDraw(){const S_=pgSeries(),css=getComputedStyle(document.documentElement),vars=$$("#pgVars input:checked").map(i=>i.value),al=$("#pgAlign").value;
-  $("#pgC2t").textContent=$("#pgV2").value==="d"?"Derivata di AUX (°C/min)":"Δ = TEMPERATURE − AUX (°C)";
+  $("#pgC2t").textContent=$("#pgV2").value==="d"?"Derivata di AUX (°C/min)":$("#pgV2").value==="led"?"Corrente barra LED (A)":"Δ = TEMPERATURE − AUX (°C)";
   const fmtX=al==="clock"?v=>`${String(Math.floor(v/60)%24).padStart(2,"0")}:${String(Math.floor(v%60)).padStart(2,"0")}`:v=>`${v} min`;
   const c1=pgCanvas($("#pgC1")),c2=pgCanvas($("#pgC2"));
   if(!S_.length){[c1,c2].forEach(c=>{c.g.fillStyle=css.getPropertyValue("--muted");c.g.font="12px "+css.getPropertyValue("--body");c.g.fillText("Seleziona una o più prove a sinistra.",12,c.H/2)});$("#pgLegend").innerHTML=`<div class="empty">Seleziona una o più prove a sinistra.</div>`;PG.map=null;return}
@@ -2527,11 +2527,11 @@ function soForm(){const so=MS.so,seqs=Object.keys(so.regole);if(!seqs.includes(M
   $("#soSeq").innerHTML=seqs.map(s=>`<option ${s===MS.soSeq?"selected":""}>${esc(s)}</option>`).join("");
   const r=so.regole[MS.soSeq]||{};$("#soReg").innerHTML=COND.map(([k,l])=>`<label class="f">${l}<input data-so="${k}" value="${r[k]==null?"":dec(r[k])}" placeholder="—" style="width:70px"></label>`).join("");
   $("#soMinV").value=so.esito.staccato_min_condizioni;$("#soMinC").value=so.esito.min_calcolabili;
-  const v=so.validita;$("#soLed").value=dec(v.led_max_A);$("#soUser").value=v.user_ok;$("#soDer").value=dec(v.deriva_max);$("#soC").value=dec(v.C_max);$("#soTol").value=v.tolleranza_s;
+  const v=so.validita;$("#soLed").value=dec(v.led_max_A);$("#soLedV").value=dec(v.led_var_max_A??0.1);$("#soUser").value=v.user_ok;$("#soDer").value=dec(v.deriva_max);$("#soC").value=dec(v.C_max);$("#soTol").value=v.tolleranza_s;
   const g=so.diagnostica;$("#soDm").value=g.minuti;$("#soDp").value=g.ping_ko_min_pct;$("#soDf").value=g.aux_fault_min_pct;$("#soDx").checked=!!g.aux_fermi;$("#soMet").checked=!!so.meteo.attivo}
 function soRead(){const so=MS.so,r={};$$("#soReg [data-so]").forEach(i=>{if(i.value.trim()!=="")r[i.dataset.so]=nn(i.value)});so.regole[MS.soSeq]=r;
   so.esito={staccato_min_condizioni:+$("#soMinV").value||2,min_calcolabili:+$("#soMinC").value||3};
-  so.validita={led_max_A:nn($("#soLed").value),user_ok:$("#soUser").value.trim(),deriva_max:nn($("#soDer").value),C_max:nn($("#soC").value),tolleranza_s:nn($("#soTol").value)};
+  so.validita={led_max_A:nn($("#soLed").value),led_var_max_A:nn($("#soLedV").value)||0.1,user_ok:$("#soUser").value.trim(),deriva_max:nn($("#soDer").value),C_max:nn($("#soC").value),tolleranza_s:nn($("#soTol").value)};
   so.diagnostica={minuti:+$("#soDm").value||2,ping_ko_min_pct:nn($("#soDp").value),aux_fault_min_pct:nn($("#soDf").value),aux_fermi:$("#soDx").checked};so.meteo={attivo:$("#soMet").checked};return so}
 async function soSaveQuiet(){const r=await api("/api/sc/soglie",{soglie:soRead()});MS.so=r.soglie;soForm()}
 $("#soSave").onclick=async()=>{try{await soSaveQuiet();toast("Soglie salvate: premi «Rivaluta» per applicarle alle prove già raccolte")}catch(e){fail(e)}};

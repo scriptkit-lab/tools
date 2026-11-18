@@ -36,7 +36,7 @@ import paramiko
 PARAMIKO_VER = getattr(paramiko, "__version__", "?")
 
 APP_NAME = "PoleDesk"
-VERSION = "1.26.2"
+VERSION = "1.27.1"
 
 FROZEN = getattr(sys, "frozen", False)          # True quando gira come PoleDesk.exe
 UPDATED = os.environ.get("POLEDESK_UPDATED") == "1"
@@ -4201,7 +4201,7 @@ F_SC_STATO, F_SC_METEO = SC_DIR / "stato.json", SC_DIR / "meteo.json"
 # Valori iniziali: alla prima apertura vengono scritti in soglie.json; da lì in poi vale il file.
 SC_SOGLIE_INIZIALI = {
     "_nota": "Soglie provvisorie. Si modificano da PoleDesk (Prova → Avanzate → Soglie e validità) o qui a mano; valgono dopo Rivaluta.",
-    "validita": {"led_max_A": 1.0, "user_ok": "IDLE", "deriva_max": 0.05, "C_max": 0.35, "tolleranza_s": 15},
+    "validita": {"led_max_A": 1.0, "led_var_max_A": 0.1, "user_ok": "IDLE", "deriva_max": 0.05, "C_max": 0.35, "tolleranza_s": 15},
     "diagnostica": {"minuti": 2, "ping_ko_min_pct": 80, "aux_fault_min_pct": 50, "aux_fermi": True},
     "regole": {
         "T2": {"I_min": 1.9, "IA_min": 0.55, "tau_max": 190, "R_min": 4, "rimbalzo_max": 105, "In_min": 0.25, "Q_min": 0.5},
@@ -4263,7 +4263,7 @@ def sc_soglie_save(body):
             raise ValueError(f"valore non valido in {where}")
         return x
     out = sc_soglie()
-    for k in ("led_max_A", "deriva_max", "C_max", "tolleranza_s"):
+    for k in ("led_max_A", "led_var_max_A", "deriva_max", "C_max", "tolleranza_s"):
         if k in (c.get("validita") or {}):
             out["validita"][k] = num(c["validita"][k], "validità " + k)
     if "user_ok" in (c.get("validita") or {}):
@@ -4676,6 +4676,12 @@ def sc_eval_csv(path, seq=None, soglie=None, coords=(None, None)):
     out["led_max"] = max(leds) if leds else None
     if leds and max(leds) >= float(va["led_max_A"]):
         out["motivi"].append(f"corrente LED {max(leds):.2f} A (massimo {va['led_max_A']})")
+    out["led_min"] = min(leds) if leds else None
+    if leds and max(leds) - min(leds) > float(va.get("led_var_max_A", 0.1)):
+        # quando è cambiata: primo campione lontano dal valore iniziale
+        t0l = next((r["t"] for r in rows if r.get("led") is not None and abs(r["led"] - leds[0]) > float(va.get("led_var_max_A", 0.1))), None)
+        quando = f" al minuto {(t0l - rows[0]['t']) / 60:.0f}" if t0l else ""
+        out["motivi"].append(f"barra LED cambiata durante la prova (da {min(leds):.2f} a {max(leds):.2f} A{quando})")
     uok = str(va.get("user_ok") or "")
     bad = sorted({r["user"] for r in rows if uok and r.get("user") and r["user"] != uok})
     if bad:
