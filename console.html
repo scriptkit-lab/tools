@@ -347,14 +347,14 @@ a.btn{text-decoration:none;color:inherit}
         <div class="hint" id="lbSel"></div>
         <div id="lbPlan"></div>
         <div class="row"><button class="btn primary run" id="lbProg">Avvia</button><button class="btn" id="lbStato">Stato</button><button class="btn" id="lbVer" title="Dopo le prove: nessun processo appeso, nessun file di stato rimasto, TempContEn = 1">Verifica</button>
-          <button class="btn danger" id="lbPulisci">Ferma</button><span class="grow"></span><button class="btn primary run" id="lbRacc">Raccogli e valuta</button></div>
+          <button class="btn danger" id="lbPulisci">Ferma</button><button class="btn" id="lbCont" title="Avvia solo l'acquisizione continua, senza prove">Solo acquisizione</button><span class="grow"></span><button class="btn primary run" id="lbRacc">Raccogli e valuta</button></div>
         <div class="hint" id="lbHint"></div><div id="lbTimes"></div>
       </div></div>
       <div class="card" id="lbRunCard" hidden><h3><span id="lbRunTitle"></span></h3>
         <div style="overflow:auto"><table class="dsst"><thead><tr><th>Colonnina</th><th>Comando</th><th>Stato della prova</th><th>Errore</th></tr></thead><tbody id="lbRunBody"></tbody></table></div></div>
       <div class="card"><h3>Risultati<span class="grow"></span><select id="lbFSeq" style="width:auto"></select>
           <label class="row" style="gap:6px;font:400 13px var(--body)"><input type="checkbox" id="lbFTest"> anche tempi ridotti</label></h3>
-        <div class="b" style="overflow:auto;max-height:520px"><table class="dsst antab"><thead><tr><th>Notte</th><th>Inizio</th><th>Colonnina</th><th>Sequenza</th><th>Esito</th><th class="num">Ī</th><th class="num">Ī/A</th><th class="num">τ s</th><th class="num">R</th><th class="num">Rimb. %</th><th class="num">In</th><th class="num">Q</th><th class="num">Text</th><th class="num">C</th><th class="num">Deriva 1/2</th><th>Motivi</th><th>Dati</th></tr></thead><tbody id="lbProve"></tbody></table></div></div>
+        <div class="b" style="overflow:auto;max-height:520px"><div id="lbContFiles" class="hint" style="margin-bottom:8px"></div><table class="dsst antab"><thead><tr><th>Notte</th><th>Inizio</th><th>Colonnina</th><th>Sequenza</th><th>Esito</th><th class="num">Ī</th><th class="num">Ī/A</th><th class="num">τ s</th><th class="num">R</th><th class="num">Rimb. %</th><th class="num">In</th><th class="num">Q</th><th class="num">Text</th><th class="num">C</th><th class="num">Deriva 1/2</th><th>Motivi</th><th>Dati</th></tr></thead><tbody id="lbProve"></tbody></table></div></div>
       <details class="card"><summary style="padding:11px 14px;cursor:pointer;font:600 14px var(--ui)">Avanzate</summary><div class="b" style="display:grid;gap:14px">
         <div id="lbPart"></div>
         <div class="row"><label class="row" style="gap:6px"><input type="checkbox" id="lbRid"> tempi ridotti (prova di funzionamento, dati in collaudo/), tempi ×</label><input id="lbScala" style="width:70px">
@@ -397,7 +397,7 @@ a.btn{text-decoration:none;color:inherit}
       <div class="card"><h3>Prova sulle righe spuntate</h3><div class="b" style="display:grid;gap:12px">
         <div id="msPlan"></div>
         <div class="row"><button class="btn" id="msDiag" title="Solo informativa, nessun comando (2 min): ping allo schermo, AUX FAULT, dati AUX fermi. Non esclude nessuna colonnina dalla prova termica.">Diagnostica</button>
-          <button class="btn primary run" id="msProg">Avvia</button><button class="btn" id="msStato">Stato</button><button class="btn" id="msVer" title="Dopo le prove: nessun processo appeso, nessun file di stato rimasto, TempContEn = 1">Verifica</button><button class="btn danger" id="msPulisci">Ferma</button>
+          <button class="btn primary run" id="msProg">Avvia</button><button class="btn" id="msStato">Stato</button><button class="btn" id="msVer" title="Dopo le prove: nessun processo appeso, nessun file di stato rimasto, TempContEn = 1">Verifica</button><button class="btn danger" id="msPulisci">Ferma</button><button class="btn" id="msCont" title="Avvia solo l'acquisizione continua, senza prove">Solo acquisizione</button>
           <span class="grow"></span><button class="btn primary run" id="msRacc">Raccogli e valuta</button></div>
         <div class="hint" id="msHint"></div><div id="msTimes"></div>
       </div></div>
@@ -2348,30 +2348,38 @@ function planRender(pf,c){
       <label class="row" style="gap:6px"><input type="radio" name="${pf}Q" value="subito" ${c.quando==="subito"?"checked":""}> subito, una volta</label>
       <label class="row" style="gap:6px"><input type="radio" name="${pf}Q" value="una" ${c.quando==="una"?"checked":""}> una volta alle <input type="time" data-k="ora" value="${c.ora}" style="width:110px"></label>
       <label class="row" style="gap:6px"><input type="radio" name="${pf}Q" value="ogni" ${c.quando==="ogni"?"checked":""}> ogni notte alle <input type="time" data-k="ora2" value="${c.ora}" style="width:110px"> per <input type="number" data-k="giorni" min="1" max="30" value="${c.giorni}" style="width:64px"> notti</label>
-      <label class="row" style="gap:6px;margin-left:24px" ${c.quando==="ogni"&&c.sequenze.length>1?"":"hidden"}><input type="checkbox" data-k="ruota" ${c.ruota?"checked":""}> ruota l'ordine delle sequenze ogni notte</label></div>
+      <label class="row" style="gap:6px;margin-left:24px" ${c.quando==="ogni"&&c.sequenze.length>1?"":"hidden"}><input type="checkbox" data-k="ruota" ${c.ruota?"checked":""}> ruota l'ordine delle sequenze ogni notte</label>
+      <label class="row" style="gap:6px"><input type="radio" name="${pf}Q" value="ore" ${c.quando==="ore"?"checked":""}> ripeti ogni <input data-k="ogni_ore" value="${dec(c.ogni_ore)}" style="width:60px"> ore, <input type="number" data-k="volte" min="1" max="200" value="${c.volte}" style="width:64px"> volte</label>
+      <label class="row" style="gap:6px;margin-left:24px" ${c.quando==="ore"?"":"hidden"}><input type="checkbox" data-k="ore_dalle" ${c.ore_dalle?"checked":""}> primo avvio alle <input type="time" data-k="ora3" value="${c.ora}" style="width:110px"> (altrimenti subito)</label></div>
     <div style="display:grid;gap:6px"><div class="hint"><b>Condizioni</b></div>
       <label class="row" style="gap:6px"><input type="checkbox" data-k="parti_sempre" ${c.parti_sempre?"checked":""}> <b>parti sempre</b> (nessuna precondizione)</label>
       <label class="row" style="gap:6px">pausa tra sequenze <input type="number" data-k="pausa_min" min="0" value="${c.pausa_min}" style="width:70px"> min</label>
       <label class="row" style="gap:6px" ${c.parti_sempre?"hidden":""}>base stabile per <input type="number" data-k="base_min" min="0" max="120" value="${c.base_min}" style="width:70px"> min prima di partire</label>
-      <span class="hint" ${c.parti_sempre?"":"hidden"}>Saltate: base stabile, ore di accensione, USER STATUS, prova precedente. Restano la pausa e le sicurezze durante la prova.</span></div></div>`}
+      <span class="hint" ${c.parti_sempre?"":"hidden"}>Saltate: base stabile, ore di accensione, USER STATUS, prova precedente. Restano la pausa e le sicurezze durante la prova.</span>
+      <div class="hint" style="margin-top:6px"><b>Acquisizione continua</b> (indipendente dalle prove)</div>
+      <label class="row" style="gap:6px"><input type="checkbox" data-k="continua" ${c.continua?"checked":""}> acquisisci un campione ogni <input type="number" data-k="continua_s" min="5" value="${c.continua_s}" style="width:76px"> s per <input type="number" data-k="continua_ore" min="1" value="${c.continua_ore}" style="width:64px"> h</label>
+      <span class="hint">Nessun comando alla colonnina; continua anche tra una prova e l'altra; si ferma con Ferma o alla scadenza. Un file al giorno.</span></div></div>`}
 function planRead(pf,c){const box=$(`#${pf}Plan`),g=k=>box.querySelector(`[data-k=${k}]`);
   c.sequenze=[...box.querySelectorAll("[data-seq]")].filter(x=>x.checked).map(x=>x.dataset.seq);
   c.quando=(box.querySelector(`input[name=${pf}Q]:checked`)||{}).value||"subito";
-  c.ora=c.quando==="ogni"?g("ora2").value:g("ora").value;c.giorni=+g("giorni").value||1;c.ruota=g("ruota").checked;
+  c.ora=c.quando==="ogni"?g("ora2").value:c.quando==="ore"?g("ora3").value:g("ora").value;c.giorni=+g("giorni").value||1;c.ruota=g("ruota").checked;
+  c.ogni_ore=nn(g("ogni_ore").value)||4;c.volte=+g("volte").value||1;c.ore_dalle=g("ore_dalle").checked;c.continua=g("continua").checked;c.continua_s=+g("continua_s").value||180;c.continua_ore=+g("continua_ore").value||24;
   c.parti_sempre=g("parti_sempre").checked;c.pausa_min=+g("pausa_min").value||0;c.base_min=+g("base_min").value||0;return c}
 function planTimes(c){const seqs=c.sequenze.map(n=>LB.seqs.find(s=>s.nome===n)).filter(Boolean);if(!seqs.length)return"";
   const k=c.ridotti?c.scala:1,now=new Date();let t=new Date(now);
-  if(c.quando!=="subito"){const [h,m]=c.ora.split(":").map(Number);t.setHours(h,m,0,0);if(t<=now)t.setDate(t.getDate()+1)}
+  if(c.quando!=="subito"&&!(c.quando==="ore"&&!c.ore_dalle)){const [h,m]=c.ora.split(":").map(Number);t.setHours(h,m,0,0);if(t<=now)t.setDate(t.getDate()+1)}const t0=new Date(t);
   const f=d=>d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}),add=(d,s)=>new Date(d.getTime()+s*1000),rows=[];let incerto=false;
   seqs.forEach((q,i)=>{if(i&&c.pausa_min){rows.push(`<tr class="mut"><td>${incerto?"~":""}${f(t)}</td><td></td><td>pausa</td><td class="num">${c.pausa_min} min</td></tr>`);t=add(t,c.pausa_min*60)}
     if(!c.parti_sempre&&c.base_min){rows.push(`<tr class="mut"><td>${incerto?"~":""}${f(t)}</td><td>${esc(q.nome)}</td><td>attesa base stabile (da ${c.base_min} a ${c.partenza.pre_wait_min} min)</td><td class="num">≥ ${c.base_min} min</td></tr>`);t=add(t,c.base_min*60);incerto=true}
     q.passi.forEach((p,j)=>{const d=Math.max(10,Math.round(p.s*k));rows.push(`<tr><td>${incerto?"~":""}${f(t)}</td><td>${j?"":`<b>${esc(q.nome)}</b>`}</td><td>${j+1}/${q.passi.length} ${esc(p.nome)} <span class="hint">${p.h?"scaldiglia":""}${p.f?"ventola":""}${!p.h&&!p.f?"tutto spento":""}</span></td><td class="num">${d>=60?Math.round(d/60)+" min":d+" s"}</td></tr>`);t=add(t,d)})});
   rows.push(`<tr><td><b>${incerto?"~":""}${f(t)}</b></td><td></td><td><b>fine</b>${c.quando==="ogni"?` (prima notte; poi ogni notte per ${c.giorni})`:""}</td><td></td></tr>`);
-  return `<details open style="margin-top:6px"><summary class="hint" style="cursor:pointer"><b>Orari previsti</b>${c.quando==="subito"?" (se avvii adesso)":""}${incerto?" · ~ = più tardi se la base tarda a stabilizzarsi":""}</summary>
+  if(c.quando==="ore"&&c.volte>1){const rip=[];for(let i=1;i<Math.min(c.volte,12);i++){const d=new Date(t0.getTime()+i*c.ogni_ore*3600000);rip.push(d.toLocaleString("it-IT",{weekday:"short",hour:"2-digit",minute:"2-digit"}))}
+    rows.push(`<tr><td colspan="4" class="hint">Ripetizioni (stesso schema): ${rip.join(" · ")}${c.volte>12?` … (${c.volte} in tutto)`:""}</td></tr>`)}
+  return `<details open style="margin-top:6px"><summary class="hint" style="cursor:pointer"><b>Orari previsti</b>${c.quando==="subito"||(c.quando==="ore"&&!c.ore_dalle)?" (se avvii adesso)":""}${incerto?" · ~ = più tardi se la base tarda a stabilizzarsi":""}</summary>
     <table class="dsst" style="margin-top:6px;max-width:640px"><thead><tr><th>Ora</th><th>Sequenza</th><th>Passo</th><th class="num">Durata</th></tr></thead><tbody>${rows.join("")}</tbody></table></details>`}
 function planHint(c){if(!c.sequenze.length)return "Scegli almeno una sequenza.";
-  const t=c.sequenze.reduce((a,s)=>a+durSeq(s),0)*(c.ridotti?c.scala:1),q=c.quando==="subito"?"Parte subito, una volta":c.quando==="una"?`Parte alle ${c.ora}, una volta`:`Parte ogni notte alle ${c.ora} per ${c.giorni} notti`;
-  return `${q}: ${c.sequenze.join(" → ")}${c.sequenze.length>1?`, con ${c.pausa_min} min di pausa tra l'una e l'altra`:""}. ${c.parti_sempre?"Parte sempre, senza precondizioni.":`Prima di ogni sequenza aspetta la base stabile (${c.base_min} min, al massimo ${c.partenza.pre_wait_min}).`} Passi: ${hm(t)}${c.ridotti?` (tempi × ${dec(c.scala)})`:""}. Avvia sostituisce qualsiasi piano o prova presente sulla colonnina.`}
+  const t=c.sequenze.reduce((a,s)=>a+durSeq(s),0)*(c.ridotti?c.scala:1),q=c.quando==="subito"?"Parte subito, una volta":c.quando==="una"?`Parte alle ${c.ora}, una volta`:c.quando==="ore"?`Parte ${c.ore_dalle?"alle "+c.ora:"subito"} e si ripete ogni ${dec(c.ogni_ore)} ore, ${c.volte} volte`:`Parte ogni notte alle ${c.ora} per ${c.giorni} notti`;
+  return `${q}: ${c.sequenze.join(" → ")}${c.sequenze.length>1?`, con ${c.pausa_min} min di pausa tra l'una e l'altra`:""}. ${c.parti_sempre?"Parte sempre, senza precondizioni.":`Prima di ogni sequenza aspetta la base stabile (${c.base_min} min, al massimo ${c.partenza.pre_wait_min}).`} Passi: ${hm(t)}${c.ridotti?` (tempi × ${dec(c.scala)})`:""}. ${c.continua?` Acquisizione continua: un campione ogni ${c.continua_s} s per ${c.continua_ore} h.`:""} Avvia sostituisce qualsiasi piano o prova presente sulla colonnina.`}
 function partRender(pf){$(`#${pf}Part`).innerHTML=`<div class="hint" style="margin-bottom:6px"><b>Condizioni di partenza</b> (non valgono con «parti sempre»; pagina web leggibile sempre richiesta)</div><div class="row">
   <label class="f" title="Differenza massima tra il valore più alto e il più basso di AUX nella finestra di attesa">Escursione max base °C<input id="${pf}Tol" style="width:80px"></label>
   <label class="f">Attesa massima base (min)<input id="${pf}MaxW" type="number" min="1" max="240" style="width:90px"></label>
@@ -2381,7 +2389,7 @@ function partRender(pf){$(`#${pf}Part`).innerHTML=`<div class="hint" style="marg
 const partSet=(pf,p)=>{$(`#${pf}Tol`).value=dec(p.stable_tol);$(`#${pf}MaxW`).value=p.pre_wait_min;$(`#${pf}Upt`).value=dec(p.min_uptime_h);$(`#${pf}User`).value=p.user_ok;$(`#${pf}Free`).value=dec(p.min_free_mb)};
 const partGet=pf=>({stable_tol:nn($(`#${pf}Tol`).value),pre_wait_min:+$(`#${pf}MaxW`).value||60,min_uptime_h:nn($(`#${pf}Upt`).value),user_ok:$(`#${pf}User`).value.trim(),min_free_mb:nn($(`#${pf}Free`).value)});
 function stBadge(s){if(!s)return `<span class="hint">premi «Stato»</span>`;const t=s.stato||"",k=/^pulita/.test(t)?"ok":/da pulire|non verificata/.test(t)?"ko":/anomal|non raggiungibile|errore/.test(t)?"ko":/in corso|diagnostica|monitoraggio/.test(t)?"run":/attesa|pausa|programmata/.test(t)?"wait":/non partita|interrotta|non valida|da ripetere/.test(t)?"ko":/completata|fermata/.test(t)?"ok":"idle";
-  return `<span class="stb ${k}">${esc(t)}</span>${s.dettaglio?`<div style="font-size:12.5px;margin-top:3px">${esc(s.dettaglio)}</div>`:""}${s.ora?`<div class="hint">letto alle ${esc(String(s.ora).slice(11,16))}</div>`:""}`}
+  return `<span class="stb ${k}">${esc(t)}</span>${s.dettaglio?`<div style="font-size:12.5px;margin-top:3px">${esc(s.dettaglio)}</div>`:""}${s.continua?`<div style="font-size:12px;margin-top:2px;color:${/attiva/.test(s.continua)?"var(--accent)":"var(--muted)"}">${esc(s.continua)}</div>`:""}${s.ora?`<div class="hint">letto alle ${esc(String(s.ora).slice(11,16))}</div>`:""}`}
 function runTable(r,body,title,card){$(card).hidden=false;const v=Object.entries(r.stations),c=k=>v.filter(([,x])=>x.state===k).length,st=r.stato||{};
   $(title).innerHTML=`${esc(r.package.name)} · <span class="ok">${c("ok")} ok</span>${c("errore")?` · <span class="err">${c("errore")} errori</span>`:""}${c("in corso")+c("in coda")?` · <span class="warn">${c("in corso")+c("in coda")} in corso</span>`:""}`;
   $(body).innerHTML=v.map(([sid,x])=>{const s=st[sid];return `<tr class="res" data-sid="${sid}"><td><b style="font-weight:600">${esc(x.name)}</b></td><td class="s-${x.state.replace(" ",".")}">${esc(x.state)}<div class="hint">${esc(x.step||"")}</div></td><td>${x.state==="in corso"||x.state==="in coda"?`<span class="hint">lettura…</span>`:stBadge(s)}</td><td style="font:12px var(--mono)">${esc(x.error||"")}</td></tr>`+(DS.open.has("sc"+sid)?`<tr class="out"><td colspan="4"><pre class="term">${esc(x.log.join("\n"))}</pre></td></tr>`:"")}).join("")}
@@ -2397,7 +2405,8 @@ async function scAct(pg,action,ask,ids){if(!ids.length)return pg==="lab"?toast("
     if(pg==="lab"){LB.run=r.id;lbPoll()}else{MS.run=r.id;msPoll()}}catch(e){fail(e)}}
 
 /* --- Prova --- */
-async function lbLoad(){try{const d=await api("/api/sc/lab");LB.cfg=d.cfg;LB.seqs=d.sequenze;LB.prove=d.prove;LB.stato=d.stato||{};MS.so=d.soglie;$("#soFile").textContent=d.file_soglie;
+async function lbLoad(){try{const d=await api("/api/sc/lab");LB.cfg=d.cfg;LB.seqs=d.sequenze;LB.prove=d.prove;LB.stato=d.stato||{};
+  $("#lbContFiles").innerHTML=(d.continua||[]).length?`<b>Acquisizione continua</b> (raccolta con «Raccogli e valuta»): `+d.continua.slice(0,30).map(x=>`${esc(x.cuid)} ${esc(x.giorno.slice(6,8)+"/"+x.giorno.slice(4,6))} ${scLink(x.dir,x.file,"CSV")} <span class="hint">${x.kb} kB</span>`).join(" · "):"";MS.so=d.soglie;$("#soFile").textContent=d.file_soglie;
   $("#lbScript").textContent=d.script?`prova_schermo.sh ${d.script}`:"ATTENZIONE: prova_schermo.sh mancante accanto a server.py";
   lbForm();lbSel();sqeList();soForm();lbResults();const live=d.runs.find(r=>!r.done);if(live&&!LB.run){LB.run=live.id;lbPoll()}}catch(e){fail(e)}}
 function lbSel(){const n=selected();$("#lbSel").innerHTML=n.length?`<b>Colonnine:</b> ${esc(n.map(s=>s.name).join(", "))}`:`<span class="warn">Seleziona le colonnine nella colonna a sinistra.</span>`}
@@ -2409,6 +2418,7 @@ const lbIds=()=>selected().map(s=>s.id);
 $("#lbProg").onclick=()=>{const c=lbRead();scAct("lab","programma",planHint(c)+"\n\nAvviare su {n} colonnine?",lbIds())};
 $("#lbStato").onclick=()=>scAct("lab","stato","",lbIds());
 $("#lbVer").onclick=()=>scAct("lab","verifica","",lbIds());
+$("#lbCont").onclick=()=>{const c=lbRead();scAct("lab","continua",`Avviare solo l'acquisizione continua (un campione ogni ${c.continua_s} s per ${c.continua_ore} h, nessun comando) su {n} colonnine?\nLe prove eventualmente in corso non vengono toccate.`,lbIds())};
 $("#lbPulisci").onclick=()=>scAct("lab","pulisci","Fermare {n} colonnine? Annulla i piani e ferma le prove in corso (uscite spente, controllo termico riattivato).",lbIds());
 $("#lbRacc").onclick=()=>scAct("lab","raccogli","",lbIds());
 async function lbPoll(){clearTimeout(LB.timer);if(!LB.run)return;try{const r=await api("/api/dist/run/"+LB.run);
@@ -2499,6 +2509,7 @@ $("#msDiag").onclick=()=>scAct("mass","diagnosi","Diagnostica su {n} colonnine? 
 $("#msProg").onclick=()=>{const c=msRead();scAct("mass","programma",planHint(c)+"\n\nAvviare su {n} colonnine?",msIds())};
 $("#msStato").onclick=()=>scAct("mass","stato","",msIds());
 $("#msVer").onclick=()=>scAct("mass","verifica","",msIds());
+$("#msCont").onclick=()=>{const c=msRead();scAct("mass","continua",`Avviare solo l'acquisizione continua (un campione ogni ${c.continua_s} s per ${c.continua_ore} h, nessun comando) su {n} colonnine?\nLe prove eventualmente in corso non vengono toccate.`,msIds())};
 $("#msPulisci").onclick=()=>scAct("mass","pulisci","Fermare {n} colonnine? Annulla i piani e ferma le prove in corso (uscite spente, controllo termico riattivato).",msIds());
 $("#msRacc").onclick=()=>scAct("mass","raccogli","",msIds());
 $("#msUp").onchange=e=>upArchives(e.target,msLoad);

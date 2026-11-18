@@ -36,7 +36,7 @@ import paramiko
 PARAMIKO_VER = getattr(paramiko, "__version__", "?")
 
 APP_NAME = "PoleDesk"
-VERSION = "1.24.1"
+VERSION = "1.26.2"
 
 FROZEN = getattr(sys, "frozen", False)          # True quando gira come PoleDesk.exe
 UPDATED = os.environ.get("POLEDESK_UPDATED") == "1"
@@ -3980,7 +3980,8 @@ def _import_tests(st, path, log):
     if path.name.endswith((".tar.gz", ".tgz")):
         with tarfile.open(path, "r:gz") as tf:
             for m in tf.getmembers():
-                if m.isfile() and m.name.endswith(".csv") and not os.path.basename(m.name).startswith(("risultati", "baseline", "controlli")):
+                if m.isfile() and m.name.endswith(".csv") and not os.path.basename(m.name).startswith(("risultati", "baseline", "controlli", "diagnosi")) \
+                        and "_continua_" not in m.name:
                     texts.append((os.path.basename(m.name), tf.extractfile(m).read().decode("utf-8", "replace")))
     elif path.suffix == ".csv":
         texts.append((path.name, path.read_text(encoding="utf-8", errors="replace")))
@@ -4226,6 +4227,7 @@ SC_RUOLI = {"rif": (0, 0), "carica": (1, 0), "misura": (0, 1), "ventola": (0, 1)
 # condizioni di partenza: inviate alla colonnina in coda a ogni seq_*.conf (lo script le legge da lì)
 PART_DEFAULT = {"stable_tol": 0.3, "pre_wait_min": 60, "min_uptime_h": 3, "user_ok": "IDLE", "min_free_mb": 5}
 # quando: "subito" (una volta, adesso) · "una" (una volta all'ora indicata) · "ogni" (ogni notte all'ora indicata per N notti)
+CONT_DEFAULT = {"ogni_ore": 4, "volte": 6, "ore_dalle": False, "continua": False, "continua_s": 180, "continua_ore": 24}
 LAB_DEFAULT = {"quando": "subito", "ora": "22:00", "giorni": 3, "sequenze": ["T2"], "ruota": False, "parti_sempre": False,
                "pausa_min": 60, "base_min": 30, "ridotti": False, "scala": 0.05, "nome": "lab", "parallelo": 5, "dir": "/home/root/test"}
 MASS_DEFAULT = {"quando": "una", "ora": "00:30", "giorni": 1, "sequenze": ["T2", "T2L"], "ruota": False, "parti_sempre": False,
@@ -4318,9 +4320,16 @@ def _seq_parse(text):
 def sc_sequenze():
     for n, (d, st) in SC_SEQ_INIZIALI.items():
         f = SC_SEQ / f"seq_{n}.conf"
-        if not f.exists():
+        cur = _seq_parse(f.read_text(encoding="utf-8", errors="replace")) if f.exists() else None
+        if cur is None or not cur["passi"]:
+            # sequenza di base mancante o senza passi (file vuoto o rovinato): si ricrea; il file rovinato resta come .vuoto
+            if f.exists():
+                f.replace(f.with_name(f.name + ".vuoto"))
             src = Path(__file__).resolve().parent / f"seq_{n}.conf"      # file della release accanto a server.py
-            f.write_bytes(src.read_bytes().replace(b"\r\n", b"\n") if src.exists() else _seq_text(n, d, st).encode())
+            blob = src.read_bytes().replace(b"\r\n", b"\n") if src.exists() else b""
+            if not _seq_parse(blob.decode("utf-8", "replace"))["passi"]:
+                blob = _seq_text(n, d, st).encode()                       # valori della release, se il file accanto è vuoto
+            f.write_bytes(blob)
     out = []
     for f in sorted(SC_SEQ.glob("seq_*.conf")):
         x = _seq_parse(f.read_text(encoding="utf-8", errors="replace"))
@@ -4384,14 +4393,14 @@ def _seq_def(name):
 
 def sc_cfg(kind):
     f, d = (F_SC_LAB, LAB_DEFAULT) if kind == "lab" else (F_SC_MASS, MASS_DEFAULT)
-    c = {**d, **load(f, {})}
+    c = {**CONT_DEFAULT, **d, **load(f, {})}
     c["partenza"] = {**PART_DEFAULT, **(c.get("partenza") or {})}
     return c
 
 
 def sc_cfg_save(kind, body):
     c = sc_cfg(kind)
-    d = LAB_DEFAULT if kind == "lab" else MASS_DEFAULT
+    d = {**CONT_DEFAULT, **(LAB_DEFAULT if kind == "lab" else MASS_DEFAULT)}
     for k in d:
         if k in body:
             c[k] = body[k]
@@ -4407,14 +4416,21 @@ def sc_cfg_save(kind, body):
     if len(seqs) > 5:
         raise ValueError("al massimo 5 sequenze per notte")
     c["sequenze"] = seqs
-    if c.get("quando") not in ("subito", "una", "ogni"):
+    if c.get("quando") not in ("subito", "una", "ogni", "ore"):
         c["quando"] = "subito"
-    for k in ("ruota", "parti_sempre", "ridotti"):
+    for k in ("ruota", "parti_sempre", "ridotti", "ore_dalle", "continua"):
         c[k] = bool(c.get(k))
     try:
         c["scala"] = min(1.0, max(0.005, float(str(c.get("scala") or 0.05).replace(",", "."))))
     except ValueError:
         c["scala"] = 0.05
+    try:
+        c["ogni_ore"] = round(float(str(c.get("ogni_ore") or 4).replace(",", ".")), 2)
+    except ValueError:
+        raise ValueError("«ripeti ogni» vuole un numero di ore")
+    c["volte"] = max(1, min(200, int(float(c.get("volte") or 1))))
+    c["continua_s"] = max(5, min(86400, int(float(c.get("continua_s") or 180))))
+    c["continua_ore"] = max(1, min(24 * 31, int(float(c.get("continua_ore") or 24))))
     for k in ("pausa_min", "base_min", "giorni", "parallelo"):
         if k in c:
             c[k] = max(0, int(float(c[k] or 0)))
@@ -4435,6 +4451,16 @@ def sc_cfg_save(kind, body):
     pa = {"stable_tol": pn("stable_tol", 0.05, 5, "tolleranza della base"), "pre_wait_min": int(pn("pre_wait_min", 1, 240, "attesa massima")),
           "min_uptime_h": pn("min_uptime_h", 0, 72, "ore di accensione"), "user_ok": re.sub(r"[^A-Za-z0-9_ -]", "", str(pa.get("user_ok") or "")).strip(),
           "min_free_mb": pn("min_free_mb", 1, 1000, "spazio libero")}
+    if c["quando"] == "ore":
+        if c["ogni_ore"] < 0.25:
+            raise ValueError("«ripeti ogni» almeno 0,25 ore (15 minuti)")
+        k = c["scala"] if c["ridotti"] else 1
+        dur = sum(x["durata"] for x in sc_sequenze() if x["nome"] in c["sequenze"]) * k + c["pausa_min"] * 60 * (len(c["sequenze"]) - 1)
+        if not c["parti_sempre"]:
+            dur += c["base_min"] * 60 * len(c["sequenze"])
+        if c["ogni_ore"] * 3600 < dur:
+            raise ValueError(f"«ripeti ogni {c['ogni_ore']:g} ore» è più corto di un giro di prove (circa {round(dur / 60)} min): "
+                             "l'avvio successivo arriverebbe con la prova precedente ancora in corso")
     if not c["parti_sempre"] and c["base_min"] and c["base_min"] >= pa["pre_wait_min"]:
         raise ValueError(f"l'attesa massima della base ({pa['pre_wait_min']} min) deve superare l'attesa base stabile ({c['base_min']} min), "
                          "altrimenti la finestra non fa in tempo a riempirsi: metti almeno " + str(c["base_min"] + 1) + " min, meglio il doppio")
@@ -4632,9 +4658,10 @@ def sc_eval_csv(path, seq=None, soglie=None, coords=(None, None)):
         out["motivi"].append("nessun campione")
         return out
     sd = _seq_def(seq) if seq else None
-    if sd and len(sd["passi"]) == len(phases):          # durate previste dal file della sequenza
+    # durate previste dal file della sequenza, solo se la prova le ha usate davvero (non con i tempi ridotti)
+    if sd and len(sd["passi"]) == len(phases) and all(abs(ph["s"] - p["s"]) <= max(20, 0.2 * p["s"]) for ph, p in zip(phases[:-1], sd["passi"][:-1])):
         for ph, p in zip(phases, sd["passi"]):
-            ph["s"], ph["role"] = p["s"], ("misura" if p["ruolo"] == "ventola" and ph["role"] == "misura" else ph["role"])
+            ph["s"] = p["s"]
     T = lambda a, b: [r for r in rows if a <= r["t"] < b]
 
     def near(x):
@@ -4719,6 +4746,16 @@ def sc_eval_csv(path, seq=None, soglie=None, coords=(None, None)):
         m["t_on"] = ton
         mis.append(m)
     out["misure"] = mis
+    # eventi registrati dallo script (2.4.0): TempContEn tornato attivo = non valida; uscite rinviate = avviso
+    try:
+        with open(path, encoding="utf-8-sig") as fh:
+            ev = [r.get("evento") or "" for r in csv.DictReader(fh, delimiter=";")]
+    except Exception:
+        ev = []
+    ntc, nus = sum("TempContEn" in e for e in ev), sum("uscite_rinviate" in e for e in ev)
+    if ntc:
+        out["motivi"].append(f"TempContEn tornato attivo {ntc} volte durante la prova (ripristinato dallo script)")
+    out["avvisi"] = [f"uscite non conformi: comando rinviato {nus} volte"] if nus else []
     if len(mis) < 2 or any(x.get("I") is None for x in mis[:2]):
         out["motivi"].append("indice non calcolabile su due misure")
     d1 = mis[0].get("deriva") if mis else None
@@ -4836,6 +4873,10 @@ def sc_eval_archive(path, station):
                 d = SC_DATI / _safe_name(base.split("_", 1)[0])
                 d.mkdir(parents=True, exist_ok=True)
                 (d / base).write_bytes(data)
+            elif base.endswith(".csv") and "_continua_" in base:
+                d = SC_DATI / _safe_name(base.split("_continua_")[0]) / "continua"
+                d.mkdir(parents=True, exist_ok=True)
+                (d / base).write_bytes(data)
             elif base.endswith(".csv") and not base.startswith(("baseline", "controlli")):
                 cu = text.split("\n", 2)[1].split(";")[2] if text.count("\n") > 1 and text.startswith("epoch;") else ""
                 d = SC_DATI / _safe_name(cu or "sconosciuto")
@@ -4876,6 +4917,8 @@ def sc_build_item(p, cuid, seq, nome, station, rr, test, so):
     ev = sc_eval_csv(p, seq, so, (la, lo))
     cuid = ev.get("cuid") or cuid
     ru = sc_rule(ev, seq, so)
+    if ev.get("avvisi"):
+        ru["motivo"] = "; ".join(x for x in [ru.get("motivo", "")] + ev["avvisi"] if x)
     if rr.get("esito") == "interrotta":
         ru.update(esito="DA RIPETERE", motivo="interrotta: " + (rr.get("validita") or ""))
     t = ev.get("inizio")
@@ -4883,7 +4926,7 @@ def sc_build_item(p, cuid, seq, nome, station, rr, test, so):
     return {"file": p.name, "dir": p.parent.name, "extra": extra, "cuid": cuid, "colonnina": station.get("name", ""), "seq": seq, "nome": nome,
             "inizio": t, "notte": _notte(t), "test": test, "valida": ev["valida"], "motivi_validita": ev["motivi"],
             "ind": ev["ind"], "misure": [{k: v for k, v in m.items() if k != "t_on"} for m in ev["misure"]],
-            "Text": ev["Text"], "vento": ev["vento"], "led_max": ev.get("led_max"), "esito_script": rr.get("esito", ""),
+            "Text": ev["Text"], "vento": ev["vento"], "led_max": ev.get("led_max"), "esito_script": rr.get("esito", ""), "avvisi": ev.get("avvisi") or [],
             "valutato": datetime.now().isoformat(timespec="seconds"), **ru}
 
 
@@ -5003,8 +5046,15 @@ def _sc_store_stato(sid, x, kind):
         lab, det = _stato_label(sb, ris)
     with LOCK:
         d = load(F_SC_STATO, {})
-        d[sid] = {"stato": lab, "dettaglio": det, "ora": datetime.now().strftime("%Y-%m-%d %H:%M"), "colonnina": x["name"]}
+        d[sid] = {"stato": lab, "dettaglio": det, "ora": datetime.now().strftime("%Y-%m-%d %H:%M"), "colonnina": x["name"],
+                  "continua": _continua(x)}
         save(F_SC_STATO, d)
+
+
+def _continua(x):
+    l = next((_ll(l) for l in reversed(x.get("log", [])) if _ll(l).startswith("CONTINUA=")), "")
+    st, _, det = l[len("CONTINUA="):].partition(";")
+    return f"acquisizione continua attiva: {det}" if st == "attiva" else ("acquisizione continua spenta" if st == "spenta" else "")
 
 
 def sc_after_run(run):
@@ -5037,9 +5087,10 @@ def sc_after_run(run):
             lab = "pulita" if ok == "OK" else "da pulire: premi Ferma" if ok == "KO" else "non verificata"
             with LOCK:
                 d = load(F_SC_STATO, {})
-                d[sid] = {"stato": lab, "dettaglio": det or x.get("error") or "", "ora": datetime.now().strftime("%Y-%m-%d %H:%M"), "colonnina": x["name"]}
+                d[sid] = {"stato": lab, "dettaglio": det or x.get("error") or "", "ora": datetime.now().strftime("%Y-%m-%d %H:%M"), "colonnina": x["name"],
+                          "continua": _continua(x) or "acquisizione continua spenta"}
                 save(F_SC_STATO, d)
-        elif kind.endswith(":stato") or kind.endswith(":programma") or kind.endswith(":test") or kind.endswith(":pulisci"):
+        elif kind.endswith(":stato") or kind.endswith(":programma") or kind.endswith(":test") or kind.endswith(":pulisci") or kind.endswith(":continua"):
             _sc_store_stato(sid, x, kind)
 
 
@@ -5071,12 +5122,17 @@ def sc_action(body):
             f = SC_SEQ / f"seq_{s}.conf"
             if not f.exists():
                 raise ValueError(f"sequenza {s} mancante")
+            if not _seq_parse(f.read_text(encoding="utf-8", errors="replace"))["passi"]:
+                raise ValueError(f"la sequenza {s} non ha passi (file {f} vuoto o rovinato): aprila in Prova → Avanzate → Sequenze e salvala, o eliminala")
             pa = c["partenza"]
             tail = ("\n# condizioni di partenza impostate in PoleDesk (" + ("Prova" if kind == "lab" else "Campo") + ")\n"
                     f"STABLE_TOL={pa['stable_tol']:g}\nPRE_WAIT_MIN={int(pa['pre_wait_min'])}\nMIN_UPTIME_H={int(round(pa['min_uptime_h']))}\n"
                     f"USER_OK=\"{pa['user_ok']}\"\nMIN_FREE_KB={int(pa['min_free_mb'] * 1000)}\n")
             add(f.name, f.read_bytes().replace(b"\r\n", b"\n").rstrip(b"\n") + b"\n" + tail.encode())
-        if c["quando"] == "subito":
+        if c["quando"] == "ore":
+            q = (f"--alle {c['ora']}" if c["ore_dalle"] else "--subito") + f" --ogni-ore {c['ogni_ore']:g} --volte {c['volte']}"
+            name = f"ogni {c['ogni_ore']:g} ore, {c['volte']} volte" + (f" dalle {c['ora']}" if c["ore_dalle"] else " da subito")
+        elif c["quando"] == "subito":
             q, name = "--subito", "una volta, subito"
         elif c["quando"] == "una":
             q, name = f"--alle {c['ora']}", f"una volta alle {c['ora']}"
@@ -5096,8 +5152,12 @@ def sc_action(body):
             name += ", parti sempre"
         # due pulizie: se la prima trova processi che si stanno ancora chiudendo, la seconda li ritrova chiusi
         steps = [{"type": "invia"}, {**pul, "continue": True}, pul,
-                 {"type": "comando", "command": ps + f" {q} --nome {{{{nome_prova}}}} {{{{ipopt}}}}", "timeout": 60, "expect": "Avvii"},
-                 chk]
+                 {"type": "comando", "command": ps + f" {q} --nome {{{{nome_prova}}}} {{{{ipopt}}}}", "timeout": 60, "expect": "Avvii"}]
+        if c["continua"]:
+            steps.append({"type": "comando", "command": f"cd {{{{dir}}}} && IP_SCHERMO={{{{ipval}}}} sh prova_schermo.sh --continua-avvia {c['continua_s']} {c['continua_ore']}",
+                          "timeout": 30, "expect": "Acquisizione continua avviata"})
+            name += f" + acquisizione continua ogni {c['continua_s']} s"
+        steps.append(chk)
     elif act == "diagnosi":
         steps = [{"type": "invia"},
                  {"type": "comando", "command": "cd {{dir}} && IP_SCHERMO={{ipval}} sh prova_schermo.sh --diagnosi " + str(int(so["diagnostica"]["minuti"])),
@@ -5107,6 +5167,12 @@ def sc_action(body):
         steps = [{"type": "comando", "command": ps + " --processi; sh prova_schermo.sh --stato; echo '== log'; tail -n 6 programmata.log 2>/dev/null; true", "timeout": 60}]
         files = []
         name = "stato e processi"
+    elif act == "continua":
+        steps = [{"type": "invia", "only": ["prova_schermo.sh"]},
+                 {"type": "comando", "command": f"cd {{{{dir}}}} && IP_SCHERMO={{{{ipval}}}} sh prova_schermo.sh --continua-avvia {c['continua_s']} {c['continua_ore']}",
+                  "timeout": 30, "expect": "Acquisizione continua avviata"},
+                 {"type": "comando", "command": ps + " --stato", "timeout": 60, "continue": True}]
+        name = f"solo acquisizione continua ogni {c['continua_s']} s per {c['continua_ore']} h"
     elif act == "verifica":
         # invia lo script (versione corrente) e controlla: nessun processo, nessun file di stato, TempContEn = 1
         steps = [{"type": "invia", "only": ["prova_schermo.sh"]}, {"type": "comando", "command": ps + " --verifica", "timeout": 60, "expect": "VERIFICA="}]
@@ -5193,7 +5259,9 @@ def sc_mass_view():
 def sc_lab_view():
     prove = load(F_SC_PROVE, {})
     items = sorted((i for i in prove.values() if i.get("file")), key=lambda i: i.get("inizio") or 0, reverse=True)
-    return {"cfg": sc_cfg("lab"), "sequenze": sc_sequenze(), "soglie": sc_soglie(), "file_soglie": str(F_SC_SOGLIE),
+    cont = sorted(({"dir": f"{p.parent.parent.name}/continua", "file": p.name, "cuid": p.parent.parent.name, "giorno": p.stem.rsplit("_", 1)[-1],
+                    "kb": round(p.stat().st_size / 1024)} for p in SC_DATI.glob("*/continua/*.csv")), key=lambda x: (x["giorno"], x["cuid"]), reverse=True)[:200]
+    return {"cfg": sc_cfg("lab"), "sequenze": sc_sequenze(), "soglie": sc_soglie(), "file_soglie": str(F_SC_SOGLIE), "continua": cont,
             "stato": load(F_SC_STATO, {}), "prove": [{k: i.get(k) for k in ("file", "dir", "cuid", "colonnina", "seq", "nome", "inizio", "notte", "test", "valida", "extra",
                                                                            "motivi_validita", "ind", "misure", "Text", "vento", "esito", "confidenza", "motivo", "scattate")}
                                                      for i in items[:600]]}
@@ -5546,7 +5614,7 @@ class Handler(BaseHTTPRequestHandler):
             qd = parse_qs(u.query)
             dn, fn = qd.get("dir", [""])[0], qd.get("name", [""])[0]
             p = SC_DATI / dn / fn
-            if not re.fullmatch(r"[A-Za-z0-9._-]+", dn) or not re.fullmatch(r"[A-Za-z0-9._-]+\.(csv|log|txt)", fn) or not p.is_file():
+            if not re.fullmatch(r"[A-Za-z0-9._-]+(/continua)?", dn) or not re.fullmatch(r"[A-Za-z0-9._-]+\.(csv|log|txt)", fn) or not p.is_file():
                 return self._send(404, {"error": "file non trovato"})
             return self._send(200, p.read_bytes(), ("text/csv" if fn.endswith(".csv") else "text/plain") + "; charset=utf-8",
                               {"Content-Disposition": f"attachment; filename={fn}"})

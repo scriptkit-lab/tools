@@ -1,5 +1,5 @@
 #!/bin/sh
-# prova_schermo.sh 2.3.1 — acquisizione dati per il rilevamento del distacco dello schermo, sulla colonnina.
+# prova_schermo.sh 2.5.2 — acquisizione dati per il rilevamento del distacco dello schermo, sulla colonnina.
 #
 # Tutti i parametri stanno in prova_schermo.conf (creato dal generatore). Senza file valgono i valori qui sotto.
 # Un altro file di impostazioni: CONF=/percorso/altro.conf sh prova_schermo.sh ...
@@ -16,6 +16,7 @@
 #                --scala X (tempi × X, es. 0.1 per una prova corta), --pausa MIN tra sequenze,
 #                --base MIN di base stabile (0 = non aspetta), --prova (pausa e base 0, dati in collaudo/),
 #                --parti-sempre (nessuna precondizione all'avvio, resta la pausa tra sequenze),
+#                --ogni-ore H --volte N (ripete l'avvio ogni H ore, N volte in tutto),
 #                --ip-schermo IP (ping al computer dello schermo), --calendario "T2,T2L;-;T2L,T2" (sequenze notte per notte,
 #                "-" = notte senza prove), --monitora MIN (nelle notti senza prove: monitoraggio passivo per MIN minuti)
 #   sh prova_schermo.sh --diagnosi [minuti]        livello 0, nessun comando: ping allo schermo, AUX FAULT, dati AUX fermi
@@ -26,6 +27,8 @@
 #   sh prova_schermo.sh --ferma                    annulla il piano e ferma la prova in corso (con ripristino)
 #   sh prova_schermo.sh --ripristina               uscite spente e controllo termico riattivato, verificato
 #   sh prova_schermo.sh --guardia                  (timer e avvio) ripristina se una prova è rimasta a metà
+#   sh prova_schermo.sh --continua-avvia SEC [ORE] acquisizione continua (nessun comando) ogni SEC secondi per ORE ore, file in continua/
+#   sh prova_schermo.sh --continua-ferma           ferma l'acquisizione continua (anche --pulisci la ferma)
 #   sh prova_schermo.sh --verifica                 colonnina pulita? (processi, file di stato, TempContEn): VERIFICA=OK|KO;dettaglio
 #   sh prova_schermo.sh --stato                    stato, ultime prove, valore di TempContEn
 #                                                  (ultima riga STATO_BREVE=libera|programmata|pausa|attesa_base|in_corso|monitoraggio|diagnosi;dettaglio)
@@ -39,7 +42,7 @@
 #      e nessuna prova attiva, ripristina;
 #   5. soglie di sicurezza, ricarica, FAULT e pagina muta interrompono subito la prova.
 
-VERSIONE="2.3.1"
+VERSIONE="2.5.2"
 CONF="${CONF:-$(cd "$(dirname "$0")" 2>/dev/null && pwd)/prova_schermo.conf}"
 [ -f "$CONF" ] && . "$CONF"
 BASE="${DIR:-/home/root/test}"       # blocco, segnali e piano stanno qui anche se una sequenza sposta i dati altrove
@@ -92,11 +95,20 @@ Misura 2;misura;300;0;1
 : "${PAGE_SNAPSHOT:=1}"; : "${MIN_FREE_KB:=5000}"
 : "${CONFIG_DEFAULT:=campo}"
 : "${LATE_MAX_MIN:=30}"
+# controllo continuo durante la prova: uscite lette = comandate (rinvio del comando) e TempContEn = 0 (ripristino)
+: "${OUT_CHECK:=1}"; : "${OUT_SETTLE_S:=15}"; : "${TC_CHECK_S:=60}"; : "${CMD_QUIET_S:=10}"
 : "${V5_NAME:=AUX SUPPLY 5V}"; : "${AUX_FAULT_OK:=^(0|NO|FALSE|OK|NONE|NO FAULT)?$}"
 : "${DIAG_PING_KO_PCT:=80}"; : "${DIAG_FAULT_PCT:=50}"
 [ -n "$IP_SCHERMO" ] && DISPLAY_IP="$IP_SCHERMO"      # dal comando (--ip-schermo) o dall'ambiente: vale su .conf e sequenze
 
-PASSO="$BASE/.passo"
+PASSO="$BASE/.passo"; CONT="$BASE/.continua"
+cont_pid() {                        # PID dell'acquisizione continua (vivo e davvero questo script)
+    [ -f "$CONT" ] || return 0
+    c=$(sed -n 's/^PID=//p' "$CONT"); [ -n "$c" ] && [ -d "/proc/$c" ] || return 0
+    [ "$(awk '{ print $3 }' "/proc/$c/stat" 2>/dev/null)" = "Z" ] && return 0
+    tr '\0' ' ' < "/proc/$c/cmdline" 2>/dev/null | grep -q prova_schermo && echo "$c"
+    return 0
+}
 LOCK="$BASE/.lock"; MARK="$BASE/.tc_disattivo"; LAST="$DIR/.ultima_prova"; GLOG="$BASE/guardia.log"; SCHED="$BASE/.programmata"
 INC="$BASE/.prova_in_corso"; mkdir -p "$BASE" || exit 1
 mkdir -p "$DIR" || exit 1
@@ -107,7 +119,8 @@ RUNLOG="$GLOG"
 log() { echo "$(date '+%H:%M:%S') $*" >> "$RUNLOG"; echo "$*"; }
 
 # ---------------- comandi PS4GAux e verifica di TempContEn
-send() { printf '%s\n' "$1" > "$CMD"; echo "$(date '+%H:%M:%S') comando $1" >> "$RUNLOG"; }
+LAST_SEND=0
+send() { printf '%s\n' "$1" > "$CMD"; LAST_SEND=$(date +%s); echo "$(date '+%H:%M:%S') comando $1" >> "$RUNLOG"; }
 tc_read() {                          # stampa il valore di TempContEn letto nel log di PS4GAux ("" se non risponde)
     [ -f "$AUXLOG" ] || { echo ""; return; }
     off=$(wc -c < "$AUXLOG" 2>/dev/null); off=${off:-0}
@@ -185,8 +198,9 @@ prova_procs() {                     # "PID ruolo comando" di ogni processo prova
         case "$c" in
             *grep*|*awk*|*tail*|*" cat "*) continue;;
             *--alle*|*--tra*|*--subito*) r=piano;;
+            *"--continua "*) r=continua;;
             *--controlli*|*--diagnosi*) r=controlli;;
-            *--guardia*|*--stato*|*--ferma*|*--pulisci*|*--processi*|*--verifica*|*--archivio*|*--ripristina*|*--annulla*) r=servizio;;
+            *--guardia*|*--stato*|*--ferma*|*--pulisci*|*--processi*|*--verifica*|*--archivio*|*--ripristina*|*--annulla*|*--continua-*) r=servizio;;
             *) r=prova
                # sottoshell della prova (stesso comando): il guardiano a tempo è quella registrata in .wd_pid,
                # le altre sono letture di un istante e non si elencano
@@ -235,7 +249,7 @@ ping_ms() {
     [ -n "$r" ] && echo "$r" || echo "ko"
 }
 
-HEADER="epoch;timestamp;cuid;passo;nome_passo;cmd_riscaldatore;cmd_ventola;aux_heater_power;aux_fan_power;aux_temperature;temperature;cpu_temperature;aux_leds_current;aux_lux;main_power_voltage;aux_supply_12v;user_status;aux_fault;antitamper;evse_task_0;evse_task_1;ok;display_flag;display_ok;psg_flag;psg_ok;ping_ms;ping_ok;aux_supply_5v"
+HEADER="epoch;timestamp;cuid;passo;nome_passo;cmd_riscaldatore;cmd_ventola;aux_heater_power;aux_fan_power;aux_temperature;temperature;cpu_temperature;aux_leds_current;aux_lux;main_power_voltage;aux_supply_12v;user_status;aux_fault;antitamper;evse_task_0;evse_task_1;ok;display_flag;display_ok;psg_flag;psg_ok;ping_ms;ping_ok;aux_supply_5v;evento"
 SN=0
 sample() {                           # una riga nel CSV; controlli di sicurezza solo durante la prova (SAFETY=1)
     read_page
@@ -243,7 +257,7 @@ sample() {                           # una riga nel CSV; controlli di sicurezza 
     P=""; [ $((SN % PING_EVERY)) -eq 0 ] && P=$(ping_ms)
     PO=""; [ -n "$P" ] && { [ "$P" = ko ] && PO=0 || PO=1; }
     if [ -z "$PAGE" ]; then
-        echo "$NOW;$(ts);;$PH;$PHNAME;$CH;$CF;;;;;;;;;;;;;;;0;;;;;$P;$PO;" >> "$CSV"
+        echo "$NOW;$(ts);;$PH;$PHNAME;$CH;$CF;;;;;;;;;;;;;;;0;;;;;$P;$PO;;$EVQ" >> "$CSV"; EVQ=""
         LOST=$((LOST + INTERVAL))
         if [ "$SAFETY" = 1 ] && [ "$LOST" -gt 30 ]; then RESULT="interrotta"; REASON="pagina non leggibile da più di 30 s"; exit 3; fi
         return
@@ -253,7 +267,8 @@ sample() {                           # una riga nel CSV; controlli di sicurezza 
     AUXT="$(num "$(get_value "AUX TEMPERATURE")")"; TEMP="$(num "$(get_value "TEMPERATURE")")"
     USERST="$(get_value "USER STATUS")"; EVSE0="$(get_value "EVSE TASK 0 STATUS")"; EVSE1="$(get_value "EVSE TASK 1 STATUS")"
     DF="$(get_value "$DISPLAY_FLAG")"; PF="$(get_value "$PSG_FLAG")"
-    echo "$NOW;$(ts);$CUID;$PH;$PHNAME;$CH;$CF;$(get_value "AUX HEATER POWER");$(get_value "AUX FAN POWER");$AUXT;$TEMP;$(num "$(get_value "CPU-TEMPERATURE")");$(num "$(get_value "AUX LEDS CURRENT")");$(num "$(get_value "AUX LUX")");$(num "$(get_value "MAIN POWER VOLTAGE")");$(num "$(get_value "AUX SUPPLY 12V")");$USERST;$(get_value "AUX FAULT");$(get_value "ANTITAMPER OK STATUS");$EVSE0;$EVSE1;1;$DF;$(flag_ok "$DF" "$DISPLAY_OK");$PF;$(flag_ok "$PF" "$PSG_OK");$P;$PO;$(num "$(get_value "$V5_NAME")")" >> "$CSV"
+    HPW="$(get_value "AUX HEATER POWER")"; FPW="$(get_value "AUX FAN POWER")"
+    echo "$NOW;$(ts);$CUID;$PH;$PHNAME;$CH;$CF;$HPW;$FPW;$AUXT;$TEMP;$(num "$(get_value "CPU-TEMPERATURE")");$(num "$(get_value "AUX LEDS CURRENT")");$(num "$(get_value "AUX LUX")");$(num "$(get_value "MAIN POWER VOLTAGE")");$(num "$(get_value "AUX SUPPLY 12V")");$USERST;$(get_value "AUX FAULT");$(get_value "ANTITAMPER OK STATUS");$EVSE0;$EVSE1;1;$DF;$(flag_ok "$DF" "$DISPLAY_OK");$PF;$(flag_ok "$PF" "$PSG_OK");$P;$PO;$(num "$(get_value "$V5_NAME")");$EVQ" >> "$CSV"; EVQ=""
     [ "$SAFETY" = 1 ] || return
     if gt "$AUXT" "$AUX_MAX"; then RESULT="interrotta"; REASON="AUX TEMPERATURE $AUXT oltre $AUX_MAX"; exit 4; fi
     if gt "$TEMP" "$TEMP_MAX"; then RESULT="interrotta"; REASON="TEMPERATURE $TEMP oltre $TEMP_MAX"; exit 4; fi
@@ -261,6 +276,43 @@ sample() {                           # una riga nel CSV; controlli di sicurezza 
     # colonnina libera per tutta la prova: un cambio di stato (ricarica, prenotazione) la rende non confrontabile
     if [ -n "$USER_OK" ] && [ -n "$USERST" ] && [ "$USERST" != "$USER_OK" ]; then RESULT="interrotta"; REASON="colonnina non libera (USER STATUS = $USERST)"; exit 6; fi
     if [ -n "$CHARGE_RX" ] && echo "$EVSE0 $EVSE1" | grep -q -E "$CHARGE_RX"; then RESULT="interrotta"; REASON="inizio di una ricarica"; exit 6; fi
+    [ "$PH" -ge 1 ] && { check_uscite; check_tc; }
+}
+onoff() { case "$(echo "$1" | tr 'a-z' 'A-Z')" in ON*|TRUE*|YES*) echo 1;; OFF*|FALSE*|NO*) echo 0;; *) awk -v v="$1" 'BEGIN { gsub(",", ".", v); print (v + 0 > 0) ? 1 : 0 }';; esac; }
+EVQ=""; OUT_BAD=0; TC_PEND=""; TC_T=0; TC_LAST=0; TC_NR=0; RESEND=0; STEP_T=0
+check_uscite() {                     # scaldiglia e ventola lette come comandate; altrimenti rinvio del comando del passo
+    [ "$OUT_CHECK" = 1 ] && [ -n "$HPW" ] && [ -n "$FPW" ] || return 0
+    [ $((NOW - STEP_T)) -ge "$OUT_SETTLE_S" ] || return 0
+    h=$(onoff "$HPW"); f=$(onoff "$FPW")
+    if [ "$h" != "$CH" ] || [ "$f" != "$CF" ]; then OUT_BAD=$((OUT_BAD + 1)); else OUT_BAD=0; fi
+    if [ "$OUT_BAD" -ge 2 ] && [ $((NOW - LAST_SEND)) -ge 15 ]; then
+        log "ATTENZIONE: uscite lette scaldiglia $h ventola $f, comandate $CH/$CF (passo $PHNAME): comando rinviato"
+        send "07;0$CF;0$CH;01;00;01"; EVQ="$EVQ uscite_rinviate"; OUT_BAD=0
+    fi
+}
+check_tc() {                         # TempContEn deve restare 0: lettura senza attesa, mai a ridosso di un comando
+    [ "$TC_CHECK_S" -gt 0 ] && [ -f "$AUXLOG" ] || return 0
+    if [ -n "$TC_PEND" ]; then
+        sz=$(wc -c < "$AUXLOG" 2>/dev/null); [ "${sz:-0}" -lt "$TC_PEND" ] && TC_PEND=0
+        NEW=$(tail -c +"$((TC_PEND + 1))" "$AUXLOG" 2>/dev/null)
+        v=$(echo "$NEW" | sed -n 's/.*TempContEn.*Value=\([^ ,;]*\).*/\1/p' | tail -n 1)
+        [ -z "$v" ] && v=$(echo "$NEW" | sed -n 's/.*Value=\([^ ,;]*\).*/\1/p' | tail -n 1)
+        if [ -n "$v" ]; then
+            TC_PEND=""; TC_NR=0
+            if [ "$v" != 0 ]; then
+                log "ATTENZIONE: TempContEn letto $v durante la prova (servizio AUX ripartito?): rimesso a 0, poi comando del passo rinviato"
+                send "05;00;TempContEn;0"; RESEND=1; EVQ="$EVQ TempContEn=$v"
+                echo "$(date '+%Y-%m-%d %H:%M') $CUID" > "$MARK"
+            fi
+        elif [ $((NOW - TC_T)) -gt 20 ]; then
+            TC_PEND=""; TC_NR=$((TC_NR + 1)); [ "$TC_NR" = 3 ] && log "TempContEn: nessuna risposta a 3 controlli di fila (la prova continua)"
+        fi
+        return 0
+    fi
+    if [ "$RESEND" = 1 ]; then [ $((NOW - LAST_SEND)) -ge 5 ] && { send "07;0$CF;0$CH;01;00;01"; RESEND=0; }; return 0; fi
+    [ $((NOW - TC_LAST)) -ge "$TC_CHECK_S" ] && [ $((NOW - LAST_SEND)) -ge "$CMD_QUIET_S" ] || return 0
+    TC_PEND=$(wc -c < "$AUXLOG" 2>/dev/null); TC_PEND=${TC_PEND:-0}; TC_T=$NOW; TC_LAST=$NOW
+    printf '04;00;TempContEn\n' > "$CMD"          # solo lettura: non conta come comando (LAST_SEND invariato)
 }
 pace() {                             # attende il prossimo campione agganciato a $1 (inizio) senza superare $2 (fine)
     K=$((K + 1)); NEXT=$(($1 + K * INTERVAL)); NOW=$(now)
@@ -303,10 +355,38 @@ case "$1" in
     p=$(running_pid)
     if [ -n "$p" ]; then kill -TERM "$p"; echo "Arresto richiesto (PID $p): la prova si chiude con il ripristino."; else echo "Nessuna prova attiva."; restore; fi
     exit 0;;
+--continua-avvia)
+    # acquisizione continua: un campione ogni N s (indipendente dalle prove), per al massimo ORE ore o fino a --continua-ferma / --pulisci
+    IV="${2:-180}"; OR="${3:-168}"
+    case "$IV$OR" in *[!0-9]*|"") echo "Uso: --continua-avvia SECONDI [ORE]"; exit 1;; esac
+    [ "$IV" -lt 5 ] && IV=5
+    c=$(cont_pid); [ -n "$c" ] && { kill "$c" 2>/dev/null; sleep 1; }
+    SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"; export CONF IP_SCHERMO
+    ( trap '' HUP INT; exec sh "$SELF" --continua "$IV" "$OR" ) </dev/null >/dev/null 2>&1 &
+    { echo "PID=$!"; echo "OGNI=$IV"; echo "DAL=$(date '+%Y-%m-%d %H:%M')"; echo "FINO=$(date -d "@$(( $(now) + OR * 3600 ))" '+%Y-%m-%d %H:%M' 2>/dev/null)"; } > "$CONT"
+    echo "Acquisizione continua avviata: un campione ogni $IV s per $OR h, in $DIR/continua/ (un file al giorno). Ferma: sh $0 --continua-ferma"
+    exit 0;;
+--continua-ferma)
+    c=$(cont_pid); [ -n "$c" ] && kill "$c" 2>/dev/null; rm -f "$CONT"
+    echo "Acquisizione continua ferma${c:+ (PID $c)}."; exit 0;;
+--continua)
+    IV="${2:-180}"; OR="${3:-168}"; END=$(( $(now) + OR * 3600 )); mkdir -p "$DIR/continua"
+    SAFETY=0; PH=0; PHNAME="continua"; CH=""; CF=""; LOST=0; K=0; T1=$(now)
+    while [ "$(now)" -lt "$END" ] && [ -f "$CONT" ]; do
+        [ "$(sed -n 's/^PID=//p' "$CONT")" = "$$" ] || exit 0           # sostituita da un'altra acquisizione
+        read_page; CU="$(get_value "CUID")"
+        CSV="$DIR/continua/${CU:-colonnina}_continua_$(date '+%Y%m%d').csv"
+        [ -f "$CSV" ] || echo "$HEADER" > "$CSV"
+        # stato reale delle uscite nel campo «comando»: qui non si comanda nulla
+        sample
+        K=$((K + 1)); NEXT=$((T1 + K * IV)); W=$((NEXT - $(now))); [ "$W" -gt 0 ] && sleep "$W"
+    done
+    rm -f "$CONT"; exit 0;;
 --verifica)
     # colonnina pulita? nessun processo dello script, nessun file di stato rimasto, TempContEn = 1 (solo lettura se c'è una prova)
     K=""
-    L=$(prova_procs | awk '$2 != "servizio"'); [ -n "$L" ] && K="$K processi: $(echo "$L" | awk '{ printf "%s%s(%s)", (NR > 1 ? ", " : ""), $1, $2 }');"
+    L=$(prova_procs | awk '$2 != "servizio" && $2 != "continua"'); [ -n "$L" ] && K="$K processi: $(echo "$L" | awk '{ printf "%s%s(%s)", (NR > 1 ? ", " : ""), $1, $2 }');"
+    CP=$(cont_pid); [ -n "$CP" ] && echo "CONTINUA=attiva;ogni $(sed -n 's/^OGNI=//p' "$CONT") s dal $(sed -n 's/^DAL=//p' "$CONT") fino al $(sed -n 's/^FINO=//p' "$CONT")"
     F=$(for f in .lock .prova_in_corso .tc_disattivo .programmata .passo .wd_pid; do [ -e "$BASE/$f" ] && printf '%s ' "$f"; done)   # .piano: solo copie delle sequenze, non conta
     [ -n "$F" ] && K="$K file di stato rimasti: $F;"
     if [ -z "$L" ]; then
@@ -331,7 +411,8 @@ case "$1" in
     p=$(running_pid)
     if [ -n "$p" ]; then kill -TERM "$p"; echo "Prova in corso (PID $p): arresto con ripristino"; i=0; while [ -d "/proc/$p" ] && [ "$i" -lt 45 ]; do sleep 1; i=$((i + 1)); done; fi
     # processi rimasti (anche sottoprocessi di un istante del ripristino): fino a 4 giri, l'ultimo a forza
-    attivi() { prova_procs | awk '$2 == "prova" || $2 == "guardiano" || $2 == "controlli" || $2 == "piano" { print $1 }'; }
+    attivi() { prova_procs | awk '$2 == "prova" || $2 == "guardiano" || $2 == "controlli" || $2 == "piano" || $2 == "continua" { print $1 }'; }
+    rm -f "$CONT"
     i=0; CH=""
     while [ "$i" -lt 4 ]; do
         R=$(attivi); [ -z "$R" ] && break
@@ -340,7 +421,7 @@ case "$1" in
         sleep 3; i=$((i + 1))
     done
     [ -n "$CH" ] && echo "Altri processi prova_schermo chiusi:$(echo $CH | tr ' ' '\n' | sort -u | tr '\n' ' ')"
-    rm -rf /tmp/prova_schermo.lock* "$LOCK" "$INC" "$PASSO" "$BASE/.piano" "$BASE/.wd_pid"
+    rm -rf /tmp/prova_schermo.lock* "$LOCK" "$INC" "$PASSO" "$BASE/.piano" "$BASE/.wd_pid" "$CONT"
     RUNLOG="$GLOG"; restore
     # verifica: conta solo ciò che resta in due letture a 3 s di distanza (i processi di un istante spariscono da soli)
     L1=$(prova_procs | awk '$2 != "servizio" { print $1 }'); sleep 3; L2=$(prova_procs | awk '$2 != "servizio"')
@@ -385,6 +466,7 @@ case "$1" in
         else SB="programmata;${NX:-in corso di avvio}"; fi
     else SB="libera;"; fi
     echo "STATO_BREVE=$SB"
+    CP=$(cont_pid); if [ -n "$CP" ]; then echo "CONTINUA=attiva;ogni $(sed -n 's/^OGNI=//p' "$CONT") s fino al $(sed -n 's/^FINO=//p' "$CONT")"; else echo "CONTINUA=spenta;"; fi
     for f in "$DIR/risultati.csv" "$DIR/collaudo/risultati.csv"; do [ -f "$f" ] && tail -n 4 "$f" | grep -v '^data;' | sed "s|^|RIS=$(basename "$(dirname "$f")")/|"; done
     exit 0;;
 --alle|--tra|--subito)
@@ -400,7 +482,7 @@ case "$1" in
     if [ "$MODE" = "--subito" ]; then MODE="--tra"; WHEN=0
     else WHEN="$1"; [ -z "$WHEN" ] && { echo "$USO"; exit 1; }; shift; fi
     k=$(kill_piani); [ -n "$k" ] && echo "Piano precedente sostituito (chiusi PID$k)."
-    GIORNI=1; NOME="$CONFIG_DEFAULT"; NT=""; SCALA=1; O_PAUSA=""; O_BASE=""; PROVA=0; NSQ=0; CAL=""; MON=0; PS=0
+    GIORNI=1; NOME="$CONFIG_DEFAULT"; NT=""; SCALA=1; O_PAUSA=""; O_BASE=""; PROVA=0; NSQ=0; CAL=""; MON=0; PS=0; OGNI_H=""; VOLTE=1
     PIANO="$BASE/.piano"; rm -rf "$PIANO"; mkdir -p "$PIANO"
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -412,6 +494,8 @@ case "$1" in
             --base)   O_BASE="$2"; shift 2;;
             --prova)  PROVA=1; shift;;
             --parti-sempre) PS=1; shift;;
+            --ogni-ore) OGNI_H="$2"; shift 2;;
+            --volte) VOLTE="$2"; shift 2;;
             --ip-schermo) IP_SCHERMO="$2"; shift 2;;
             --calendario) CAL="$2"; shift 2;;
             --monitora) MON="$2"; shift 2;;
@@ -421,6 +505,11 @@ case "$1" in
     done
     case "$GIORNI" in ''|*[!0-9]*|0) echo "--giorni vuole un numero da 1 in su"; exit 1;; esac
     case "$MON" in ''|*[!0-9]*) echo "--monitora vuole i minuti"; exit 1;; esac
+    if [ -n "$OGNI_H" ]; then             # ripetizione ogni N ore, VOLTE avvii in tutto
+        echo "$OGNI_H" | grep -q -E '^[0-9]*\.?[0-9]+$' && [ "$(awk -v h="$OGNI_H" 'BEGIN { print (h >= 0.25) }')" = 1 ] || { echo "--ogni-ore vuole un numero di ore da 0.25 in su"; exit 1; }
+        case "$VOLTE" in ''|*[!0-9]*|0) echo "--volte vuole un numero da 1 in su"; exit 1;; esac
+        [ -n "$CAL" ] && { echo "--ogni-ore non si usa con --calendario"; exit 1; }
+    fi
     if [ -n "$CAL" ]; then                 # calendario: le sequenze delle notti sono quelle scritte nel calendario
         [ "$NSQ" = 0 ] || { echo "Con --calendario le sequenze si scrivono solo nel calendario"; exit 1; }
         GIORNI=$(echo "$CAL" | awk -F';' '{ print NF }')
@@ -471,6 +560,7 @@ $SCALED
           [ "$PS" = 1 ] && printf 'STABLE_MIN=0\nMIN_UPTIME_H=0\nUSER_OK=""\nREST_MIN=0\n'
           :; } > "$D/seq_$SNAME.conf"
         T=$(echo "$SCALED" | awk -F';' '{ t += $3 } END { print t + 0 }'); TOT=$((TOT + T))
+        [ "$T" -gt 0 ] || { echo "ERRORE: la sequenza $SNAME non ha passi${SRC:+ (file $SRC)}: piano non programmato"; rm -rf "$PIANO"; exit 1; }
         SEQS="$SEQS $D/seq_$SNAME.conf"
         LIST="$LIST
   $i. $SNAME ($((T / 60)) min $((T % 60)) s): $(echo "$SCALED" | awk -F';' '{ printf "%s%s %ds", (NR > 1 ? " → " : ""), $1, $3 }')"
@@ -488,7 +578,13 @@ $SCALED
         case "$FIRST" in *ERR*|"") echo "Orari non validi: $WHEN (usa HH:MM, più orari separati da virgola, es. 21:00,01:00)"; exit 1;; esac
     fi
     p=$(running_pid); [ -n "$p" ] && [ "$WHEN" = 0 ] && { echo "Una prova è in corso (PID $p): aspetta che finisca o fermala con --ferma."; exit 1; }
+    if [ -n "$OGNI_H" ]; then
+        set -- $FIRST; ST=$(awk -v h="$OGNI_H" 'BEGIN { printf "%d", h * 3600 }')
+        EVENTS=$(d=0; while [ "$d" -lt "$VOLTE" ]; do echo "$(($1 + d * ST)):$((d + 1))"; d=$((d + 1)); done | tr '\n' ' ')
+        case "$WHEN" in *,*) echo "Con --ogni-ore un solo orario di avvio"; exit 1;; esac
+    else
     EVENTS=$(for e in $FIRST; do d=0; while [ "$d" -lt "$GIORNI" ]; do echo "$((e + d * 86400)):$((d + 1))"; d=$((d + 1)); done; done | sort -n | tr '\n' ' ')
+    fi
     SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
     PAUSA="${O_PAUSA:-$REST_MIN}"; RLAST="$RDIR/.ultima_prova"; mkdir -p "$RDIR"
     export CONF
@@ -551,7 +647,7 @@ $SCALED
     read_page; CU="$(get_value "CUID")"
     A="$DIR/archivio_${CU:-colonnina}_$(date '+%Y%m%d_%H%M').tar.gz"
     # dati della cartella e delle prove di funzionamento (collaudo/), senza archivi precedenti
-    L=$(cd "$DIR" && for f in ./*.csv ./*.log ./*.txt ./*.conf ./collaudo/*.csv ./collaudo/*.log ./collaudo/*.txt; do [ -f "$f" ] && echo "$f"; done)
+    L=$(cd "$DIR" && for f in ./*.csv ./*.log ./*.txt ./*.conf ./collaudo/*.csv ./collaudo/*.log ./collaudo/*.txt ./continua/*.csv; do [ -f "$f" ] && echo "$f"; done)
     [ -z "$L" ] && { echo "Nessun dato da archiviare in $DIR"; exit 1; }
     (cd "$DIR" && tar czf "$A" $L)
     echo "Archivio pronto: $A"; exit 0;;
@@ -578,6 +674,7 @@ analyse() {
         if ($24 != "") { dn++; dd += $24 } if ($26 != "") { pn++; pp += $26 }
         if ($27 != "") { gn++; if ($27 != "ko") { g++; gm += $27 } }
         if ($13 != "" && (lm == "" || $13 + 0 > lm)) lm = $13 + 0
+        if ($30 ~ /TempContEn/) ntc++; if ($30 ~ /uscite_rinviate/) nus++
         if (uok != "" && $17 != "" && $17 != uok) ub = $17
         if ($22 != 1 || $10 == "" || $10 == 0) next
         n++; t[n] = $1; T[n] = $10; p[n] = $4; h[n] = on($8); f[n] = on($9); if (!(p[n] in st)) st[p[n]] = t[n] }
@@ -585,6 +682,8 @@ analyse() {
         why = ""; valid = 1; d1 = ""; d2 = ""
         if (lm != "" && lm >= lmax) { valid = 0; why = why sprintf(" corrente LED %.2f A (massimo %s);", lm, lmax) }
         if (ub != "") { valid = 0; why = why " colonnina non libera (USER STATUS " ub ");" }
+        if (ntc) { valid = 0; why = why " TempContEn tornato attivo " ntc " volte durante la prova (ripristinato);" }
+        if (nus) why = why " uscite non conformi, comando rinviato " nus " volte;"
         mi = 0
         for (k = 2; k <= ns; k++) {
             if (role[k] != "misura" || role[k - 1] != "carica" || !(k in st)) continue
@@ -772,19 +871,32 @@ SAFETY=1; STARTED=1
 T0=$(now)
 { echo "T0=$T0"; echo "CUID='$CUID'"; echo "CONFIG='$SAFE_CFG'"; echo "SLOT='$SLOT'"; echo "NOTE=''"; echo "CSV='$CSV'"; } > "$INC"
 WDS=$((TOTAL + WATCHDOG_MARGIN_MIN * 60))
-( trap '' HUP; sleep "$WDS"; printf '07;00;00;01;00;01\n' > "$CMD"; sleep 3; printf '05;00;TempContEn;1\n' > "$CMD"
-  echo "$(date '+%Y-%m-%d %H:%M:%S') guardiano a tempo: ripristino dopo $WDS s (prova non chiusa)" >> "$GLOG" ) </dev/null >/dev/null 2>&1 &
+( trap '' HUP; sleep "$WDS"
+  # interviene solo se è ancora la sua prova: un guardiano rimasto da una prova chiusa di colpo non deve toccare la prova successiva
+  if [ -f "$INC" ] && ! grep -q "^T0=$T0\$" "$INC"; then
+      echo "$(date '+%Y-%m-%d %H:%M:%S') guardiano a tempo della prova T0=$T0: è in corso un'altra prova, nessun intervento" >> "$GLOG"; exit 0; fi
+  printf '07;00;00;01;00;01\n' > "$CMD"; sleep 3; printf '05;00;TempContEn;1\n' > "$CMD"
+  echo "$(date '+%Y-%m-%d %H:%M:%S') guardiano a tempo: ripristino dopo $WDS s (prova T0=$T0 non chiusa)" >> "$GLOG" ) </dev/null >/dev/null 2>&1 &
 echo $! > "$BASE/.wd_pid"
 log "Guardiano a tempo: ripristino automatico tra $((WDS / 60)) min se la prova non si chiude."
 log "Limiti di sicurezza di questa sequenza: AUX TEMPERATURE ≤ $AUX_MAX °C, TEMPERATURE ≤ $TEMP_MAX °C, LED < $LED_MAX A per la validità."
 echo "$(date '+%Y-%m-%d %H:%M') $CUID" > "$MARK"; DISABLED=1
 send "05;00;TempContEn;0"; sleep 2
+# verifica all'avvio: TempContEn deve risultare 0 (fino a 3 tentativi); se il log di PS4GAux non risponde la prova continua
+if [ -f "$AUXLOG" ]; then
+    k=1; v=$(tc_read)
+    while [ -n "$v" ] && [ "$v" != 0 ] && [ "$k" -lt 3 ]; do send "05;00;TempContEn;0"; sleep 2; v=$(tc_read); k=$((k + 1)); done
+    if [ -z "$v" ]; then log "TempContEn: nessuna risposta alla verifica iniziale (la prova continua; controllo ogni ${TC_CHECK_S} s)"
+    elif [ "$v" != 0 ]; then RESULT="interrotta"; REASON="TempContEn non disattivabile (letto $v dopo 3 tentativi)"; exit 7
+    else log "TempContEn verificato a 0: controllo termico automatico disattivato."; fi
+    TC_LAST=$(now)
+fi
 log "Passi: $NS, durata $((TOTAL / 60)) min, fine prevista alle $(date -d "@$((T0 + TOTAL))" '+%H:%M' 2>/dev/null)"
 S=$T0
 i=1
 while [ "$i" -le "$NS" ]; do
     eval "PHNAME=\$SN_$i; PDUR=\$SS_$i; CH=\$SH_$i; CF=\$SF_$i"
-    PH=$i; E=$((S + PDUR))
+    PH=$i; E=$((S + PDUR)); STEP_T=$S; OUT_BAD=0; RESEND=0
     echo "${SEQNAME:-conf};$i/$NS $PHNAME;$E" > "$PASSO"
     send "07;0$CF;0$CH;01;00;01"
     K=0
