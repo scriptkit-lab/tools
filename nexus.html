@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NEXUS · Manutenzione 2.1</title>
+<style>
+:root{--side:#1f2429;--side2:#343a40;--top:#15181b;--bg:#f2f3f5;--card:#fff;--line:#dfe3e8;--ink:#1d2328;--mute:#68717a;--blue:#2a78d6;--red:#d63a3a;--green:#1e9e45;--amber:#e0a800}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 "Segoe UI",system-ui,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+a{color:var(--blue)}
+#top{height:56px;background:var(--top);color:#fff;display:flex;align-items:center;gap:12px;padding:0 16px;position:sticky;top:0;z-index:6}
+#top .brand{font-weight:700;font-size:18px;white-space:nowrap}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:700}
+.b-yel{background:#ffc107;color:#212529}
+.modes{display:flex;background:#2b3035;border-radius:6px;padding:3px;margin-left:12px}
+.modes button{border:0;background:transparent;color:#cfd4d9;padding:6px 14px;border-radius:4px;font:inherit;cursor:pointer;font-weight:600}
+.modes button.on{background:#fff;color:#1d2328}
+#clock{flex:1;text-align:right;color:#ffffff88;font-size:13px}
+#wrap{display:flex;min-height:calc(100vh - 56px)}
+#side{width:236px;background:var(--side);padding:10px 0;flex-shrink:0}
+#side a{display:flex;align-items:center;gap:10px;color:#ffffffa0;text-decoration:none;padding:11px 18px}
+#side a:hover{color:#fff}#side a.on{color:#fff;background:var(--side2);border-left:3px solid var(--blue);padding-left:15px}
+#side .sec{color:#ffffff55;font-size:11px;text-transform:uppercase;letter-spacing:1px;padding:14px 18px 4px}
+#side .ic{width:20px;text-align:center}
+#main{flex:1;padding:18px 22px;min-width:0}
+h1{font-size:22px;margin:0 0 4px}h2{font-size:17px;margin:0}
+.sub{color:var(--mute);margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;margin-bottom:16px;overflow:hidden}
+.card>h5{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);background:#f8f9fa;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card>.bd{padding:12px 16px}
+.grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+@media(max-width:1000px){.grid2{grid-template-columns:1fr}}
+table{border-collapse:collapse;width:100%}td,th{padding:6px 8px;text-align:left;vertical-align:middle}
+th{font-size:12px;color:var(--mute);font-weight:600;border-bottom:2px solid var(--line);text-transform:uppercase;letter-spacing:.3px}
+.lines td{border-bottom:1px solid var(--line)}
+tr.clk{cursor:pointer}tr.clk:hover td{background:#f2f6fc}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:12px;font-weight:700;white-space:nowrap}
+.p-GUASTO{background:#f8d7da;color:#842029}.p-ATTENZIONE{background:#fff3cd;color:#664d03}.p-OK{background:#d1e7dd;color:#0f5132}.p-INFO{background:#e2e6ea;color:#41464b}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;padding:7px 14px;border-radius:5px;font:inherit;cursor:pointer;text-decoration:none;line-height:1.3}
+.btn-p{background:var(--blue);color:#fff}.btn-g{background:var(--green);color:#fff}.btn-r{background:var(--red);color:#fff}.btn-o{background:#fff;border-color:#c9cfd6;color:var(--ink)}
+.btn-sm{padding:3px 9px;font-size:13px}.btn-xl{padding:14px 22px;font-size:18px;font-weight:600;border-radius:8px}
+.btn:disabled{opacity:.45;cursor:default}
+input[type=text],input[type=number],select,textarea{font:inherit;padding:6px 9px;border:1px solid #c9cfd6;border-radius:5px;background:#fff}
+.mute{color:var(--mute)}small{color:var(--mute)}
+.note{background:#fff8e1;border:1px solid #ffe08a;border-radius:6px;padding:9px 13px;margin-bottom:14px;font-size:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-top:4px solid var(--blue);border-radius:6px;padding:10px 14px}
+.kpi.ok{border-top-color:var(--green)}.kpi.bad{border-top-color:var(--red)}.kpi.warn{border-top-color:var(--amber)}
+.kl{font-size:13px;color:var(--mute)}.kv{font-size:28px;font-weight:700;line-height:1.15;font-variant-numeric:tabular-nums}.kv small{font-size:15px;font-weight:400}.ks{font-size:12px;color:var(--mute)}
+.bar{display:flex;height:12px;border-radius:3px;overflow:hidden;background:#eef0f2;min-width:80px}.bar i{display:block;height:100%}
+.bg-r{background:var(--red)}.bg-a{background:var(--amber)}.bg-g{background:var(--green)}.bg-b{background:var(--blue)}
+.leg{display:flex;gap:14px;font-size:12px;color:var(--mute);margin-top:6px}.leg i{display:inline-block;width:11px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.spc{font-family:Consolas,monospace;font-weight:700;font-size:12px;padding:1px 6px;border:1px solid #ffd666;border-radius:3px;background:#fff8e1;color:#6b4e00;white-space:nowrap}
+.man{font-size:12px;text-decoration:none;padding:1px 7px;border:1px solid #9ec5fe;border-radius:3px;background:#e7f1ff;color:#0a58ca;white-space:nowrap}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:8px}
+/* colonnina */
+.hero{display:flex;gap:16px;align-items:center;border-radius:8px;padding:16px 20px;margin-bottom:16px;color:#fff}
+.hero.h-OK{background:#1e8b42}.hero.h-ATTENZIONE{background:#b98900}.hero.h-GUASTO{background:#c0352f}
+.hero .big{font-size:26px;font-weight:700;line-height:1.2}.hero .ico{font-size:44px}
+.todo{border:2px solid #f1c2c2;background:#fff;border-radius:8px;margin-bottom:14px;overflow:hidden}
+.todo.w{border-color:#ffe08a}
+.todo .th{padding:12px 16px;background:#fdf1f1;display:flex;gap:10px;align-items:center;flex-wrap:wrap}.todo.w .th{background:#fffaeb}
+.todo .tb{padding:12px 16px;display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px}
+@media(max-width:900px){.todo .tb{grid-template-columns:1fr}}
+.steps{margin:6px 0 0;padding-left:22px}.steps li{margin:4px 0}
+.partcard{border:1px solid var(--line);border-radius:8px;padding:10px;display:flex;gap:10px;align-items:center;margin-bottom:8px;background:#fafbfc}
+.partcard .code{white-space:nowrap;font-family:Consolas,monospace;font-size:19px;font-weight:700;color:#6b4e00;background:#fff3c4;padding:1px 8px;border-radius:4px}
+.photo{width:84px;height:64px;border-radius:6px;background:repeating-linear-gradient(45deg,#eceff2,#eceff2 7px,#f7f8f9 7px,#f7f8f9 14px);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;overflow:hidden;border:1px solid var(--line)}
+.photo img{width:100%;height:100%;object-fit:cover}
+.blocks{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.blk{background:#fff;border:1px solid var(--line);border-left:5px solid var(--green);border-radius:6px;overflow:hidden}
+.blk.s-GUASTO{border-left-color:var(--red)}.blk.s-ATTENZIONE{border-left-color:var(--amber)}
+.blk h4{margin:0;padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:15px;background:#f8f9fa;border-bottom:1px solid var(--line)}
+.blk .bphoto{height:110px;background-size:cover;background-position:center;border-bottom:1px solid var(--line)}
+.kv2 td{padding:4px 14px;font-size:14px;border-bottom:1px solid #f0f2f4}.kv2 td:first-child{color:#4a535b;width:56%}
+.v-bad{color:#a11d1d;font-weight:700}.v-warn{color:#7a5a00;font-weight:700}
+.led{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}.l-g{background:var(--green)}.l-r{background:var(--red)}.l-a{background:var(--amber)}.l-x{background:#adb5bd}
+.dtab td{padding:3px 8px;border:2px solid #fff;background:#eceeef;font-size:13px}.dtab th{background:#343a40;color:#fff;text-align:center;border:2px solid #fff}
+/* campo */
+.search{display:flex;gap:10px;max-width:760px}.search input{flex:1;font-size:20px;padding:14px 16px;border-radius:8px}
+.reslist .r{display:flex;gap:14px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;margin-bottom:10px;cursor:pointer}
+.reslist .r:hover{border-color:var(--blue)}
+.wiz{max-width:900px}.wsteps{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}.wsteps span{padding:6px 12px;border-radius:16px;background:#e9ecef;font-size:13px}.wsteps span.on{background:var(--blue);color:#fff}.wsteps span.done{background:#d1e7dd;color:#0f5132}
+.wcard{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px}
+.qbtns{display:flex;gap:12px;margin-top:16px}
+.chk li{list-style:none;margin:8px 0;font-size:17px}.chk{padding:0}.chk input{width:22px;height:22px;vertical-align:-4px;margin-right:10px}
+/* configurazione */
+.cfgt td{padding:4px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}.cfgt input,.cfgt textarea{width:100%;font-size:13px;padding:4px 6px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:14px}.tabs button{border:0;background:transparent;padding:9px 14px;font:inherit;cursor:pointer;color:var(--mute);border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--blue);font-weight:600}
+/* report */
+.rep{background:#fff;max-width:900px;margin:0 auto;padding:28px 34px;border:1px solid var(--line)}
+.rep h1{font-size:22px}.rep h3{font-size:15px;margin:18px 0 6px;border-bottom:2px solid #1d2328;padding-bottom:3px}
+.rep table td,.rep table th{border-bottom:1px solid #ddd;font-size:13px;padding:4px 6px}
+.sheet{border:1px solid #bbb;border-radius:6px;padding:14px 16px;margin-bottom:14px;break-inside:avoid}
+.sheet .sh{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:8px}
+.box{display:inline-block;width:15px;height:15px;border:2px solid #555;border-radius:3px;vertical-align:-3px;margin-right:6px}
+/* benessere, grafici, diagnosi massiva */
+.sthead{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.sthead h1{margin:0}
+.health{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;margin-bottom:16px}@media(max-width:900px){.health{grid-template-columns:1fr}}
+.ring{background:#fff;border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px}
+.areas{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.area{background:#fff;border:1px solid var(--line);border-top:5px solid var(--green);border-radius:8px;padding:10px 14px;cursor:pointer}.area:hover{border-color:var(--blue)}
+.area.s-GUASTO{border-top-color:var(--red)}.area.s-ATTENZIONE{border-top-color:var(--amber)}
+.area .at{font-weight:600;display:flex;gap:6px;align-items:center}.area .av{font-size:13px;color:var(--mute);margin-top:4px}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px}
+.chart{background:#fff;border:1px solid var(--line);border-radius:6px;padding:10px 12px}.chart .ct{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
+.chart svg{width:100%;height:auto;display:block}.ln{fill:none;stroke:var(--blue);stroke-width:2}.thr{stroke:var(--red);stroke-dasharray:5 4;stroke-width:1.2}.thl{font-size:10px;fill:var(--red)}
+.axl{font-size:10px;fill:#8a939b}.gridl{stroke:#eef0f2}.vbad{color:var(--red)}
+.spark{display:flex;gap:10px;align-items:center;justify-content:space-between}.spark svg{width:130px;height:36px}
+.prog{height:22px;background:#e9ecef;border-radius:11px;overflow:hidden;display:flex}.prog i{display:block;height:100%;transition:width .1s}
+.errbtn{display:flex;gap:14px;align-items:center;width:100%;text-align:left;padding:14px 16px;border:2px solid var(--line);border-radius:8px;background:#fff;margin-bottom:10px;cursor:pointer;font:inherit}
+.errbtn:hover{border-color:var(--blue);background:#f5f9ff}.errcode{font-family:Consolas,monospace;font-size:12px;background:#212529;color:#ffc107;padding:2px 7px;border-radius:3px}
+.crumbs{font-size:14px;color:var(--mute);margin-bottom:10px}.crumbs div{margin:3px 0}
+.qbig{font-size:22px;font-weight:600;margin:6px 0 4px}
+.esito{border:2px solid #9fd3b0;background:#f2fbf5;border-radius:10px;padding:16px 18px;margin-bottom:12px}
+.flow{display:flex;align-items:center;gap:4px;margin:6px 0 14px;flex-wrap:wrap}.flow .fs{padding:7px 12px;border-radius:18px;background:#e9ecef;font-size:13px;font-weight:600;color:#5d666e}
+.flow .fs.done{background:#d1e7dd;color:#0f5132}.flow .fs.on{background:var(--blue);color:#fff}.flow .fs.bad{background:var(--red);color:#fff}.flow .fa{color:#adb5bd;font-weight:700}
+.sfbox{white-space:pre-wrap;background:#f6f8fa;border:1px solid var(--line);border-radius:6px;padding:10px 12px;font:12.5px/1.45 Consolas,monospace;margin:10px 0}
+.codebox{white-space:nowrap;font:700 22px Consolas,monospace;border:3px solid #1d2328;padding:4px 10px;border-radius:6px;letter-spacing:1px}
+.ctest{border:2px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px}.ctest.ok{border-color:#9fd3b0;background:#f2fbf5}.ctest.ko{border-color:#f1c2c2;background:#fdf1f1}
+.ctest .cth{display:flex;justify-content:space-between;gap:10px;margin-bottom:4px}
+.livebox{display:flex;gap:18px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin-top:8px;font-size:14px}
+.areas5{display:flex;gap:2px;background:#2b3035;border-radius:6px;padding:3px;margin-left:12px;align-items:center;flex-wrap:wrap}.areas5 button{border:0;background:transparent;color:#cfd4d9;padding:6px 10px;border-radius:4px;font:inherit;font-size:13px;cursor:pointer;font-weight:600}.areas5 button.on{background:#fff;color:#1d2328}
+.flow5{display:flex;align-items:stretch;gap:6px;margin:10px 0 18px;flex-wrap:wrap}.f5{flex:1;min-width:120px;background:#fff;border:1px solid var(--line);border-top:5px solid #999;border-radius:8px;padding:10px;text-align:center;cursor:pointer}.f5.on{box-shadow:0 0 0 2px var(--blue)}.f5a{display:flex;flex-direction:column;justify-content:center;align-items:center;color:#8a939b;font-weight:700}.f5a small{font-weight:400;font-size:10.5px}
+.fase{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:9px;background:#e7f1ff;color:#0a58ca;margin-left:6px;vertical-align:1px}
+.tl td{font-size:13.5px;vertical-align:top}.mono{font-family:Consolas,monospace}
+.logbox{background:#0f1419;color:#d6dde3;border-radius:6px;padding:10px 12px;font:12px/1.5 Consolas,monospace;max-height:560px;overflow:auto;margin:8px 0}
+.ll{white-space:pre-wrap}.ll .lt{color:#7d8a96}.ll .lv{display:inline-block;width:46px;color:#7d8a96}.ll.l-ERROR{color:#ff8a80}.ll.l-ERROR .lv{color:#ff5252;font-weight:700}.ll.l-WARN{color:#ffd180}.ll.l-WARN .lv{color:#ffab40;font-weight:700}
+.term{background:#0f1419;color:#d6dde3;border-radius:6px;padding:12px 14px;font:12.5px/1.5 Consolas,monospace;white-space:pre-wrap;min-height:360px}
+.toast{pointer-events:none;position:fixed;right:16px;bottom:16px;background:#212529;color:#fff;padding:10px 14px;border-radius:6px;opacity:0;transition:.2s;z-index:30}.toast.on{opacity:.95}
+@media print{#top,#side,.noprint,.toast{display:none!important}#main{padding:0}body{background:#fff}.rep{border:0;padding:0;max-width:none}.sheet{page-break-inside:avoid}}
+@media(max-width:800px){#side{width:58px}#side a span,#side .sec{display:none}#clock{display:none}}
+
+.nxsim{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.4px;padding:1px 6px;border-radius:3px;background:#fdecec;color:#a52a24;border:1px solid #f1c2c2;vertical-align:2px;margin-left:6px}
+.tr{display:inline-block;min-width:118px;text-align:center;padding:2px 8px;border-radius:10px;font-size:11.5px;font-weight:700;letter-spacing:.3px}
+.tr-PASS{background:#d1e7dd;color:#0f5132}.tr-FAIL{background:#f8d7da;color:#842029}.tr-NT{background:#e9ecef;color:#495057}.tr-NA{background:#e7f1ff;color:#0a58ca}
+.es2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}.es2>div{border:2px solid var(--line);border-radius:8px;padding:10px 14px}.es2 .ok{border-color:#9fd3b0;background:#f2fbf5}.es2 .ko{border-color:#f1c2c2;background:#fdf1f1}.es2 .wip{border-color:#ffe08a;background:#fff8e1}
+.es2 .t{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--mute)}.es2 .v{font-size:19px;font-weight:700;margin-top:2px}
+.wz{border:2px solid #9ec5fe;border-radius:8px;padding:12px 14px;background:#f5f9ff;margin-bottom:12px}.wz .ty{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:1px 7px;border-radius:3px;background:#0a58ca;color:#fff;margin-right:6px}
+.seg{display:inline-flex;border:1px solid #c9cfd6;border-radius:6px;overflow:hidden}.seg button{border:0;background:#fff;padding:5px 12px;font:inherit;font-size:13px;cursor:pointer}.seg button.on{background:#1d2328;color:#fff}
+.cmdst{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0}.cmdst span{font-size:11.5px;padding:2px 8px;border-radius:10px;background:#d1e7dd;color:#0f5132;font-weight:600}.cmdst span.ko{background:#f8d7da;color:#842029}.cmdst span.w{background:#fff3cd;color:#664d03}.cmdst span.no{background:#eef0f2;color:#9aa1a8;font-weight:400}
+.kbc{border:1px solid var(--line);border-left:5px solid #1e8b42;border-radius:6px;padding:10px 14px;margin-bottom:8px;background:#fff;cursor:pointer}.kbc:hover{background:#f5f9ff}.kbc.bozza{border-left-color:#b98900}.kbc.obsoleta{border-left-color:#adb5bd;opacity:.75}
+.kbst{font-size:11px;font-weight:700;padding:1px 7px;border-radius:3px;text-transform:uppercase}.kbst.validata{background:#d1e7dd;color:#0f5132}.kbst.bozza{background:#fff3cd;color:#664d03}.kbst.obsoleta{background:#e9ecef;color:#6c757d}
+.tag{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:3px;background:#eef0f2;color:#41464b;margin:2px 4px 2px 0}
+.nxhero{background:#14191e;color:#e9edf1;border-radius:10px;padding:28px 30px;margin-bottom:16px}.nxhero h1{color:#fff;font-size:30px;letter-spacing:.5px}.nxhero .k{color:#7fb2ff;font-size:12.5px;letter-spacing:2px;text-transform:uppercase;font-weight:700}
+.asis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}.asis div{background:#fff;border:2px dashed #c9cfd6;border-radius:8px;padding:12px;transform:rotate(var(--r,0deg))}
+.tobe{display:grid;gap:10px}.tobe .ly{border:2px solid #9ec5fe;border-radius:8px;padding:10px 14px;background:#fff}.tobe .ly.core{border-color:#0a58ca;background:#eaf2ff}.tobe .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}.tobe .row span{background:#f1f3f5;border-radius:5px;padding:5px 10px;font-size:13.5px}
+#nxdemo{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;z-index:40;background:#14191e;color:#fff;border-radius:10px;padding:10px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 24px #0005;max-width:min(980px,94vw)}
+#nxdemo b{color:#7fb2ff}#nxdemo .btn{padding:4px 10px;font-size:13px;white-space:nowrap}
+.brand small{font-weight:400;color:#ffffff99;font-size:12px;margin-left:5px}#top .badge{white-space:nowrap}body.nxdm #main{padding-bottom:120px}
+@media print{#nxdemo{display:none!important}}
+</style>
+</head>
+<body>
+<div id="top"><span class="brand">NEXUS</span>
+  <div class="areas5 noprint"><span class="mute" style="color:#ffffff88;font-size:12px;margin-right:4px">Area:</span><button data-area="L1">📞 L1 Customer Care</button><button data-area="L2">🖥 L2 Control Room</button><button data-area="L3">🔧 L3 Manutentore</button><button data-area="SOST">🔁 Sostituzione</button><button data-area="REP">🏭 Magazzino e riparazione</button><span style="width:1px;height:20px;background:#ffffff33;margin:0 4px"></span><button data-area="ENG">🧪 Ingegneria</button></div><span id="clock"></span></div>
+<div id="wrap"><nav id="side" class="noprint"></nav><main id="main"><p class="mute">Caricamento…</p></main></div>
+<div class="toast" id="toast"></div>
+<script>
+/* ==================================================================================================
+   NEXUS · Manutenzione 2.1 · console operativa (servita da server.py, dati nella cartella della postazione)
+   [ADATTATORI]  api(): server locale → letture reali (pagina di stato + SSH in sola lettura), casi e pacchetti su file
+   [MOTORE]      casi a catena, comandi registrati con verifica, statino standard, wizard dalla base di conoscenza
+   [INTERFACCIA] aree L1-L2-L3-Sostituzione-Riparazione-Ingegneria, Knowledge Base, identificazione stazione
+   Il tool non invia comandi alle colonnine: l'operatore li esegue con lo strumento autorizzato e qui li registra;
+   la verifica dell'effetto è una rilettura vera della colonnina.
+   ================================================================================================== */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=n=>Number(n).toLocaleString("it-IT");
+function toast(m,ms){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(t.h);t.h=setTimeout(()=>t.classList.remove("on"),ms||3200)}
+const nowS=()=>new Date().toLocaleString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit"});
+function fnv(s){let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193)>>>0}return h.toString(16).padStart(8,"0")}
+function kpi(l,v,s,t){return `<div class="kpi ${t||""}"><div class="kl">${l}</div><div class="kv">${v}</div><div class="ks">${s||"&nbsp;"}</div></div>`}
+
+/* ------------------------------------------------------------------ [ADATTATORI] server locale */
+async function api(path,body){const r=await fetch(path,body===undefined?{}:{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const j=await r.json().catch(()=>({errore:"risposta non valida"}));if(!r.ok)throw new Error(j.errore||r.statusText);return j}
+let D=null;const R={page:"casiloc",cid:null,area:null,busy:""};let CASE=null;
+async function loadAll(){D=await api("/api/nx/init");if(!R.area)R.area=D.postazione.area||"L2"}
+async function refreshCasi(){const x=await api("/api/nx/casi");D.casi=x.casi;D.arrivo=x.arrivo}
+const AREA=()=>R.area;
+
+/* ------------------------------------------------------------------ [MOTORE] aree, stazioni, profili */
+const AREE=[["L1","Customer Care","📞"],["L2","Control Room","🖥"],["L3","Manutentore","🔧"],["SOST","Sostituzione","🔁"],["REP","Magazzino e riparazione","🏭"],["ENG","Ingegneria","🧪"]];
+const AREA_NOME=a=>(AREE.find(x=>x[0]===a)||[a,a])[1],AREA_COL={L1:"#7b4cc2",L2:"#2a78d6",L3:"#b98900",SOST:"#c0352f",REP:"#1e8b42",ENG:"#495057"};
+const areaPill=a=>`<span class="pill" style="background:${AREA_COL[a]||"#6c757d"};color:#fff">${a} · ${AREA_NOME(a)}</span>`;
+const chi=()=>(D.postazione.operatore||"operatore non indicato")+" ("+AREA_NOME(AREA())+")";
+const OPS={verifica:"Verifica stato operativo",resetcp:"Reset CP (programma principale)",resetcm:"Reset CM (modulo di comunicazione)",riavvio:"Riavvio colonnina",sblocco:"Sblocco presa"};
+const TESTS={LET:{nome:"Lettura stato senza errori attivi",fasi:["L1","L2"],man:0},CMDV:{nome:"Verifica dopo comando remoto",fasi:["L1","L2"],man:0},SESS:{nome:"Sessione di ricarica di verifica",fasi:["L1","L2"],man:0},
+  CUID:{nome:"Identità della stazione verificata sul posto",fasi:["L3","SOST"],man:0},RIL:{nome:"Rilettura di collaudo senza errori",fasi:["L3","SOST"],man:0},CH0:{nome:"Prova di ricarica presa sinistra (0)",fasi:["L3","SOST"],man:0},
+  CH1:{nome:"Prova di ricarica presa destra (1)",fasi:["L3","SOST"],man:0},CHK:{nome:"Controlli finali (sportello, schermo, tessera, danni)",fasi:["L3","SOST"],man:1},SER:{nome:"Seriali vecchio e nuovo registrati",fasi:["SOST"],man:0},BANCO:{nome:"Collaudo al banco",fasi:["REP"],man:1}};
+const TRES={PASS:"PASS",FAIL:"FAIL",NT:"NOT TESTED",NA:"NOT APPLICABLE"};const trPill=r=>`<span class="tr tr-${r}">${TRES[r]}</span>`;
+const PROFILI={JP21:{nome:"JuicePole 2.1",famiglia:"AC floor mount, 2 prese",lettura:"Pagina di stato HTTP + SSH in sola lettura",prese:2,comandi:{L1:["verifica","resetcp","resetcm","riavvio"],L2:["verifica","resetcp","resetcm","riavvio","sblocco"]},test:{remoto:["LET","SESS"],campo:["RIL","CH0","CH1","CHK"]},wizard:true},
+  GEN:{nome:"Profilo generico",famiglia:"stazione non riconosciuta",lettura:"nessuna lettura automatica: solo osservazioni",prese:null,comandi:{L1:[],L2:[]},test:{remoto:[],campo:["CHK"]},wizard:false}};
+const profKey=c=>c&&c.stz&&c.stz.modello==="JuicePole 2.1"?"JP21":"GEN",profOf=c=>PROFILI[profKey(c)];
+function stOf(c){const z=c.stz||{};if(!z.ip&&!z.nome)return null;return D.stazioni.find(s=>s.id===z.sid&&s.nome===z.nome)||D.stazioni.find(s=>s.nome===z.nome&&s.ip===z.ip)||(z.cuid?D.stazioni.find(s=>s.cuid===z.cuid||s.cuid_atteso===z.cuid):null)||null}
+const attive=r=>(r.anomalie||[]).filter(a=>a.gravita!=="INFO");
+
+/* ------------------------------------------------------------------ [MOTORE] casi */
+function addAtt(c,tipo,titolo,esito,det,dati){const prev=c.att.length?c.att[c.att.length-1].h:"0";const r={t:nowS(),area:AREA(),chi:chi(),tipo,titolo,esito:esito||"INFO",det:det||""};if(dati)r.dati=dati;r.h=fnv(prev+JSON.stringify(r));c.att.push(r);return r}
+function catenaOk(c){let prev="0";for(const r of c.att){const{h,...x}=r;if(fnv(prev+JSON.stringify(x))!==h)return false;prev=h}return true}
+async function salva(c){await api("/api/nx/salva",{caso:c});CASE=c;await refreshCasi()}
+async function apriCaso(id){CASE=await api("/api/nx/caso",{id});R.cid=id;R.cdoc="";go("caso")}
+async function lettura(c,label,completa){const s=stOf(c);if(!s){toast("Stazione non in elenco: nessuna lettura possibile");return null}
+  R.busy="Lettura di "+s.nome+"…";render();let r;try{r=await api("/api/nx/lettura",{id:s.id,completa:completa!==false})}finally{R.busy=""}
+  const an=attive(r),cuidDiv=c.stz.cuid&&r.cuid&&r.cuid!==c.stz.cuid;if(!c.stz.cuid&&r.cuid)c.stz.cuid=r.cuid;
+  const det=r.errore?"non raggiungibile: "+r.errore:an.length?an.map(a=>a.messaggio).join("; "):"nessun errore attivo · CUID "+(r.cuid||"-");
+  return addAtt(c,"lettura",label||"Lettura della colonnina",r.errore||an.length?"KO":"OK",det+(cuidDiv?` · ATTENZIONE: CUID letto ${r.cuid} diverso da ${c.stz.cuid}`:""),{cuid:r.cuid,esito:r.esito,anomalie:(r.anomalie||[]).map(a=>({guasto:a.guasto,gravita:a.gravita,messaggio:a.messaggio,n:a.n,componente:a.componente})),valori:r.valori||{}})}
+const ultimaLettura=c=>[...c.att].reverse().find(a=>a.tipo==="lettura"&&a.dati);
+const guastoAttivo=c=>{const l=ultimaLettura(c);return l?(l.dati.anomalie||[]).find(a=>a.gravita!=="INFO")||null:null};
+function pacchetto(c,dest){const snap=JSON.parse(JSON.stringify(c));const pkg={formato:"manutenzione21-caso",versione:2,da:AREA(),a:dest,t:nowS(),caso:snap};pkg.impronta=fnv(JSON.stringify(snap));return pkg}
+function scaricaFile(pkg,name){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(pkg,null,1)],{type:"application/json"}));a.download=name;document.body.appendChild(a);a.click();a.remove()}
+async function inoltra(c,dest,motivo,stato){addAtt(c,"inoltro",`Inoltrato a ${dest} · ${AREA_NOME(dest)}`,"INFO",motivo);c.dove=dest;c.stato=stato||"INOLTRATO";const pkg=pacchetto(c,dest);
+  const r=await api("/api/nx/invia",{pkg});scaricaFile(pkg,r.file);await salva(c);toast(`Pacchetto salvato in ${r.percorso}${r.anche_in_arrivo?" (in laboratorio è già in «Casi in arrivo» di "+dest+")":": allegalo all'email o all'ordine di lavoro"}`,6000);return r}
+async function importa(item){const{pkg}=await api("/api/nx/prendi",{file:item.file});const c=JSON.parse(JSON.stringify(pkg.caso));const ok=catenaOk(pkg.caso);
+  let old=null;try{old=await api("/api/nx/caso",{id:c.id})}catch(_){}
+  if(old&&old.att.length>c.att.length&&old.dove!==pkg.a){toast("Su questo PC c'è già una versione più recente del caso: il pacchetto resta in «importati»",6000);return null}
+  c.dove=AREA();c.stato=c.stato==="INOLTRATO"?"IN CARICO":c.stato;addAtt(c,"ricezione",`Ricevuto da ${pkg.da} e importato`,ok?"OK":"KO",`pacchetto ${pkg.impronta} · catena ${ok?"integra":"ALTERATA"}`);await salva(c);return c}
+
+/* ------------------------------------------------------------------ [MOTORE] comandi registrati e verificati */
+function cmdStepper(x){return `<div class="cmdst">${x.stati.map(s=>`<span class="${/Scaduto|Non verificato|Errore/.test(s.s)?"ko":/attesa/i.test(s.s)?"w":""}" title="${esc(s.t+" · "+(s.d||""))}">${s.s}${s.dich?"*":""} <small style="color:inherit;opacity:.7">${esc(s.t.slice(-8))}</small></span>`).join("")}</div>`}
+function cmdForm(c,area){const P=profOf(c),ops=P.comandi[area]||[];if(!ops.length)return '<p class="mute">Nessun comando ammesso a questo livello per il profilo.</p>';
+  return `<div style="display:grid;grid-template-columns:2fr 1.2fr 1.6fr;gap:6px"><label>Comando<br><select id="cm-op" style="width:100%">${ops.map(o=>`<option value="${o}">${OPS[o]}</option>`).join("")}</select></label>
+   <label>Eseguito con<br><select id="cm-tool" style="width:100%"><option>Backend CM</option><option>XCustomer</option><option>Portale costruttore</option><option>Altro</option></select></label>
+   <label>Risposta dello strumento<br><select id="cm-es" style="width:100%"><option value="ok">Eseguito, risposta OK</option><option value="err">Errore dallo strumento</option><option value="to">Nessuna risposta (scaduto)</option></select></label></div>
+   <label style="display:block;margin-top:6px">Testo della risposta (facoltativo)<br><input type="text" id="cm-txt" style="width:100%" placeholder="es. ACK 200, job id…"></label>
+   <div class="qbtns"><button class="btn btn-p btn-sm" data-cmd="reg">Registra il comando</button></div>
+   <small class="mute">Il tool non invia comandi. * = stato dichiarato dallo strumento. La verifica è sempre una rilettura vera della colonnina.</small>`}
+function cmdRegistra(c){const k=$("#cm-op").value,tool=$("#cm-tool").value,es=$("#cm-es").value,txt=$("#cm-txt").value.trim(),t=nowS();
+  const x={id:"CMD-"+fnv(c.id+t+k).slice(0,6).toUpperCase(),op:k,label:OPS[k],tool,area:AREA(),caso:c.id,stz:c.stz.nome,t,stati:[{s:"Richiesto",t,d:"motivo: "+c.sintomo},{s:"Inviato",t,d:"tramite "+tool,dich:1}]};
+  if(es==="ok"){x.stati.push({s:"Ricevuto",t,dich:1},{s:"Eseguito",t,dich:1},{s:"Risposta",t,d:txt||"OK",dich:1},{s:"In attesa di verifica",t});x.esito="DA VERIFICARE"}
+  else if(es==="err"){x.stati.push({s:"Errore",t,d:txt||"errore dallo strumento",dich:1});x.esito="ERRORE";x.discr="Lo strumento ha restituito un errore"}
+  else{x.stati.push({s:"Scaduto",t,d:txt||"nessuna risposta",dich:1});x.esito="SCADUTO";x.discr="Comando inviato senza conferma di ricezione"}
+  (c.cmd=c.cmd||[]).push(x);addAtt(c,"comando",x.label,x.esito==="DA VERIFICARE"?"INFO":"KO",`${x.id} via ${tool} · ${x.stati.map(s=>s.s.toLowerCase()).join(" → ")}${x.discr?" · "+x.discr:""}`);return x}
+async function cmdVerifica(c,id){const x=(c.cmd||[]).find(z=>z.id===id);const r=await lettura(c,"Rilettura di verifica dopo: "+x.label);if(!r)return;x.stati=x.stati.filter(s=>!/attesa/i.test(s.s));
+  if(r.esito==="OK"){x.stati.push({s:"Verificato",t:r.t,d:"rilettura senza errori"});x.esito="VERIFICATO"}else{x.stati.push({s:"Non verificato",t:r.t,d:r.det});x.esito="DISCREPANZA";x.discr="Comando dichiarato eseguito ma lo stato letto dopo non è cambiato"}
+  addAtt(c,"comando",`Verifica ${x.id}: ${x.esito}`,x.esito==="VERIFICATO"?"OK":"KO",x.discr||"rilettura senza errori")}
+function cmdList(c,area){const L=(c.cmd||[]).filter(x=>!area||x.area===area);return L.slice().reverse().map(x=>`<div style="margin-top:8px"><b>${esc(x.label)}</b> <small>${x.id} · ${esc(x.tool)} · ${x.area}</small> <b style="color:${x.esito==="VERIFICATO"?"var(--green)":x.esito==="DA VERIFICARE"?"var(--amber)":"var(--red)"}">${x.esito}</b>
+  ${x.esito==="DA VERIFICARE"&&x.area===AREA()?` <button class="btn btn-p btn-sm" data-cmdv="${x.id}">↻ Rileggi e verifica</button>`:""}${cmdStepper(x)}${x.discr?`<small style="color:var(--red)">⚠ ${esc(x.discr)}</small>`:""}</div>`).join("")}
+
+/* ------------------------------------------------------------------ [MOTORE] statino standard */
+function testRes(c,area,id){const P=profOf(c),ov=(c.nxt||{})[area]?.[id];if(ov)return {r:ov.r,ev:"impostato da "+(ov.chi||"operatore")+": "+(ov.m||"-"),man:1};
+  if(id==="CH1"&&P.prese===1)return {r:"NA",ev:"il profilo ha una sola presa"};
+  const A=c.att.filter(a=>a.area===area),last=f=>[...A].reverse().find(f),Rr=a=>a?{r:a.esito==="OK"?"PASS":a.esito==="KO"?"FAIL":"NT",ev:a.t+" · "+a.titolo+(a.det?" · "+a.det.slice(0,90):"")}:{r:"NT",ev:"nessuna evidenza in questa fase"};
+  switch(id){case "LET":return Rr(last(a=>a.tipo==="lettura"));
+    case "CMDV":{const x=(c.cmd||[]).filter(z=>z.area===area).pop();if(!x)return {r:"NT",ev:"nessun comando"};return {r:x.esito==="VERIFICATO"?"PASS":x.esito==="DA VERIFICARE"?"NT":"FAIL",ev:`${x.id} ${x.label}: ${x.esito}`}}
+    case "SESS":return Rr(last(a=>a.tipo==="test"&&/^Sessione di ricarica di verifica/.test(a.titolo)));
+    case "CUID":return Rr(last(a=>a.tipo==="arrivo"||(a.tipo==="lettura"&&/nuova stazione/i.test(a.titolo))));
+    case "RIL":return Rr(last(a=>a.tipo==="lettura"&&/collaudo/i.test(a.titolo)));
+    case "CH0":return Rr(last(a=>a.tipo==="test"&&/presa sinistra/.test(a.titolo)));
+    case "CH1":return Rr(last(a=>a.tipo==="test"&&/presa destra/.test(a.titolo)));
+    case "CHK":return Rr(last(a=>a.tipo==="test"&&/^Controlli finali/.test(a.titolo)));
+    case "SER":return Rr(last(a=>a.tipo==="sostituzione"));
+    case "BANCO":return Rr(last(a=>a.tipo==="riparazione"&&/banco/i.test(a.titolo)))}return {r:"NT",ev:""}}
+function verifica(c){const P=profOf(c),ok=(a,ids)=>ids.length&&ids.every(id=>["PASS","NA"].includes(testRes(c,a,id).r)),has=a=>c.att.some(x=>x.area===a);
+  for(const a of ["L3","SOST"])if(has(a)&&ok(a,P.test.campo))return {ok:true,via:`collaudo in campo (${a}): ${P.test.campo.join(", ")}`};
+  for(const a of ["L1","L2"])if(has(a)&&ok(a,P.test.remoto))return {ok:true,via:`verifica da remoto (${a}): ${P.test.remoto.join(", ")}`};
+  const fa=["L3","SOST"].find(has),ra=["L2","L1"].find(has)||"L1",ids=fa?P.test.campo:P.test.remoto,ar=fa||ra;
+  return {ok:false,miss:ids.map(id=>[id,testRes(c,ar,id).r]).filter(([,r])=>!["PASS","NA"].includes(r)).map(([id,r])=>`${TESTS[id].nome} (${TRES[r]})`)}}
+function attivita(c,a){const A=c.att.filter(x=>x.area===a);if(!A.length)return {v:"Non coinvolta",cls:""};return A.some(x=>["inoltro","chiusura","esito"].includes(x.tipo))?{v:"Sì, completata",cls:"ok"}:{v:"In corso",cls:"wip"}}
+function statino(c){const aree=[...new Set(c.att.map(a=>a.area))],f=R.sfase&&aree.includes(R.sfase)?R.sfase:aree.includes(AREA())?AREA():aree[aree.length-1];
+  const P=profOf(c),A=c.att.filter(a=>a.area===f),tids=Object.keys(TESTS).filter(id=>TESTS[id].fasi.includes(f)),L=A.filter(a=>a.tipo==="lettura"),at=attivita(c,f),ver=verifica(c);
+  const cm=(c.cmd||[]).filter(x=>x.area===f),inol=[...A].reverse().find(a=>a.tipo==="inoltro"),firm=[...A].reverse().find(a=>a.tipo==="statino"),chiuso=["RISOLTO","CHIUSO","RIPARATA"].includes(c.stato);
+  return `<div class="noprint filters"><button class="btn btn-o" data-cdoc="">‹ Torna al caso</button><span class="mute">Fase:</span>${aree.map(a=>`<button class="btn btn-sm ${a===f?"btn-p":"btn-o"}" data-sfase="${a}">${a}</button>`).join("")}<span style="flex:1"></span>${f===AREA()?`<button class="btn btn-g" data-firma="${f}">✍ Firma statino ${f}</button>`:""}<button class="btn btn-p" onclick="window.print()">🖨 Stampa / PDF</button></div>
+  <div class="rep"><div style="display:flex;justify-content:space-between;border-bottom:3px solid #1d2328;padding-bottom:8px;margin-bottom:10px"><div><div class="mute">${esc(D.postazione.nome)} · statino · ${f} ${AREA_NOME(f)}</div><h1 style="margin:2px 0">${esc(c.id)} · ${f}</h1><div>${esc(c.fonte)} · «${esc(c.sintomo)}»</div></div><div style="text-align:right">${statoPill(c.stato)}<br><small>modello statino 1.0, uguale per tutte le fasi</small></div></div>
+  <table class="lines"><tr><td style="width:22%"><b>Identità</b></td><td>${esc(c.stz.nome||c.stz.libero||"-")} · ${esc(c.stz.modello)} · IP ${esc(c.stz.ip||"-")} · CUID ${esc(c.stz.cuid||"-")}${c.stz.comune?" · "+esc(c.stz.comune)+", "+esc(c.stz.indirizzo):""}${c.stz.manuale?` · <b>modello scelto a mano: ${esc(c.stz.manuale)}</b>`:""}</td></tr>
+   <tr><td><b>Caso</b></td><td>${esc(c.id)} · XCustomer ${esc(c.ext.xc||"-")} · Salesforce ${esc(c.ext.sf||"-")} · ordine di lavoro ${esc(c.ext.wo||"-")}</td></tr>
+   <tr><td><b>Chi e quando</b></td><td>${A.length?esc(A[A.length-1].chi)+" · "+esc(A[0].t)+" → "+esc(A[A.length-1].t):"-"}</td></tr>
+   <tr><td><b>Stato prima / dopo</b></td><td>${L.length?`${L[0].esito==="OK"?"✅":"⛔"} ${esc(L[0].t)} <small>${esc(L[0].det.slice(0,120))}</small>`:"nessuna lettura"}${L.length>1?` → ${L[L.length-1].esito==="OK"?"✅":"⛔"} ${esc(L[L.length-1].t)} <small>${esc(L[L.length-1].det.slice(0,120))}</small>`:""}</td></tr></table>
+  <h3>Comandi</h3>${cm.length?`<table class="lines"><tr><th>Comando</th><th>Ciclo di vita</th><th>Esito</th></tr>${cm.map(x=>`<tr><td>${esc(x.label)}<br><small>${x.id} · ${esc(x.tool)}</small></td><td>${cmdStepper(x)}${x.discr?`<small style="color:var(--red)">⚠ ${esc(x.discr)}</small>`:""}</td><td><b>${x.esito}</b></td></tr>`).join("")}</table><small>* stato dichiarato dallo strumento</small>`:'<p class="mute">Nessun comando in questa fase.</p>'}
+  <h3>Test</h3><table class="lines"><tr><th>Test</th><th>Esito</th><th>Evidenza</th><th class="noprint">Imposta</th></tr>${tids.map(id=>{const x=testRes(c,f,id),obb=P.test.campo.includes(id)||P.test.remoto.includes(id);return `<tr><td>${esc(TESTS[id].nome)} <small>${id}${obb?" · obbligatorio":""}</small></td><td>${trPill(x.r)}</td><td><small>${esc(x.ev)}</small></td>
+   <td class="noprint">${f===AREA()?`<select data-ov="${id}" style="font-size:12px"><option value="">automatico</option>${TESTS[id].man?`<option value="PASS" ${x.man&&x.r==="PASS"?"selected":""}>PASS</option><option value="FAIL" ${x.man&&x.r==="FAIL"?"selected":""}>FAIL</option>`:""}<option value="NT" ${x.man&&x.r==="NT"?"selected":""}>NOT TESTED</option>${obb?"":`<option value="NA" ${x.man&&x.r==="NA"?"selected":""}>NOT APPLICABLE</option>`}</select>`:""}</td></tr>`}).join("")||'<tr><td colspan="4" class="mute">Nessun test previsto per questa fase.</td></tr>'}</table>
+  <h3>Esito</h3><div class="es2"><div class="${at.cls}"><div class="t">Attività completata (${f})</div><div class="v">${at.v}</div></div><div class="${ver.ok?"ok":"ko"}"><div class="t">Guasto risolto (intero caso)</div><div class="v">${ver.ok?"✅ Verificato":"Non verificato"}</div><small>${ver.ok?esc(ver.via):"Mancano: "+esc(ver.miss.join("; ")||"test previsti dal profilo")}</small></div></div>
+  ${chiuso&&!ver.ok?`<div class="note" style="border-color:#f1c2c2;background:#fdf1f1"><b>⚠ Il caso risulta ${c.stato} ma il guasto non è verificato.</b></div>`:""}
+  ${c.comp.filter(x=>x.area===f).length?`<h3>Componenti</h3><table class="lines">${c.comp.filter(x=>x.area===f).map(x=>`<tr><td>${esc(x.az)}</td><td>${esc(x.code)}</td><td>seriale ${esc(x.sn||"-")}</td></tr>`).join("")}</table>`:""}
+  <h3>Passaggio</h3><p>${inol?esc(inol.titolo)+" · <small>"+esc(inol.det)+"</small>":"Nessun passaggio ad altra area."}</p>
+  <h3>Firma</h3><p>${firm?`✍ ${esc(firm.chi)} · ${esc(firm.t)} · <span class="mono">${esc(firm.det)}</span>`:"Non ancora firmato."} <small>catena ${catenaOk(c)?"integra":"ALTERATA"}</small></p></div>`}
+
+/* ------------------------------------------------------------------ [CONOSCENZA] Knowledge Base */
+const KB_DEF={stato:"bozza",ver:"0.9",resp:"base del tool v0.4, da validare",data:""};
+function kbAll(){const base=Object.entries(D.kb||{}).map(([g,k])=>({id:"KB:"+g,guasto:g,tipo:"Guasto noto",titolo:k.titolo||g,modelli:["JP21"],livelli:["L2","L3"],codici:[g],testo:k.spiega||"",causa:k.causa||"",passi:k.passi||[],ricambi:k.ricambi||[],albero:k.albero||[],...KB_DEF,...(D.kb_stato["KB:"+g]||{})}));
+  return [...base,...(D.kb_bozze||[]).map(k=>({...KB_DEF,...k,...(D.kb_stato[k.id]||{})}))]}
+const kbOf=g=>kbAll().find(k=>k.guasto===g);
+const kbVisibile=k=>["L1","L3","SOST"].includes(AREA())?k.stato==="validata":true;
+const partCode=comp=>{const p=(D.ricambi||[]).find(r=>(r.componente||"").toUpperCase()===String(comp).toUpperCase());return p&&p.codice?p.codice:""};
+const compLbl=(comp,n)=>{const c=String(comp).replace("{n}",n??"0");const k=partCode(c);return `<span class="spc">${esc(c)}${k?" · "+esc(k):""}</span>`};
+function kbPage(){if(R.kbid)return kbDet(kbAll().find(k=>k.id===R.kbid));const F=R.kbf=R.kbf||{s:"",q:""},L=kbAll(),vis=L.filter(kbVisibile);
+  const res=vis.filter(k=>(!F.s||k.stato===F.s)&&(!F.q||(k.titolo+" "+k.testo+" "+k.codici.join(" ")).toLowerCase().includes(F.q.toLowerCase())));
+  return `<h1>📚 Knowledge Base</h1><div class="sub">Una scheda per ogni errore interno della 2.1 (testi, cause, passi, albero del wizard, ricambi) più le bozze nate dalle RCA. ${["L1","L3","SOST"].includes(AREA())?"In quest'area vedi solo le schede <b>validate</b>.":"Qui vedi anche bozze e obsolete."}</div>
+  <div class="kpis">${kpi("Validate",L.filter(k=>k.stato==="validata").length,"visibili a tutti","ok")}${kpi("Bozze",L.filter(k=>k.stato==="bozza").length,"da validare in Ingegneria","warn")}${kpi("Obsolete",L.filter(k=>k.stato==="obsoleta").length,"")}</div>
+  ${AREA()==="ENG"&&L.some(k=>k.stato==="bozza"&&k.id.startsWith("KB:"))?`<div class="note">Le schede di base arrivano dal tool v0.4 e non sono ancora state confermate su colonnine reali: validale una per una dopo averle controllate, oppure tutte insieme. <button class="btn btn-o btn-sm" data-kbvalall="1">Valida tutte le schede di base</button></div>`:""}
+  ${!vis.length?'<div class="note">Nessuna scheda validata: l\'Ingegneria deve validarle prima che compaiano qui.</div>':""}
+  <div class="filters">${["L1","L3","SOST"].includes(AREA())?"":`<select data-kbf="s"><option value="">tutti gli stati</option>${["validata","bozza","obsoleta"].map(o=>`<option ${F.s===o?"selected":""}>${o}</option>`).join("")}</select>`}<input type="text" id="kb-q" placeholder="cerca, anche per codice errore" value="${esc(F.q)}"></div>
+  ${res.map(k=>`<div class="kbc ${k.stato}" data-kb="${esc(k.id)}"><div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(k.titolo)}</b><span class="kbst ${k.stato}">${k.stato}</span></div><small>${esc(k.tipo)} · JuicePole 2.1 · ${k.livelli.join(" ")} · v${esc(k.ver)}</small><div>${k.codici.map(x=>`<span class="errcode" style="font-size:11px">${esc(x)}</span>`).join(" ")}</div></div>`).join("")||'<p class="mute">Nessuna scheda.</p>'}`}
+function kbDet(k){if(!k)return '<p class="mute">Scheda non trovata.</p>';const eng=AREA()==="ENG";const pr=Object.entries(D.procedure||{}).filter(([comp])=>(k.ricambi||[]).some(r=>r.replace("{n}","")===comp.replace("{n}","")));
+  return `<div class="filters"><button class="btn btn-o btn-sm" data-kbback="1">‹ Knowledge Base</button>${eng&&k.stato==="bozza"?`<button class="btn btn-g btn-sm" data-kbst="validata">✔ Valida</button>`:""}${eng&&k.stato==="validata"?`<button class="btn btn-o btn-sm" data-kbst="obsoleta">Rendi obsoleta</button><button class="btn btn-o btn-sm" data-kbst="bozza">Riporta in bozza</button>`:""}</div>
+  <div class="sthead"><h1>${esc(k.titolo)}</h1><span class="kbst ${k.stato}">${k.stato}</span></div><div class="sub">${esc(k.id)} · versione ${esc(k.ver)} · ${esc(k.resp)}${k.data?" · "+esc(k.data):""}${k.da?" · nata da "+esc(k.da):""}</div>
+  ${k.stato==="bozza"?'<div class="note"><b>BOZZA</b>: non visibile a L1, L3 e Sostituzione finché non viene validata. Il testo e le soglie vanno confermati su colonnine reali.</div>':""}
+  <div class="grid2"><div class="card"><h5>Contenuto</h5><div class="bd"><p>${esc(k.testo)}</p>${k.causa?`<p><b>Cause:</b> ${esc(k.causa)}</p>`:""}${k.passi.length?`<ol class="steps">${k.passi.map(p=>`<li>${esc(p)}</li>`).join("")}</ol>`:""}${(k.ricambi||[]).length?`<p><b>Ricambi:</b> ${k.ricambi.map(r=>compLbl(r)).join(" ")}</p>`:""}
+   ${pr.map(([comp,p])=>`<h4 style="margin:10px 0 4px">Procedura da remoto · ${esc(comp)}</h4><ol class="steps">${(p.remote||[]).map(s=>`<li>${esc(s.titolo)}${s.variabile?` <small class="mono">${esc(s.variabile)} = ${esc(s.atteso||"")}</small>`:""}</li>`).join("")}</ol>`).join("")}</div></div>
+  <div class="card"><h5>Albero del wizard</h5><div class="bd">${(k.albero||[]).length?`<ol style="padding-left:18px">${k.albero.map(n=>`<li style="margin-bottom:6px">${esc(n.q)}<br><small>Sì → ${typeof n.si==="number"?"domanda "+(n.si+1):esc(n.si.c)} · No → ${typeof n.no==="number"?"domanda "+(n.no+1):esc(n.no.c)}</small></li>`).join("")}</ol>`:'<span class="mute">Nessun albero: solo modalità manuale.</span>'}</div></div></div>`}
+
+/* ------------------------------------------------------------------ [MOTORE] wizard a grafo dalla Knowledge Base */
+const isTemp=x=>x&&x.c&&/temporaneo|Blocco/i.test(x.c);
+function leaves(nodes){const out=[];const walk=x=>{if(typeof x==="number")return walk(nodes[x]);if(x&&x.q){walk(x.si);walk(x.no)}else if(x&&x.c)out.push(x)};if(nodes.length)walk(0);return out}
+function graph(c,area){const g=guastoAttivo(c),k=g?kbOf(g.guasto):null,G={};G.let={tipo:"lettura",t:area==="L3"?"Leggi la colonnina sul posto":"Leggi la colonnina da remoto"};
+  if(!g){G.nessun={tipo:"decisione",t:"Nessun errore attivo",d:{c:"Nessun errore attivo letto",a:area==="L3"?"Verifica il sintomo sul posto: passa in manuale e registra cosa osservi":"Verifica con una sessione di ricarica e, se il cliente conferma, chiudi",r:[]}};return {G,g,k}}
+  if(!k)return {G,g,k};const al=k.albero||[];
+  if(area==="L2"){G.kb={tipo:"scheda",t:"Leggi la scheda della Knowledge Base",next:"rem"};G.rem={tipo:"domanda",t:"Esiste una causa risolvibile da remoto?",auto:()=>leaves(al).some(isTemp),si:"cmd",no:"wo"};
+    G.cmd={tipo:"comando",t:"Registra un comando ammesso nel riquadro Comandi, poi rileggi e verifica",next:"chk"};G.chk={tipo:"controllo",t:"Il comando è verificato (errore rientrato)?",si:"ok",no:"wo"};
+    G.ok={tipo:"decisione",t:"Risolto da remoto",d:{c:"Blocco temporaneo",a:"Registra la sessione di ricarica di verifica, poi «Risolto da remoto»",r:[]}};
+    G.wo={tipo:"decisione",t:"Serve un intervento in campo",d:{c:k.causa||k.titolo,a:"Crea l'ordine di lavoro per L3 con i ricambi indicati",r:[...new Set([...(k.ricambi||[]),...leaves(al).flatMap(x=>x.r||[])])]}};return {G,g,k}}
+  let n=0;const leaf=x=>{const id="d"+(n++);G[id]={tipo:"decisione",t:"Causa individuata",d:x};return id};
+  al.forEach((q,i)=>{G["q"+i]={tipo:"domanda",t:q.q,si:typeof q.si==="number"?"q"+q.si:leaf(q.si),no:typeof q.no==="number"?"q"+q.no:leaf(q.no),tmp:isTemp(q.si)}});G.let.si=al.length?"q0":null;return {G,g,k}}
+function wz(c){const a=AREA();c.wz=c.wz||{};return c.wz[a]=c.wz[a]||{mode:"guidato",cur:"let",path:[]}}
+function wizard(c){const W=wz(c),{G,g,k}=graph(c,AREA()),n=G[W.cur]||G.let,P=profOf(c);
+  const head=`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>🧭 Wizard di troubleshooting</b><span class="seg"><button class="${W.mode==="guidato"?"on":""}" data-wzm="guidato">Guidato</button><button class="${W.mode==="manuale"?"on":""}" data-wzm="manuale">Manuale</button></span></div>`;
+  const crumbs=W.path.length?`<div class="crumbs">${W.path.map(p=>`<div>${p.auto?"⚡":"✔"} ${esc(p.t)} <b>${esc(p.r)}</b>${p.auto?` <small>${esc(p.auto)}</small>`:""}</div>`).join("")}</div>`:"";
+  const manual=`<div style="display:grid;grid-template-columns:150px 1fr auto;gap:6px;align-items:end"><label>Tipo<br><select id="wm-t" style="width:100%"><option>Osservazione</option><option>Misura</option><option>Azione</option></select></label><label>Cosa hai visto o fatto<br><input type="text" id="wm-x" style="width:100%"></label><button class="btn btn-p" data-wman="1">Registra</button></div><small class="mute">Stessa tracciatura del guidato. Per chiudere con «guasto risolto» servono comunque i test obbligatori.</small>`;
+  if(W.mode==="manuale"||!P.wizard)return `<div class="wz">${head}${!P.wizard?'<p>Profilo generico: solo modalità manuale.</p>':""}${crumbs}${manual}</div>`;
+  if(W.cur!=="let"&&g&&!k)return `<div class="wz">${head}${crumbs}<p>Per l'errore <span class="errcode">${esc(g.guasto)}</span> non c'è una scheda: usa la modalità manuale e segnalalo all'Ingegneria.</p></div>`;
+  if(k&&k.stato!=="validata"&&["L3","SOST","L1"].includes(AREA())&&W.cur!=="let")return `<div class="wz">${head}${crumbs}<p>La scheda <b>${esc(k.titolo)}</b> è in <b>${k.stato}</b>: il wizard si attiva quando l'Ingegneria la valida. Intanto usa la modalità manuale.</p></div>`;
+  const ty={lettura:"Lettura",domanda:"Domanda",scheda:"Scheda KB",comando:"Comando",controllo:"Verifica",decisione:"Decisione"}[n.tipo];let act="";
+  if(n.tipo==="lettura")act=`<button class="btn btn-p" data-wz="leggi">↻ Leggi</button>`;
+  if(n.tipo==="domanda")act=`<button class="btn btn-g" data-wz="si">Sì</button> <button class="btn btn-r" data-wz="no">No</button>`;
+  if(n.tipo==="scheda")act=`<div class="partcard" style="margin-bottom:8px"><b>${esc(k.titolo)}</b> <span class="kbst ${k.stato}">${k.stato}</span><br><small>${esc(k.testo)}</small></div><button class="btn btn-o" data-kb="${esc(k.id)}">📚 Apri la scheda</button> <button class="btn btn-p" data-wz="avanti">Letta, avanti ›</button>`;
+  if(n.tipo==="comando")act=`<button class="btn btn-p" data-wz="avanti">Comando registrato e verificato, avanti ›</button>`;
+  if(n.tipo==="controllo"){const x=(c.cmd||[]).filter(z=>z.area===AREA()).pop();act=`<small>Ultimo comando: ${x?esc(x.label)+" · <b>"+x.esito+"</b>":"nessuno"}</small><br><button class="btn btn-g" data-wz="si" ${x&&x.esito==="VERIFICATO"?"":"disabled"}>Sì, verificato</button> <button class="btn btn-r" data-wz="no">No</button>`}
+  if(n.tipo==="decisione"){const d=n.d;act=`<div class="esito" style="padding:10px 12px;margin:0"><b>Causa:</b> ${esc(d.c)} · <b>Cosa fare:</b> ${esc(d.a)}${(d.r||[]).length?`<br><b>Ricambi:</b> ${d.r.map(x=>compLbl(x,g&&g.n)).join(" ")}`:""}${k?` <button class="btn btn-o btn-sm" data-kb="${esc(k.id)}">📚 Scheda</button>`:""}</div>`}
+  return `<div class="wz">${head}${crumbs}<div><span class="ty">${ty}</span><span class="qbig" style="font-size:17px">${esc(n.t)}</span></div><div class="qbtns" style="margin-top:8px">${act}</div><div style="margin-top:6px"><button class="btn btn-o btn-sm" data-wz="reset">↺ Ricomincia</button> <small class="mute">⚡ = risposta già nota, saltata dal motore</small></div></div>`}
+async function wzStep(c,act){const W=wz(c);if(act==="reset"){W.cur="let";W.path=[];c.t3es=null;return}
+  let {G,g}=graph(c,AREA()),n=G[W.cur]||G.let;const np=W.path.length+(["leggi","avanti"].includes(act)?1:0);const go2=(id,r,auto)=>{W.path.push({t:n.t,r,auto});W.cur=id;n=G[id]};
+  if(act==="leggi"){const r=await lettura(c,AREA()==="L3"?"Lettura sul posto (wizard)":"Lettura (wizard)");if(!r)return;({G,g}=graph(c,AREA()));n=G.let;
+    if(!g)go2("nessun","nessun errore");else if(!G.kb&&!G.q0){W.path.push({t:n.t,r:"errore "+g.guasto});W.cur="let_nokb";return}else go2(AREA()==="L2"?"kb":"q0","errore confermato: "+g.guasto)}
+  else if(act==="avanti")go2(n.next,"fatto");else if(act==="si"||act==="no")go2(act==="si"?n.si:n.no,act==="si"?"Sì":"No");
+  for(let i=0;i<6&&n;i++){if(n.tipo==="domanda"&&n.auto){const v=n.auto();go2(v?n.si:n.no,v?"Sì":"No",v?"l'albero ha una causa temporanea":"nessuna causa temporanea nell'albero");continue}
+    if(n.tipo==="domanda"&&n.tmp&&(c.cmd||[]).some(x=>/riavvio|resetc/.test(x.op)&&["DISCREPANZA","SCADUTO","ERRORE"].includes(x.esito))){go2(n.no,"No","saltata: riavvio o reset già fatto senza effetto");continue}break}
+  W.path.slice(np).forEach(p=>addAtt(c,"domanda",p.t,"INFO","risposta: "+p.r+(p.auto?" · "+p.auto:"")));
+  if(n&&n.tipo==="decisione"){addAtt(c,"diagnosi","Wizard: "+n.d.c,"INFO",n.d.a);c.t3es=n.d}}
+
+/* ------------------------------------------------------------------ [INTERFACCIA] pagine comuni */
+const STATI_C={APERTO:"#6c757d","IN CARICO":"#2a78d6",INOLTRATO:"#7b4cc2",RISOLTO:"#1e8b42",CHIUSO:"#495057","IN MAGAZZINO":"#b98900",RIPARATA:"#1e8b42",DISMESSA:"#495057"};
+const statoPill=s=>`<span class="pill" style="background:${STATI_C[s]||"#6c757d"};color:#fff">${esc(s)}</span>`;
+function timeline(att){return `<table class="lines tl">${att.map(a=>`<tr><td style="width:118px"><small>${esc(a.t)}</small></td><td style="width:54px"><span class="pill" style="background:${AREA_COL[a.area]};color:#fff">${a.area}</span></td><td>${a.esito==="OK"?"✅":a.esito==="KO"?"⛔":"•"} <b>${esc(a.titolo)}</b>${a.det?`<br><small class="mute">${esc(a.det)}</small>`:""}<br><small class="mute">${esc(a.chi)}</small></td></tr>`).join("")}</table>`}
+function inbox(){const l=D.arrivo.filter(x=>!x.pkg||!x.pkg.a||x.pkg.a===AREA());return `<h1>📥 Casi in arrivo · ${AREA()}</h1><div class="sub">Pacchetti in <span class="mono">${esc(D.dati)}\\pacchetti\\arrivo</span> destinati a quest'area. Salva lì gli allegati ricevuti, oppure caricali da qui.</div>
+  <div class="filters"><label class="btn btn-o">📂 Carica un pacchetto…<input type="file" id="pk-file" accept=".json" multiple style="display:none"></label><button class="btn btn-o" data-apri="arrivo">Apri la cartella</button><button class="btn btn-o" data-reload="1">↻ Aggiorna</button></div>
+  <div class="card"><div class="bd" style="padding:0"><table class="lines"><tr><th>Caso</th><th>Stazione</th><th>Da</th><th>Motivo</th><th>Inviato</th><th>Catena</th><th></th></tr>
+  ${l.map((x,i)=>{if(x.errore)return `<tr><td colspan="7">${esc(x.file)} · <span style="color:var(--red)">${esc(x.errore)}</span></td></tr>`;const c=x.pkg.caso,last=[...c.att].reverse().find(a=>a.tipo==="inoltro");return `<tr><td><b>${esc(c.id)}</b><br><small>${esc(c.sintomo)}</small></td><td>${esc(c.stz.nome||c.stz.libero||"-")}<br><small>${esc(c.stz.cuid||"")}</small></td><td>${areaPill(x.pkg.da)}</td><td><small>${esc(last?.det||"")}</small></td><td><small>${esc(x.pkg.t)}</small></td><td>${catenaOk(c)?"✅ integra":"⛔ alterata"}</td><td><button class="btn btn-p btn-sm" data-imp="${esc(x.file)}">Importa e apri</button></td></tr>`}).join("")||'<tr><td colspan="7" class="mute" style="padding:16px">Nessun pacchetto in arrivo per quest\'area.</td></tr>'}</table></div></div>`}
+function casiLoc(){const l=D.casi.slice().sort((a,b)=>(b.ultima.t||"").localeCompare(a.ultima.t||"")),f=R.cf||"aperti";const vis=l.filter(c=>f==="tutti"||(f==="qui"?c.dove===AREA():!["CHIUSO","RIPARATA","DISMESSA"].includes(c.stato)));
+  return `<h1>🗂 Casi su questo PC</h1><div class="sub">File in <span class="mono">${esc(D.dati)}\\casi</span>. Ogni caso porta con sé la storia di tutte le aree da cui è passato.</div>
+  <div class="filters">${["L1","L2"].includes(AREA())?`<button class="btn btn-p" data-p2="nuovo">＋ Nuovo caso</button>`:""}<span class="seg">${[["aperti","Aperti"],["qui","In carico a "+AREA()],["tutti","Tutti"]].map(([k,t])=>`<button class="${f===k?"on":""}" data-cf="${k}">${t}</button>`).join("")}</span><button class="btn btn-o" data-apri="casi">Apri la cartella</button></div>
+  <div class="card"><div class="bd" style="padding:0"><table class="lines"><tr><th>Caso</th><th>Stazione</th><th>Segnalazione</th><th>Ultima attività</th><th>Dove</th><th>Stato</th></tr>
+  ${vis.map(c=>`<tr class="clk" data-caso="${esc(c.id)}"><td><b>${esc(c.id)}</b><br><small>${esc(c.aperto)}</small></td><td>${esc(c.stz?.nome||c.stz?.libero||"-")}<br><small>${esc(c.stz?.cuid||"")}</small></td><td>${esc(c.sintomo)}</td><td><small>${esc(c.ultima.titolo||"")}</small><br><small class="mute">${esc(c.ultima.t||"")}</small></td><td>${areaPill(c.dove)}</td><td>${statoPill(c.stato)}</td></tr>`).join("")||'<tr><td colspan="6" class="mute" style="padding:16px">Nessun caso.</td></tr>'}</table></div></div>`}
+function stazRicerca(q){q=(q||"").trim().toLowerCase();if(q.length<2)return [];return D.stazioni.filter(s=>[s.nome,s.ip,s.cuid,s.cuid_atteso,s.comune,s.indirizzo].join(" ").toLowerCase().includes(q)).slice(0,10)}
+const stazRiga=(s,attr)=>`<div class="r" ${attr} style="padding:8px 10px;border:1px solid var(--line);border-radius:6px;margin-top:6px;cursor:pointer"><b>${esc(s.nome||s.ip)}</b> · ${esc(s.ip)}:${esc(s.porta_web||80)}${s.cuid||s.cuid_atteso?" · CUID "+esc(s.cuid||s.cuid_atteso):""}${s.comune?" · "+esc(s.comune):""} ${s.esito?`<span class="pill p-${esc(s.esito)}">${esc(s.esito)}</span>`:'<small class="mute">mai letta</small>'}</div>`;
+function nuovo(){const sel=R.nsid&&D.stazioni.find(s=>s.id===R.nsid),res=stazRicerca(R.nq),l1=AREA()==="L1";
+  return `<h1>${l1?"📞 Nuova chiamata":"＋ Nuovo caso"}</h1><div class="sub">${l1?"Il cliente segnala un problema: individua la colonnina e registra il caso.":"Caso aperto dalla Control Room."} I dati personali del cliente restano in XCustomer: qui solo il numero del caso.</div><div class="wcard" style="max-width:860px">
+   <label><b>Colonnina</b> (nome, IP, CUID, comune)<br><input type="text" id="n-q" value="${esc(R.nq||"")}" style="width:100%"></label>
+   ${sel?`<div class="partcard" style="margin-top:8px">🧩 JuicePole 2.1 · <b>${esc(sel.nome)}</b> · ${esc(sel.ip)} · CUID ${esc(sel.cuid||sel.cuid_atteso||"da leggere")} <button class="btn btn-o btn-sm" data-nsid="">cambia</button></div>`:res.map(s=>stazRiga(s,`data-nsid="${esc(s.id)}"`)).join("")+(R.nq&&R.nq.length>=2?`<div style="margin-top:8px"><button class="btn btn-o btn-sm" data-nlib="1">La stazione non è in elenco: apri con profilo generico</button></div>`:"")}
+   ${R.nlib&&!sel?`<div class="note" style="margin-top:8px">Profilo generico: nessuna lettura, nessun comando. Il caso viene segnalato all'Ingegneria.<br><label>Identificativo (seriale, CUID o indirizzo)<br><input type="text" id="n-lib" value="${esc(R.nq||"")}" style="width:100%"></label></div>`:""}
+   <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px"><label>Canale<br><select id="n-fonte" style="width:100%">${(l1?["Telefono","Chat","Email","App"]:["Dashboard control room","Segnale predittivo","Diagnosi di flotta","Altro"]).map(x=>`<option>${x}</option>`).join("")}</select></label><label>Numero caso XCustomer<br><input type="text" id="n-xc" placeholder="es. XC-77812" style="width:100%"></label></div>
+   <label style="display:block;margin-top:12px">Cosa segnala<br><input type="text" id="n-sint" list="sintomi" style="width:100%" placeholder="es. Lo schermo è nero"><datalist id="sintomi">${["La colonnina non si avvia","Lo schermo è nero","La tessera non viene letta","La presa sinistra non eroga","La presa destra non eroga","La ricarica si interrompe","Non si avvia da app"].map(x=>`<option value="${x}">`).join("")}</datalist></label>
+   <div class="qbtns"><button class="btn btn-p btn-xl" id="n-go" ${sel||R.nlib?"":"disabled"}>Apri il caso ›</button></div></div>`}
+function storico(){const res=stazRicerca(R.sq),s=R.ssid&&D.stazioni.find(x=>x.id===R.ssid);const cs=s?D.casi.filter(c=>c.stz&&c.stz.nome===s.nome&&c.stz.ip===s.ip):[];
+  return `<h1>🔎 Storico stazione</h1><div class="sub">Casi di questo PC per la stazione.</div><div class="search"><input type="text" id="st-q" placeholder="nome, IP o CUID" value="${esc(R.sq||"")}"></div>${s?"":res.map(x=>stazRiga(x,`data-ssid="${esc(x.id)}"`)).join("")}
+  ${s?`<div class="card" style="margin-top:10px"><h5>${esc(s.nome)} · ${esc(s.ip)} · CUID ${esc(s.cuid||s.cuid_atteso||"-")}</h5><div class="bd">${cs.length?`<table class="lines">${cs.map(c=>`<tr class="clk" data-caso="${esc(c.id)}"><td><b>${esc(c.id)}</b></td><td>${esc(c.sintomo)}</td><td>${statoPill(c.stato)}</td><td><small>${esc(c.aperto)}</small></td></tr>`).join("")}</table>`:'<p class="mute">Nessun caso su questo PC.</p>'}</div></div>`:""}`}
+
+/* ------------------------------------------------------------------ [INTERFACCIA] pagina del caso e lavoro per area */
+function casoPage(){const c=CASE;if(!c||c.id!==R.cid)return '<p class="mute">Caricamento…</p>';if(R.cdoc==="stat")return statino(c);if(R.cdoc)return casoDoc(c);
+  const qui=c.dove===AREA()&&!["CHIUSO","RIPARATA","DISMESSA","INOLTRATO"].includes(c.stato),P=profOf(c),ver=verifica(c),s=stOf(c);
+  const work=qui?({L1:workL1,L2:workL2,L3:workL3,SOST:workSOST,REP:workREP,ENG:()=>'<div class="note">L\'Ingegneria consulta il caso; per lavorarlo scegli l\'area in alto.</div>'}[AREA()])(c):`<div class="note">${c.stato==="INOLTRATO"?`Inoltrato a ${areaPill(c.dove)}: chi lo riceve lo importa da «Casi in arrivo».`:c.dove!==AREA()?`Il caso è in carico a ${areaPill(c.dove)}.`:"Caso chiuso."}</div>`;
+  return `<div class="filters noprint"><button class="btn btn-o btn-sm" data-p2="casiloc">‹ Casi</button><span style="flex:1"></span><button class="btn btn-o btn-sm" data-cdoc="stat">📝 Statino ${AREA()}</button><button class="btn btn-o btn-sm" data-cdoc="rep">🖨 Report del caso</button><button class="btn btn-o btn-sm" data-pkdl="1">⬇ Scarica pacchetto</button></div>
+  <div class="sthead"><h1>${esc(c.id)}</h1>${statoPill(c.stato)} ${areaPill(c.dove)}<span class="mute">${esc(c.stz.nome||c.stz.libero||"")} · ${esc(c.stz.ip||"")} · CUID ${esc(c.stz.cuid||"-")}</span></div>
+  <div class="mute" style="margin:-6px 0 10px">${esc(c.fonte)} · «${esc(c.sintomo)}» · aperto ${esc(c.aperto)}${c.ext.xc?" · XCustomer "+esc(c.ext.xc):""}${c.ext.sf?" · Salesforce "+esc(c.ext.sf):""}${c.ext.wo?" · ordine "+esc(c.ext.wo):""} · catena ${catenaOk(c)?"✅ integra":"⛔ alterata"}</div>
+  <div class="note" style="background:#f5f9ff;border-color:#9ec5fe">🧩 Profilo <b>${esc(P.nome)}</b>${c.stz.manuale?` (modello scelto a mano: ${esc(c.stz.manuale)}, da confermare)`:""} · guasto risolto: <b>${ver.ok?"✅ verificato":"non verificato"}</b>${s?` · <a href="/console#ben/${encodeURIComponent(s.id)}" target="_blank">Diagnostica completa ↗</a>`:""}</div>
+  ${R.busy?`<div class="note">⏳ ${esc(R.busy)}</div>`:""}
+  <div class="grid2"><div>${work}</div><div><div class="card"><h5>Storia del caso <small>${c.att.length} attività</small></h5><div class="bd" style="padding:0 8px">${timeline(c.att)}</div></div>
+  ${c.comp.length?`<div class="card"><h5>Componenti</h5><div class="bd"><table class="lines">${c.comp.map(x=>`<tr><td>${x.az==="montato"?"➕":"➖"} ${esc(x.az)}</td><td><span class="spc">${esc(x.code)}</span></td><td><small>seriale ${esc(x.sn||"-")}</small></td><td>${x.area}</td></tr>`).join("")}</table></div></div>`:""}</div></div>`}
+const lastLetHtml=c=>{const u=ultimaLettura(c);return u?`<div class="note" style="margin:8px 0">${u.esito==="OK"?"✅":"⛔"} ${esc(u.det)} <small>${esc(u.t)}</small></div>`:""};
+function cmdCard(c){return `<div class="card"><h5>📡 Comandi registrati</h5><div class="bd">${cmdForm(c,AREA())}${cmdList(c,null)}</div></div>`}
+function sessForm(){return `<div class="card"><h5>⚡ Sessione di ricarica di verifica</h5><div class="bd"><div style="display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:6px"><label>Riferimento sessione<br><input type="text" id="ss-id" style="width:100%" placeholder="id dal backend"></label><label>Durata (min)<br><input type="number" id="ss-min" style="width:100%"></label><label>Energia (kWh)<br><input type="number" step="0.01" id="ss-kwh" style="width:100%"></label><label>Esito<br><select id="ss-es" style="width:100%"><option value="OK">Conclusa</option><option value="KO">Interrotta / fallita</option></select></label></div>
+  <div class="qbtns"><button class="btn btn-o btn-sm" data-sess="1">Registra sessione</button></div><small class="mute">Serve, insieme a una lettura senza errori, per dichiarare «guasto risolto» da remoto.</small></div></div>`}
+function workL1(c){const ul=ultimaLettura(c),ok=ul&&ul.esito==="OK",gen=profKey(c)==="GEN";
+  return `<div class="card"><h5>📞 Primo livello</h5><div class="bd"><ol class="steps"><li><b>Leggi lo stato</b> <button class="btn btn-o btn-sm" data-l1="lettura" ${gen?"disabled":""}>↻ Leggi colonnina</button>${lastLetHtml(c)}</li>
+   <li><b>Domande al cliente</b><ul class="chk" style="margin:4px 0">${["La colonnina ha lo schermo acceso?","Ha provato con un'altra tessera o con l'app?","Il cavo è collegato fino in fondo?"].map((d,i)=>`<li style="font-size:14px">${esc(d)} <button class="btn btn-o btn-sm" data-l1q="${i}" data-a="Sì">Sì</button> <button class="btn btn-o btn-sm" data-l1q="${i}" data-a="No">No</button></li>`).join("")}</ul></li></ol>
+   <div class="qbtns"><button class="btn btn-g" data-l1="risolto" ${ok?"":"disabled title='Serve una lettura senza errori'"}>✅ Risolto da L1</button><button class="btn btn-p" data-l1="inoltra">Inoltra a L2 ›</button></div></div></div>${gen?"":cmdCard(c)+sessForm()}`}
+function workL2(c){const g=guastoAttivo(c),k=g&&kbOf(g.guasto),gen=profKey(c)==="GEN";
+  if(c.stato==="RISOLTO")return `<div class="card"><h5>Chiusura</h5><div class="bd"><p>Il caso è tornato risolto. Chiudi l'ordine ${esc(c.ext.wo||"")} su Salesforce allegando il report.</p><button class="btn btn-o" data-cdoc="rep">🖨 Report del caso</button> <button class="btn btn-g" data-l2="chiudi">Chiuso su Salesforce ✓</button></div></div>`;
+  const comps=[...new Set((k?.ricambi||[]).map(r=>r.replace("{n}",g?.n||"0")))];
+  return `${gen?"":wizard(c)}<div class="card"><h5>🖥 Diagnosi remota</h5><div class="bd"><button class="btn btn-p btn-sm" data-l2="lettura" ${gen?"disabled":""}>↻ Diagnosi remota</button>${lastLetHtml(c)}
+   <div class="qbtns"><button class="btn btn-g btn-sm" data-l2="risolto">✅ Risolto da remoto</button><small class="mute">Il caso si chiude; lo statino dice se il guasto è verificato.</small></div></div></div>
+   ${gen?"":cmdCard(c)+sessForm()}
+   <div class="card"><h5>Ordine di lavoro alla ditta (L3)</h5><div class="bd"><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px"><label>Componente sospetto<br><input type="text" id="t-comp" value="${esc(comps[0]||"")}" list="comps" style="width:100%"><datalist id="comps">${(D.ricambi||[]).map(r=>`<option value="${esc(r.componente)}">`).join("")}</datalist></label>
+    <label>Guasto<br><input type="text" id="t-gu" value="${esc(g?.guasto||"Sintomo: "+c.sintomo)}" style="width:100%"></label><label>Attività richiesta<br><select id="t-att" style="width:100%"><option>Verifica e sostituzione</option><option>Solo verifica</option><option>Sostituzione stazione</option></select></label></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px"><label>Caso Salesforce<br><input type="text" id="t-sf" value="${esc(c.ext.sf)}" style="width:100%"></label><label>Ordine di lavoro<br><input type="text" id="t-wo" value="${esc(c.ext.wo)}" style="width:100%"></label><label>Ditta<br><input type="text" id="t-ditta" style="width:100%"></label></div>
+    <div class="qbtns"><button class="btn btn-p" data-l2="l3">Crea tripletta e inoltra ›</button></div></div></div>`}
+const CHECKS=[["a","Sportello chiuso e antitamper chiuso"],["b","Schermo acceso e leggibile"],["c","Tessera di prova letta dal lettore"],["d","Nessun danno visibile a prese e cavi"]];
+function collaudo(c){const cl=c.coll=c.coll||{chk:{}},P=profOf(c),gen=profKey(c)==="GEN",prese=gen?[]:P.prese===1?[0]:[0,1],live=R.live||{};
+  const ril=[...c.att].reverse().find(a=>a.area===AREA()&&a.tipo==="lettura"&&/collaudo/i.test(a.titolo)),ch=n=>[...c.att].reverse().find(a=>a.area===AREA()&&a.tipo==="test"&&a.titolo.includes(n?"presa destra":"presa sinistra"));
+  return `<div class="card"><h5>Collaudo obbligatorio</h5><div class="bd">
+   ${gen?"":`<div class="ctest ${ril?(ril.esito==="OK"?"ok":"ko"):""}"><div class="cth"><b>Rilettura di collaudo</b><span>${ril?(ril.esito==="OK"?"✅ nessun errore":"⛔ "+esc(ril.det.slice(0,80))):"da fare"}</span></div><button class="btn btn-p btn-sm" data-l3="ril">↻ Rileggi</button></div>`}
+   ${prese.map(n=>{const x=ch(n),lv=live[n];return `<div class="ctest ${x?(x.esito==="OK"?"ok":"ko"):""}"><div class="cth"><b>Prova di ricarica presa ${n?"destra (1)":"sinistra (0)"}</b><span>${x?(x.esito==="OK"?"✅ ":"⛔ ")+esc(x.det):"da fare"}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto auto;gap:6px;align-items:end"><label>Durata in carica (min)<br><input type="number" id="ch${n}-min" style="width:100%"></label><label>Corrente max (A)<br><input type="number" step="0.1" id="ch${n}-a" value="${lv?.a??""}" style="width:100%"></label><label>Energia (kWh)<br><input type="number" step="0.01" id="ch${n}-kwh" value="${lv?.kwh??""}" style="width:100%"></label>
+     <button class="btn btn-o btn-sm" data-chlive="${n}">↻ Leggi la presa</button><button class="btn btn-p btn-sm" data-chreg="${n}">Registra</button></div>${lv?`<small class="mono">${esc(lv.txt)}</small>`:""}<br><small class="mute">Superata con almeno 2 minuti in carica e almeno 6 A.</small></div>`}).join("")}
+   <div class="ctest ${CHECKS.every(([k])=>cl.chk[k])?"ok":""}"><div class="cth"><b>Controlli finali</b><span>${CHECKS.filter(([k])=>cl.chk[k]).length}/${CHECKS.length}</span></div><ul class="chk">${CHECKS.map(([k,l])=>`<li style="font-size:14px"><label><input type="checkbox" data-cchk="${k}" ${cl.chk[k]?"checked":""}>${l}</label></li>`).join("")}</ul></div></div></div>`}
+function collOk(c){const P=profOf(c);return P.test.campo.every(id=>["PASS","NA"].includes(testRes(c,AREA(),id).r))}
+function compCard(c){const sel=(c.t3es?.r||[])[0];return `<div class="card"><h5>Componenti</h5><div class="bd"><div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:6px;align-items:end"><label>Ricambio<br><select id="cp-code" style="width:100%">${(D.ricambi||[]).map(r=>`<option value="${esc(r.codice||r.componente)}" ${sel&&r.componente===sel.replace("{n}",guastoAttivo(c)?.n||"0")?"selected":""}>${esc(r.componente)}${r.codice?" · "+esc(r.codice):""}</option>`).join("")}</select></label>
+  <label>Seriale smontato<br><input type="text" id="cp-old" style="width:100%"></label><label>Seriale montato<br><input type="text" id="cp-new" style="width:100%"></label><button class="btn btn-o" data-l3="comp">Registra</button></div></div></div>`}
+function workL3(c){const arr=c.att.some(a=>a.area===AREA()&&a.tipo==="arrivo"&&c.att.indexOf(a)>c.att.map(x=>x.tipo==="ricezione"&&x.area===AREA()).lastIndexOf(true));
+  if(!arr)return `<div class="card"><h5>🔧 Arrivo sul posto</h5><div class="bd">${c.trip?.ap?`<div class="note"><b>Tripletta di apertura:</b> ${esc(c.trip.ap.comp)} · ${esc(c.trip.ap.guasto)} · ${esc(c.trip.ap.att)}</div>`:""}<p>Confronta l'etichetta con il pacchetto: <b>${esc(c.stz.nome||c.stz.libero)}</b> · CUID <b>${esc(c.stz.cuid||"-")}</b>. Il tool legge il CUID dalla colonnina e lo confronta.</p><button class="btn btn-g btn-xl" data-l3="arrivo">Sono sul posto: inizia</button></div></div>`;
+  const ok=collOk(c);return `${wizard(c)}${compCard(c)}${collaudo(c)}<div class="card"><h5>Esito</h5><div class="bd"><div class="qbtns"><button class="btn btn-g" data-l3="risolto" ${ok?"":"disabled title='Collaudo incompleto'"}>✅ Guasto risolto</button><button class="btn btn-o" data-l3="nonris">Intervento completato, guasto non risolto</button><button class="btn btn-o" data-l3="sost">Serve sostituire la stazione</button></div>
+   <input type="text" id="l3-mot" placeholder="motivo, se non risolto" style="width:100%;margin-top:6px">${ok?"":'<small class="mute">«Guasto risolto» si abilita con il collaudo completo.</small>'}</div></div>`}
+function workSOST(c){const so=c.sost=c.sost||{motivo:"",cuidOld:c.stz.cuid||"",snOld:"",snNew:"",cuidNew:""},ok=collOk(c)&&so.snNew&&so.cuidNew;
+  return `<div class="card"><h5>🔁 Sostituzione della stazione</h5><div class="bd"><label>Motivazione<br><input type="text" id="so-mot" value="${esc(so.motivo||[...c.att].reverse().find(a=>a.tipo==="esito")?.det||"")}" style="width:100%"></label>
+   <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:8px"><label>Seriale rimossa<br><input type="text" id="so-old" value="${esc(so.snOld)}" style="width:100%"></label><label>CUID rimossa<br><input type="text" value="${esc(so.cuidOld)}" disabled style="width:100%"></label><label>Seriale nuova<br><input type="text" id="so-new" value="${esc(so.snNew)}" style="width:100%"></label><label>CUID nuova (letto)<br><input type="text" value="${esc(so.cuidNew)}" disabled style="width:100%"></label></div>
+   <div class="qbtns"><button class="btn btn-o btn-sm" data-so="leggi">↻ Leggi la nuova stazione</button><button class="btn btn-p btn-sm" data-so="reg">Registra sostituzione</button></div><small class="mute">La nuova stazione risponde allo stesso indirizzo: la lettura ne ricava il CUID. Ricordati di aggiornare il CUID atteso in Configurazione.</small></div></div>
+   ${collaudo(c)}<div class="qbtns"><button class="btn btn-g" data-so="fine" ${ok?"":"disabled title='Servono seriale e CUID della nuova e collaudo completo'"}>Chiudi: nuova in servizio, rimossa a magazzino ›</button></div>`}
+const REP_STEPS=[["ingresso","Ingresso a magazzino"],["invio","Invio al centro di riparazione"],["diagnosi","Diagnosi del riparatore"],["banco","Collaudo al banco"]];
+function workREP(c){const r=c.rep=c.rep||{fatti:{}},next=REP_STEPS.find(([k])=>!r.fatti[k]);
+  return `<div class="card"><h5>🏭 Magazzino e riparazione</h5><div class="bd"><p>Stazione rimossa <b>${esc(c.sost?.snOld||c.stz.nome||"")}</b> · CUID ${esc(c.sost?.cuidOld||c.stz.cuid||"-")}.</p><ol class="steps">${REP_STEPS.map(([k,t])=>`<li>${r.fatti[k]?"✅":"○"} <b>${t}</b>${r.fatti[k]?` <small class="mute">${esc(r.fatti[k])}</small>`:""}</li>`).join("")}</ol>
+   ${next?`<div class="card" style="margin-top:10px"><h5>${next[1]}</h5><div class="bd">${next[0]==="banco"?`<ul class="chk">${["Rilettura al banco senza errori","Prova di ricarica con carico di prova, due prese","Antitamper e schermo verificati"].map(t=>`<li style="font-size:14px"><label><input type="checkbox" class="rpb">${t}</label></li>`).join("")}</ul>`:`<label>${next[0]==="ingresso"?"Documento di trasporto":next[0]==="invio"?"Centro di riparazione":"Diagnosi"}<br><input type="text" id="rp-v" style="width:100%"></label>${next[0]==="diagnosi"?`<label style="display:block;margin-top:6px">Componenti sostituiti al banco<br><input type="text" id="rp-c" style="width:100%"></label>`:""}`}
+   <div class="qbtns"><button class="btn btn-p" data-rp="${next[0]}">Registra</button></div></div></div>`:`<div class="qbtns"><button class="btn btn-g" data-rp="riparata">Riparata: pronta per reinstallo</button><button class="btn btn-o" data-rp="dismessa">Non riparabile: dismessa</button></div>`}</div></div>`}
+function casoDoc(c){const aree=[...new Set(c.att.map(a=>a.area))];return `<div class="noprint filters"><button class="btn btn-o" data-cdoc="">‹ Torna al caso</button><span style="flex:1"></span><button class="btn btn-p" onclick="window.print()">🖨 Stampa / PDF</button></div><div class="rep">
+  <div style="border-bottom:3px solid #1d2328;padding-bottom:8px;margin-bottom:10px"><div class="mute">${esc(D.postazione.nome)} · report del caso</div><h1 style="margin:2px 0">${esc(c.id)}</h1><div>${esc(c.fonte)} · «${esc(c.sintomo)}» · aperto ${esc(c.aperto)} · ${esc(c.stato)}</div></div>
+  <p><b>Stazione</b> ${esc(c.stz.nome||c.stz.libero||"-")} · ${esc(c.stz.modello)} · IP ${esc(c.stz.ip||"-")} · CUID ${esc(c.stz.cuid||"-")} · <b>XCustomer</b> ${esc(c.ext.xc||"-")} · <b>Salesforce</b> ${esc(c.ext.sf||"-")} · <b>Ordine</b> ${esc(c.ext.wo||"-")}</p>
+  ${c.trip?.ap?`<h3>Tripletta di apertura</h3><p>${esc(c.trip.ap.comp)} · ${esc(c.trip.ap.guasto)} · ${esc(c.trip.ap.att)}</p>`:""}${c.trip?.ch?`<h3>Tripletta di chiusura</h3><p>${esc(c.trip.ch.comp)} · ${esc(c.trip.ch.causa)} · ${esc(c.trip.ch.esito)}</p>`:""}
+  ${aree.map(a=>`<h3>${a} · ${AREA_NOME(a)}</h3><table><tr><th>Quando</th><th>Chi</th><th>Attività</th><th>Esito</th><th>Dettaglio</th></tr>${c.att.filter(x=>x.area===a).map(x=>`<tr><td>${esc(x.t)}</td><td>${esc(x.chi)}</td><td>${esc(x.titolo)}</td><td>${x.esito}</td><td>${esc(x.det)}</td></tr>`).join("")}</table>`).join("")}
+  <p><small>Ogni riga ha un'impronta legata alla precedente: una modifica successiva rende la catena alterata. Catena: ${catenaOk(c)?"integra":"ALTERATA"}.</small></p></div>`}
+
+/* ------------------------------------------------------------------ [INTERFACCIA] identificazione, Ingegneria, postazione */
+function ident(){const res=stazRicerca(R.idq),s=R.idsid&&D.stazioni.find(x=>x.id===R.idsid),P=PROFILI.JP21,nf=R.idq&&R.idq.length>=2&&!res.length;
+  return `<h1>🧭 Identifica stazione</h1><div class="sub">Cerca nell'elenco colonnine di questa postazione (nome, IP, CUID atteso o letto). Il profilo decide comandi ammessi, test e wizard.</div><div class="search"><input type="text" id="id-q" placeholder="nome, IP, CUID" value="${esc(R.idq||"")}"></div>
+  ${s?"":res.map(x=>stazRiga(x,`data-idsid="${esc(x.id)}"`)).join("")}
+  ${s?`<div class="card" style="margin-top:10px"><h5>🧩 ${esc(P.nome)} <span class="pill" style="background:#1e8b42;color:#fff">profilo caricato</span></h5><div class="bd"><table class="lines"><tr><td style="width:28%">Stazione</td><td>${esc(s.nome)} · ${esc(s.ip)}:${esc(s.porta_web||80)}</td></tr><tr><td>CUID</td><td>letto ${esc(s.cuid||"-")} · atteso ${esc(s.cuid_atteso||"-")}${s.cuid&&s.cuid_atteso&&s.cuid!==s.cuid_atteso?' <b style="color:var(--red)">DIVERSO</b>':""}</td></tr>
+   <tr><td>Ultima lettura</td><td>${s.esito?`<span class="pill p-${esc(s.esito)}">${esc(s.esito)}</span> ${esc(s.giro)} ${s.anomalie.map(a=>esc(a.messaggio)).join("; ")}`:"mai letta"}</td></tr><tr><td>Firmware CP</td><td>${esc(s.cp||"-")}</td></tr><tr><td>Come si legge</td><td>${esc(P.lettura)}</td></tr><tr><td>Comandi ammessi</td><td><b>L1</b> ${P.comandi.L1.map(o=>OPS[o]).join(", ")}<br><b>L2</b> ${P.comandi.L2.map(o=>OPS[o]).join(", ")}</td></tr><tr><td>Test</td><td>campo ${P.test.campo.join(", ")} · remoto ${P.test.remoto.join(", ")}</td></tr></table>
+   <div class="qbtns"><button class="btn btn-o" data-idsid="">‹ Altra ricerca</button>${["L1","L2"].includes(AREA())?`<button class="btn btn-p" data-idnew="${esc(s.id)}">Apri un caso su questa stazione</button>`:""}<a class="btn btn-o" href="/console#ben/${encodeURIComponent(s.id)}" target="_blank">Diagnostica completa ↗</a></div></div></div>`:""}
+  ${nf?`<div class="card" style="margin-top:10px"><h5>⚠ Profilo generico <span class="pill" style="background:#c0352f;color:#fff">non riconosciuta</span></h5><div class="bd"><p>«${esc(R.idq)}» non è nell'elenco colonnine di questa postazione.</p><ul><li>Si può aprire un caso e documentarlo, ma senza letture, comandi né test specifici.</li><li>La scelta manuale del modello resta segnalata nel caso.</li></ul>
+   <div class="filters"><select id="id-man"><option value="">Scelta manuale del modello…</option><option ${R.idman==="JuicePole 2.1"?"selected":""}>JuicePole 2.1</option></select><button class="btn btn-o" data-idsegn="1">🚩 Segnala all'Ingegneria</button>${["L1","L2"].includes(AREA())?`<button class="btn btn-p" data-idlib="1">Apri caso con profilo generico</button>`:""}</div></div></div>`:""}`}
+function ericor(){const S=D.stazioni.filter(s=>s.esito),vs=[...new Set(S.map(s=>s.cp||"n/d"))].sort(),tot={},cnt={};S.forEach(s=>{const v=s.cp||"n/d";tot[v]=(tot[v]||0)+1;s.anomalie.filter(a=>a.gravita!=="INFO").forEach(a=>{cnt[a.guasto+"|"+v]=(cnt[a.guasto+"|"+v]||0)+1})});
+  const gs=[...new Set(Object.keys(cnt).map(k=>k.split("|")[0]))].sort();
+  return `<h1>🔁 Guasti ricorrenti</h1><div class="sub">Dall'ultima lettura di ogni stazione (${S.length} lette su ${D.stazioni.length}): stazioni con il guasto, per versione firmware CP. Con poche stazioni i numeri vanno letti con cautela.</div>
+  ${S.length?`<div class="card"><div class="bd" style="padding:0"><table class="lines"><tr><th>Guasto</th>${vs.map(v=>`<th class="num">CP ${esc(v)}<br><small>${tot[v]} staz.</small></th>`).join("")}<th></th></tr>${gs.map(g=>`<tr><td>${esc(D.kb[g]?.titolo||g)}<br><small class="mono">${esc(g)}</small></td>${vs.map(v=>`<td class="num">${cnt[g+"|"+v]||0} <small>(${Math.round(100*(cnt[g+"|"+v]||0)/tot[v])}%)</small></td>`).join("")}<td><button class="btn btn-o btn-sm" data-rcanew="${esc(g)}">Apri RCA</button></td></tr>`).join("")||`<tr><td colspan="${vs.length+2}" class="mute">Nessun guasto nelle ultime letture.</td></tr>`}</table></div></div>`:'<div class="note">Nessuna stazione letta: fai una diagnosi da «Diagnostica completa».</div>'}
+  <div class="card"><h5>Dove il wizard non aiuta</h5><div class="bd">${(()=>{const L=[];D.casi.forEach(c=>Object.entries(c.wz||{}).forEach(([a,w])=>{if(w.mode==="manuale"||w.cur==="nessun"||w.cur==="let_nokb")L.push({c,a,w})}));return L.length?`<table class="lines">${L.map(x=>`<tr class="clk" data-caso="${esc(x.c.id)}"><td>${esc(x.c.id)}</td><td>${x.a}</td><td>${x.w.mode==="manuale"?"passato in manuale":x.w.cur==="let_nokb"?"errore senza scheda":"nessuna causa trovata"}</td><td><small>${esc(x.w.path.map(p=>p.t+": "+p.r).join(" › "))}</small></td></tr>`).join("")}</table>`:'<p class="mute">Nessun percorso interrotto.</p>'})()}</div></div>`}
+function erca(){const L=D.rca;if(R.rcaid){const r=L.find(x=>x.id===R.rcaid);if(!r)return "";if(R.rcadoc)return rcaDoc(r);const f=(k,l,big)=>`<label style="display:block;margin-top:8px"><b>${l}</b><br>${big?`<textarea data-rcaf="${k}" rows="3" style="width:100%">${esc(r[k])}</textarea>`:`<input type="text" data-rcaf="${k}" value="${esc(r[k])}" style="width:100%">`}</label>`;
+  return `<div class="filters"><button class="btn btn-o btn-sm" data-rcaback="1">‹ RCA</button><span style="flex:1"></span><button class="btn btn-o btn-sm" data-rcadoc="1">🖨 Rapporto specialistico</button></div><div class="sthead"><h1>${esc(r.id)}</h1><span class="kbst ${r.stato==="chiusa"?"validata":"bozza"}">${r.stato}</span></div><div class="sub">${esc(r.guasto)} · aperta ${esc(r.aperta)}</div>
+   <div class="card" style="max-width:920px"><div class="bd">${f("titolo","Titolo")}${f("sintomi","Sintomi",1)}${f("dati","Dati analizzati",1)}${f("ipotesi","Ipotesi",1)}${f("prove","Prove",1)}${f("causa","Causa confermata",1)}
+   <div class="qbtns"><button class="btn btn-p" data-rcasave="1">Salva</button>${r.stato!=="chiusa"?`<button class="btn btn-g" data-rcaclose="1">Chiudi RCA e crea bozza in Knowledge Base ›</button>`:`<button class="btn btn-o btn-sm" data-kb="${esc(r.kb||"")}">📚 Bozza ${esc(r.kb||"")}</button>`}</div></div></div>`}
+  return `<h1>🔬 Analisi delle cause (RCA)</h1><div class="sub">Una RCA chiusa crea una bozza in Knowledge Base, che diventa operativa solo dopo la validazione.</div><div class="filters"><button class="btn btn-p" data-rcanew="">＋ Nuova RCA</button></div>
+  <div class="card"><div class="bd" style="padding:0"><table class="lines"><tr><th>RCA</th><th>Guasto</th><th>Aperta</th><th>Stato</th></tr>${L.map(r=>`<tr class="clk" data-rca="${esc(r.id)}"><td><b>${esc(r.id)}</b><br><small>${esc(r.titolo)}</small></td><td>${esc(r.guasto)}</td><td>${esc(r.aperta)}</td><td><span class="kbst ${r.stato==="chiusa"?"validata":"bozza"}">${r.stato}</span></td></tr>`).join("")||'<tr><td colspan="4" class="mute" style="padding:14px">Nessuna RCA.</td></tr>'}</table></div></div>`}
+function rcaDoc(r){return `<div class="noprint filters"><button class="btn btn-o" data-rcadoc="">‹ Torna</button><span style="flex:1"></span><button class="btn btn-p" onclick="window.print()">🖨 Stampa / PDF</button></div><div class="rep"><div style="border-bottom:3px solid #1d2328;padding-bottom:8px;margin-bottom:10px"><div class="mute">${esc(D.postazione.nome)} · rapporto specialistico</div><h1 style="margin:2px 0">${esc(r.id)} · ${esc(r.titolo)}</h1><div>${esc(r.guasto)} · aperta ${esc(r.aperta)} · ${r.stato}</div></div>
+  ${[["Sintomi","sintomi"],["Dati analizzati","dati"],["Ipotesi","ipotesi"],["Prove","prove"],["Causa confermata","causa"]].map(([t,k])=>`<h3>${t}</h3><p>${esc(r[k]||"-")}</p>`).join("")}</div>`}
+function ecmd(){const L=D.casi.flatMap(c=>(c.cmd||[]).map(x=>({...x,caso:c.id}))).sort((a,b)=>b.t.localeCompare(a.t)),n=k=>L.filter(x=>x.esito===k).length;
+  return `<h1>📡 Monitor comandi</h1><div class="sub">Comandi registrati nei casi di questo PC, con il loro ciclo di vita.</div><div class="kpis">${kpi("Comandi",L.length,"")}${kpi("Verificati",n("VERIFICATO"),"","ok")}${kpi("Discrepanze",n("DISCREPANZA"),"eseguito ma stato invariato","bad")}${kpi("Scaduti o in errore",n("SCADUTO")+n("ERRORE"),"","warn")}${kpi("Da verificare",n("DA VERIFICARE"),"")}</div>
+  <div class="card"><div class="bd" style="padding:0"><table class="lines"><tr><th>Comando</th><th>Stazione</th><th>Area</th><th>Esito</th><th>Ciclo di vita</th></tr>${L.map(x=>`<tr class="clk" data-caso="${esc(x.caso)}"><td>${esc(x.label)}<br><small>${x.id} · ${esc(x.caso)}</small></td><td>${esc(x.stz)}</td><td>${x.area}</td><td><b>${x.esito}</b></td><td>${cmdStepper(x)}</td></tr>`).join("")||'<tr><td colspan="5" class="mute" style="padding:14px">Nessun comando registrato.</td></tr>'}</table></div></div>`}
+function eprima(){const L=D.casi.filter(c=>c.letture&&c.letture.length===2&&c.letture[0].h!==c.letture[1].h);const c=L.find(x=>x.id===R.pcid)||L[0];if(!c)return '<h1>⚖ Prima e dopo</h1><p class="mute">Servono casi con almeno due letture.</p>';
+  const[a,b]=c.letture,va=a.dati?.valori||{},vb=b.dati?.valori||{},ks=[...new Set([...Object.keys(va),...Object.keys(vb)])].filter(k=>va[k]!==vb[k]&&!/DATE|TIME|ORA|LAST START|ENERGY|TEMPERATURE|_SSH ULTIM/i.test(k)).sort();
+  return `<h1>⚖ Prima e dopo</h1><div class="sub">Variabili cambiate tra la prima e l'ultima lettura del caso (escluse ora, energia e temperature).</div><div class="filters"><select id="pc-sel">${L.map(x=>`<option value="${esc(x.id)}" ${x===c?"selected":""}>${esc(x.id)} · ${esc(x.sintomo)}</option>`).join("")}</select></div>
+  <div class="grid3">${[a,b].map((x,i)=>`<div class="card"><h5>${i?"Dopo":"Prima"} · ${x.area} · ${esc(x.t)}</h5><div class="bd"><b>${x.esito==="OK"?"✅ nessun errore":"⛔ errori"}</b><p><small>${esc(x.det)}</small></p></div></div>`).join("")}</div>
+  <div class="card"><div class="bd" style="padding:0"><table class="lines"><tr><th>Variabile</th><th>Prima</th><th>Dopo</th></tr>${ks.map(k=>`<tr><td class="mono">${esc(k)}</td><td>${esc(va[k]??"-")}</td><td><b>${esc(vb[k]??"-")}</b></td></tr>`).join("")||'<tr><td colspan="3" class="mute">Nessuna differenza.</td></tr>'}</table></div></div>`}
+function eprof(){const sg=D.postazione.segnalazioni||[];return `<h1>🧩 Modelli e profili</h1><div class="sub">In produzione c'è un solo modello reale, la JuicePole 2.1. Gli altri si aggiungono con un profilo quando ci saranno lettura e regole.</div>
+  <div class="card"><div class="bd" style="padding:0"><table class="lines"><tr><th>Profilo</th><th>Lettura</th><th>Comandi L1 / L2</th><th>Test campo</th><th>Test remoto</th></tr>${Object.values(PROFILI).map(p=>`<tr><td><b>${esc(p.nome)}</b><br><small>${esc(p.famiglia)}</small></td><td><small>${esc(p.lettura)}</small></td><td><small>${p.comandi.L1.length} / ${p.comandi.L2.length}</small></td><td><small>${p.test.campo.join(", ")}</small></td><td><small>${p.test.remoto.join(", ")||"-"}</small></td></tr>`).join("")}</table></div></div>
+  <div class="card"><h5>Stazioni non riconosciute, segnalate</h5><div class="bd">${sg.length?`<table class="lines">${sg.map(x=>`<tr><td class="mono">${esc(x.q)}</td><td>${esc(x.da)}</td><td>${esc(x.t)}</td><td>${x.man?"scelta manuale: "+esc(x.man):""}</td><td><small>${esc(x.nota||"")}</small></td></tr>`).join("")}</table>`:'<p class="mute">Nessuna segnalazione.</p>'}</div></div>`}
+function postazione(){const p=D.postazione;return `<h1>⚙ Postazione</h1><div class="sub">Impostazioni di questo PC. Le colonnine, le password SSH e le regole si configurano in «Diagnostica completa» › Configurazione.</div>
+  <div class="card" style="max-width:760px"><div class="bd"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><label>Area predefinita<br><select id="ps-area" style="width:100%">${AREE.map(([a,n])=>`<option value="${a}" ${p.area===a?"selected":""}>${a} · ${n}</option>`).join("")}</select></label><label>Operatore (nome che firma le attività)<br><input type="text" id="ps-op" value="${esc(p.operatore)}" style="width:100%"></label>
+   <label>Sigla della postazione (nei numeri dei casi)<br><input type="text" id="ps-sig" value="${esc(p.sigla)}" style="width:100%"></label><label>Nome della piattaforma<br><input type="text" id="ps-nome" value="${esc(p.nome)}" style="width:100%"></label></div>
+   <label style="display:block;margin-top:10px"><input type="checkbox" id="ps-lab" ${p.laboratorio?"checked":""}> Laboratorio: tutte le aree su questo PC (i pacchetti inviati finiscono anche in «Casi in arrivo»)</label>
+   <div class="qbtns"><button class="btn btn-p" id="ps-save">Salva</button><button class="btn btn-o" data-apri="dati">Apri la cartella dati</button><button class="btn btn-o" data-apri="inviati">Pacchetti inviati</button></div>
+   <p class="mute" style="margin-bottom:0">Versione ${esc(D.versione)} · dati in ${esc(D.dati)} · SSH ${D.ssh?"attivo":"non attivo"}</p></div></div>`}
+
+/* ------------------------------------------------------------------ [INTERFACCIA] navigazione */
+const PAGES={casiloc:casiLoc,inbox,nuovo,storico,caso:casoPage,ident,kb:kbPage,ericor,erca,ecmd,eprima,eprof,postazione};
+function menu(){const a=AREA(),A=(p,ic,t)=>`<a href="#" data-p="${p}" class="${R.page===p?"on":""}"><span class="ic">${ic}</span><span>${t}</span></a>`,n=D.arrivo.filter(x=>x.pkg&&(!x.pkg.a||x.pkg.a===a)).length;
+  let h=`<div class="sec">Casi · ${a}</div>`+A("inbox","📥",`Casi in arrivo${n?` <b class="badge b-yel" style="margin-left:4px">${n}</b>`:""}`)+A("casiloc","🗂","Casi su questo PC")+(["L1","L2"].includes(a)?A("nuovo","＋",a==="L1"?"Nuova chiamata":"Nuovo caso"):"")+A("storico","🔎","Storico stazione");
+  if(a==="ENG")h+=`<div class="sec">Analisi</div>`+A("ericor","🔁","Guasti ricorrenti")+A("erca","🔬","Analisi delle cause (RCA)")+A("ecmd","📡","Monitor comandi")+A("eprima","⚖","Prima e dopo")+A("eprof","🧩","Modelli e profili");
+  h+=`<div class="sec">Piattaforma</div>`+A("ident","🧭","Identifica stazione")+A("kb","📚","Knowledge Base")+`<a href="/console" target="_blank"><span class="ic">🩺</span><span>Diagnostica completa ↗</span></a>`+A("postazione","⚙","Postazione");return h}
+function go(p){R.page=p;location.hash=p+(p==="caso"&&R.cid?"/"+R.cid:"");render();scrollTo(0,0)}
+function render(){if(!D)return;$("#side").innerHTML=menu();$$("#side a[data-p]").forEach(x=>x.onclick=e=>{e.preventDefault();R.cdoc="";R.kbid=null;R.rcaid=null;R.rcadoc="";go(x.dataset.p)});
+  $$(".areas5 button").forEach(b=>b.classList.toggle("on",b.dataset.area===AREA()));$(".brand").innerHTML=`${esc(D.postazione.nome)}<small>Manutenzione 2.1 · ${esc(D.versione)}</small>`;document.title=D.postazione.nome+" · Manutenzione 2.1";
+  try{$("#main").innerHTML=(PAGES[R.page]||casiLoc)()}catch(e){$("#main").innerHTML=`<div class="note">Errore nella pagina: ${esc(e.message)}</div>`;console.error(e)}bind()}
+const act=f=>async(...a)=>{try{await f(...a)}catch(e){R.busy="";toast("Errore: "+e.message,6000);render()}};
+
+/* ------------------------------------------------------------------ [INTERFACCIA] eventi */
+const on=(sel,ev,f)=>$$(sel).forEach(x=>x[ev]=act(e=>f(x,e)));
+const inputLive=(id,key,also)=>{const el=$(id);if(el)el.oninput=e=>{R[key]=e.target.value;if(also)also();const p=e.target.selectionStart;render();const f=$(id);if(f){f.focus();f.setSelectionRange(p,p)}}};
+function bind(){const c=R.page==="caso"?CASE:null;
+  on("[data-p2]","onclick",(x,e)=>{e.preventDefault();go(x.dataset.p2)});
+  on("[data-caso]","onclick",(x,e)=>{e.preventDefault();return apriCaso(x.dataset.caso)});
+  on("[data-cdoc]","onclick",x=>{R.cdoc=x.dataset.cdoc;render();scrollTo(0,0)});on("[data-sfase]","onclick",x=>{R.sfase=x.dataset.sfase;render()});
+  on("[data-apri]","onclick",async x=>{const r=await api("/api/nx/apri",{cosa:x.dataset.apri});toast(r.percorso)});
+  on("[data-reload]","onclick",async()=>{await refreshCasi();render()});on("[data-cf]","onclick",x=>{R.cf=x.dataset.cf;render()});
+  on("[data-imp]","onclick",async x=>{const item=D.arrivo.find(z=>z.file===x.dataset.imp);const cc=await importa(item);await refreshCasi();if(cc){toast("Pacchetto importato");await apriCaso(cc.id)}else render()});
+  const pf=$("#pk-file");if(pf)pf.onchange=act(async e=>{let n=0;for(const f of e.target.files){const p=JSON.parse(await f.text());await api("/api/nx/carica",{pkg:p});n++}await refreshCasi();render();toast(n+" pacchetti caricati: importali dall'elenco")});
+  inputLive("#n-q","nq",()=>{R.nsid=null;R.nlib=false});on("[data-nsid]","onclick",x=>{R.nsid=x.dataset.nsid||null;render()});on("[data-nlib]","onclick",()=>{R.nlib=true;render()});
+  const ng=$("#n-go");if(ng)ng.onclick=act(async()=>{const s=R.nsid&&D.stazioni.find(z=>z.id===R.nsid),sint=$("#n-sint").value.trim();if(!sint){toast("Scrivi cosa segnala il cliente");return}
+    const {id}=await api("/api/nx/nuovo_id",{});const stz=s?{sid:s.id,nome:s.nome,ip:s.ip,porta_web:s.porta_web,cuid:s.cuid||s.cuid_atteso||"",comune:s.comune,indirizzo:s.indirizzo,modello:"JuicePole 2.1"}:{libero:($("#n-lib")?.value||R.nq||"").trim(),modello:R.idman||"Profilo generico",manuale:R.idman||""};
+    if(!s&&R.idman)stz.modello="Profilo generico";
+    const x={id,stz,aperto:nowS(),fonte:$("#n-fonte").value,sintomo:sint,ext:{xc:$("#n-xc").value.trim(),sf:"",wo:""},dove:AREA(),stato:"APERTO",att:[],comp:[],cmd:[],trip:{ap:null,ch:null}};
+    addAtt(x,"apertura","Caso aperto: "+sint,"INFO",x.ext.xc?"XCustomer "+x.ext.xc:"");if(!s){await api("/api/nx/segnala",{q:stz.libero,da:AREA(),t:nowS(),man:R.idman||"",nota:"caso "+id});addAtt(x,"segnalazione","Stazione non riconosciuta: segnalata all'Ingegneria","INFO",stz.libero)}
+    await salva(x);R.nq="";R.nsid=null;R.nlib=false;R.idman="";await apriCaso(id)});
+  inputLive("#st-q","sq",()=>R.ssid=null);on("[data-ssid]","onclick",x=>{R.ssid=x.dataset.ssid;render()});
+  inputLive("#id-q","idq",()=>{R.idsid=null;R.idman=""});on("[data-idsid]","onclick",x=>{R.idsid=x.dataset.idsid||null;if(!R.idsid)R.idq="";render()});
+  const im=$("#id-man");if(im)im.onchange=e=>{R.idman=e.target.value;render()};
+  on("[data-idsegn]","onclick",async()=>{await api("/api/nx/segnala",{q:R.idq,da:AREA(),t:nowS(),man:R.idman||""});D.postazione.segnalazioni=[{q:R.idq,da:AREA(),t:nowS(),man:R.idman||""},...(D.postazione.segnalazioni||[])];toast("Segnalato all'Ingegneria")});
+  on("[data-idnew]","onclick",x=>{R.nsid=x.dataset.idnew;R.nq="";go("nuovo")});on("[data-idlib]","onclick",()=>{R.nq=R.idq;R.nlib=true;R.nsid=null;go("nuovo")});
+  /* Knowledge Base */
+  on("[data-kb]","onclick",(x,e)=>{e.preventDefault();e.stopPropagation();if(!x.dataset.kb)return;R.kbid=x.dataset.kb;go("kb")});on("[data-kbback]","onclick",()=>{R.kbid=null;render()});
+  on("[data-kbf]","onchange",x=>{R.kbf[x.dataset.kbf]=x.value;render()});const kq=$("#kb-q");if(kq)kq.oninput=e=>{R.kbf.q=e.target.value;const p=e.target.selectionStart;render();const f=$("#kb-q");f.focus();f.setSelectionRange(p,p)};
+  const kbSet=async(ids,st)=>{ids.forEach(id=>{const k=kbAll().find(z=>z.id===id);const v=parseFloat(k.ver)||0;D.kb_stato[id]={stato:st,ver:st==="validata"?(v<1?"1.0":(v+.1).toFixed(1)):k.ver,resp:"Ingegneria · "+(D.postazione.operatore||"-"),data:nowS().slice(0,10)}});await api("/api/nx/kb_stato",{kb_stato:D.kb_stato})};
+  on("[data-kbst]","onclick",async x=>{await kbSet([R.kbid],x.dataset.kbst);render();toast("Scheda "+x.dataset.kbst)});
+  on("[data-kbvalall]","onclick",async()=>{if(!confirm("Validare tutte le schede di base? Fallo solo se le hai controllate."))return;await kbSet(kbAll().filter(k=>k.stato==="bozza"&&k.id.startsWith("KB:")).map(k=>k.id),"validata");render();toast("Schede di base validate")});
+  /* RCA */
+  const rcaSave=async()=>api("/api/nx/rca",{rca:D.rca});
+  on("[data-rcanew]","onclick",async x=>{const g=x.dataset.rcanew,id="RCA-"+new Date().getFullYear()+"-"+D.postazione.sigla+"-"+String(D.rca.length+1).padStart(3,"0");const n=D.stazioni.filter(s=>s.anomalie.some(a=>a.guasto===g)).length;
+    D.rca.unshift({id,titolo:g?(D.kb[g]?.titolo||g)+": analisi ricorrenza":"Nuova analisi",guasto:g||"-",stato:"in corso",aperta:nowS().slice(0,10),sintomi:g?(D.kb[g]?.spiega||""):"",dati:g?`${n} stazioni con il guasto nell'ultima lettura (vedi Guasti ricorrenti)`:"",ipotesi:"",prove:"",causa:""});await rcaSave();R.rcaid=id;go("erca")});
+  on("[data-rca]","onclick",x=>{R.rcaid=x.dataset.rca;R.rcadoc="";render()});on("[data-rcaback]","onclick",()=>{R.rcaid=null;render()});on("[data-rcadoc]","onclick",x=>{R.rcadoc=x.dataset.rcadoc;render()});
+  const rcaCur=()=>D.rca.find(z=>z.id===R.rcaid),rcaRead=r=>$$("[data-rcaf]").forEach(i=>r[i.dataset.rcaf]=i.value);
+  on("[data-rcasave]","onclick",async()=>{rcaRead(rcaCur());await rcaSave();toast("RCA salvata")});
+  on("[data-rcaclose]","onclick",async()=>{const r=rcaCur();rcaRead(r);if(!r.causa.trim()){toast("Scrivi la causa confermata");return}const k=D.kb[r.guasto]||{},id="KB-B"+String((D.kb_bozze||[]).length+1).padStart(2,"0");
+    D.kb_bozze=[...(D.kb_bozze||[]),{id,tipo:"Bollettino tecnico",titolo:r.titolo,guasto:"",modelli:["JP21"],livelli:["L2","L3"],codici:[r.guasto],testo:r.sintomi,causa:r.causa,passi:[r.prove].filter(Boolean),ricambi:k.ricambi||[],albero:[],stato:"bozza",ver:"0.1",resp:"Ingegneria · "+(D.postazione.operatore||"-"),data:nowS().slice(0,10),da:r.id}];
+    r.stato="chiusa";r.kb=id;await api("/api/nx/kb_bozze",{kb_bozze:D.kb_bozze});await rcaSave();render();toast("RCA chiusa: bozza "+id+" in Knowledge Base")});
+  const pc=$("#pc-sel");if(pc)pc.onchange=e=>{R.pcid=e.target.value;render()};
+  const psv=$("#ps-save");if(psv)psv.onclick=act(async()=>{D.postazione=await api("/api/nx/postazione",{area:$("#ps-area").value,operatore:$("#ps-op").value.trim(),sigla:$("#ps-sig").value,nome:$("#ps-nome").value.trim()||"NEXUS",laboratorio:$("#ps-lab").checked});toast("Postazione salvata");render()});
+  if(!c)return;
+  const S=async()=>{await salva(c);render()};
+  on("[data-pkdl]","onclick",()=>{const p=pacchetto(c,"");scaricaFile(p,c.id+"_copia.json")});
+  on("[data-ov]","onchange",async x=>{c.nxt=c.nxt||{};const t=c.nxt[AREA()]=c.nxt[AREA()]||{},id=x.dataset.ov;if(!x.value){delete t[id];return S()}
+    const m=["NA","NT"].includes(x.value)?prompt("Motivo (obbligatorio)",""):(prompt("Nota (facoltativa)","")??"");if(m===null||(["NA","NT"].includes(x.value)&&!m.trim())){render();return}
+    t[id]={r:x.value,m,chi:chi()};addAtt(c,"test",TESTS[id].nome+": "+TRES[x.value],x.value==="PASS"?"OK":x.value==="FAIL"?"KO":"INFO","impostato da operatore · "+m);await S()});
+  on("[data-firma]","onclick",async x=>{const a=x.dataset.firma,ver=verifica(c),at=attivita(c,a);addAtt(c,"statino",`Statino ${a} firmato`,"INFO",`impronta ${fnv(JSON.stringify(c.att.filter(z=>z.area===a)))} · attività: ${at.v} · guasto risolto: ${ver.ok?"verificato":"non verificato"}`);await S();toast("Statino firmato")});
+  on("[data-wzm]","onclick",async x=>{const W=wz(c);if(W.mode!==x.dataset.wzm){W.mode=x.dataset.wzm;addAtt(c,"wizard","Modalità "+W.mode,"INFO","")}await S()});
+  on("[data-wz]","onclick",async x=>{await wzStep(c,x.dataset.wz);await S()});
+  on("[data-wman]","onclick",async()=>{const v=$("#wm-x").value.trim();if(!v){toast("Scrivi cosa hai visto o fatto");return}wz(c).path.push({t:$("#wm-t").value,r:v});addAtt(c,"manuale",$("#wm-t").value+": "+v,"INFO","modalità manuale");await S()});
+  on("[data-cmd]","onclick",async()=>{const x=cmdRegistra(c);await S();toast(x.esito==="DA VERIFICARE"?"Comando registrato: quando lo strumento ha finito, premi «Rileggi e verifica»":"Comando registrato con esito "+x.esito)});
+  on("[data-cmdv]","onclick",async x=>{await cmdVerifica(c,x.dataset.cmdv);await S()});
+  on("[data-sess]","onclick",async()=>{const id=$("#ss-id").value.trim(),mi=$("#ss-min").value,kwh=$("#ss-kwh").value,es=$("#ss-es").value;if(!id){toast("Indica il riferimento della sessione");return}addAtt(c,"test","Sessione di ricarica di verifica",es,`sessione ${id} · ${mi||"?"} min · ${kwh||"?"} kWh`);await S()});
+  /* L1 */
+  on("[data-l1]","onclick",async x=>{const k=x.dataset.l1;if(k==="lettura")await lettura(c,"Stato operativo (lettura)");
+    if(k==="risolto"){c.stato="CHIUSO";addAtt(c,"chiusura","Risolto da L1: caso chiuso su XCustomer","OK",verifica(c).ok?"guasto verificato":"guasto NON verificato: manca "+verifica(c).miss.join("; "))}
+    if(k==="inoltra"){await inoltra(c,"L2","L1 non risolve: "+(ultimaLettura(c)?.det||c.sintomo));go("casiloc");return}await S()});
+  on("[data-l1q]","onclick",async x=>{addAtt(c,"domanda",x.parentNode.firstChild.textContent.trim(),"INFO","risposta del cliente: "+x.dataset.a);await S()});
+  /* L2 */
+  on("[data-l2]","onclick",async x=>{const k=x.dataset.l2;if(k==="lettura")await lettura(c,"Diagnosi remota");
+    if(k==="risolto"){c.stato="CHIUSO";const v=verifica(c);addAtt(c,"chiusura","Risolto da remoto dalla Control Room",v.ok?"OK":"INFO",v.ok?"guasto verificato: "+v.via:"guasto NON verificato: manca "+v.miss.join("; "))}
+    if(k==="chiudi"){c.stato="CHIUSO";addAtt(c,"chiusura",`Ordine ${c.ext.wo||""} chiuso su Salesforce`,"OK","")}
+    if(k==="l3"){c.ext.sf=$("#t-sf").value.trim();c.ext.wo=$("#t-wo").value.trim();if(!c.ext.wo){toast("Scrivi il numero dell'ordine di lavoro");return}
+      c.trip.ap={comp:$("#t-comp").value,guasto:$("#t-gu").value,att:$("#t-att").value};addAtt(c,"tripletta","Tripletta di apertura","INFO",`${c.trip.ap.comp} · ${c.trip.ap.guasto} · ${c.trip.ap.att}`);
+      await inoltra(c,c.trip.ap.att==="Sostituzione stazione"?"SOST":"L3",`Ordine di lavoro ${c.ext.wo} · ${$("#t-ditta").value}`);go("casiloc");return}await S()});
+  /* L3 e collaudo */
+  on("[data-l3]","onclick",async x=>{const k=x.dataset.l3;
+    if(k==="arrivo"){const r=await lettura(c,"Lettura all'arrivo");if(r){const cu=r.dati?.cuid,ok=cu&&(!c.stz.cuid||cu===c.stz.cuid);addAtt(c,"arrivo",ok?"Arrivo sul posto, CUID verificato":"Arrivo sul posto, CUID NON corrispondente",ok?"OK":"KO",`CUID letto ${cu||"-"} · pacchetto ${c.stz.cuid||"-"}`)}else addAtt(c,"arrivo","Arrivo sul posto (stazione non leggibile)","INFO","")}
+    if(k==="comp"){const code=$("#cp-code").value,o=$("#cp-old").value.trim(),nw=$("#cp-new").value.trim();if(o)c.comp.push({t:nowS(),area:AREA(),az:"smontato",code,sn:o});c.comp.push({t:nowS(),area:AREA(),az:"montato",code,sn:nw});addAtt(c,"componente",`Sostituito ${code}`,"INFO",`smontato ${o||"-"} · montato ${nw||"-"}`)}
+    if(k==="ril")await lettura(c,"Rilettura di collaudo");
+    if(k==="risolto"){c.trip.ch={comp:c.comp.filter(z=>z.az==="montato").map(z=>z.code).join(", ")||"nessuno",causa:c.t3es?.c||"-",esito:"Risolto, collaudo superato"};addAtt(c,"esito","Guasto risolto: collaudo superato","OK",`tripletta di chiusura: ${c.trip.ch.comp} · ${c.trip.ch.causa} · ${c.trip.ch.esito}`);await inoltra(c,"L2","Esito alla Control Room per la chiusura su Salesforce","RISOLTO");go("casiloc");return}
+    if(k==="nonris"){addAtt(c,"esito","Intervento completato, guasto non risolto","KO",$("#l3-mot").value||"motivo non indicato");await inoltra(c,"L2","Serve un ritorno");go("casiloc");return}
+    if(k==="sost"){addAtt(c,"esito","Riparazione in campo non possibile: serve sostituire la stazione","KO",$("#l3-mot").value||"");await inoltra(c,"SOST","Sostituzione richiesta");go("casiloc");return}await S()});
+  on("[data-cchk]","onchange",async x=>{c.coll=c.coll||{chk:{}};c.coll.chk[x.dataset.cchk]=x.checked;if(CHECKS.every(([k])=>c.coll.chk[k]))addAtt(c,"test","Controlli finali completati","OK",CHECKS.map(z=>z[1]).join("; "));await S()});
+  on("[data-chlive]","onclick",async x=>{const n=x.dataset.chlive,s=stOf(c);if(!s)return;R.busy="Lettura della presa…";render();let r;try{r=await api("/api/nx/lettura",{id:s.id,completa:false})}finally{R.busy=""}
+    const v=r.valori||{},num=t=>parseFloat(String(t||"").replace(",","."));R.live=R.live||{};R.live[n]={a:num(v[`METER ${n} CURRENT L1`])||"",kwh:(num(v[`METER ${n} SESSION ACTIVE ENERGY`])/1000)||"",txt:`stato ${v[`EVSE TASK ${n} STATUS`]||"-"} · corrente ${v[`METER ${n} CURRENT L1`]||"-"} · sessione ${v[`METER ${n} SESSION ACTIVE ENERGY`]||"-"} · ${new Date().toLocaleTimeString("it-IT")}`};render()});
+  on("[data-chreg]","onclick",async x=>{const n=x.dataset.chreg,mi=parseFloat($(`#ch${n}-min`).value),a=parseFloat($(`#ch${n}-a`).value),kwh=$(`#ch${n}-kwh`).value;if(isNaN(mi)||isNaN(a)){toast("Indica durata e corrente massima");return}
+    const ok=mi>=2&&a>=6;addAtt(c,"test",`Prova di ricarica presa ${n==="1"?"destra":"sinistra"}`,ok?"OK":"KO",`${mi} min in carica · max ${a} A · ${kwh||"?"} kWh${R.live?.[n]?" · ultima lettura: "+R.live[n].txt:""}`);if(R.live)delete R.live[n];await S()});
+  /* sostituzione */
+  on("[data-so]","onclick",async x=>{const k=x.dataset.so,so=c.sost;so.motivo=$("#so-mot").value;so.snOld=$("#so-old").value.trim();so.snNew=$("#so-new").value.trim();
+    if(k==="leggi"){const r=await lettura(c,"Lettura della nuova stazione");if(r&&r.dati?.cuid){so.cuidNew=r.dati.cuid;if(so.cuidNew===so.cuidOld)toast("Attenzione: risponde ancora il CUID della stazione rimossa",6000)}}
+    if(k==="reg"){if(!so.snNew||!so.cuidNew){toast("Servono seriale e CUID della nuova");return}addAtt(c,"sostituzione","Stazione sostituita","OK",`rimossa ${so.snOld||"-"} (CUID ${so.cuidOld||"-"}) · installata ${so.snNew} (CUID ${so.cuidNew}) · motivo: ${so.motivo}`)}
+    if(k==="fine"){c.stz.cuid=so.cuidNew;addAtt(c,"esito","Nuova stazione in servizio, collaudo superato","OK","");await inoltra(c,"REP","Stazione rimossa a magazzino","RISOLTO");const cp=JSON.parse(JSON.stringify(c));cp.dove="L2";const pkg=pacchetto(cp,"L2");pkg.da="SOST";const r=await api("/api/nx/invia",{pkg});scaricaFile(pkg,r.file);await salva(c);toast("Due pacchetti: stazione al magazzino, esito alla Control Room",6000);go("casiloc");return}
+    await S()});
+  /* riparazione */
+  on("[data-rp]","onclick",async x=>{const k=x.dataset.rp,r=c.rep;if(REP_STEPS.some(z=>z[0]===k)){const t=REP_STEPS.find(z=>z[0]===k)[1];let v=$("#rp-v")?.value||"";
+      if(k==="banco"){const all=$$(".rpb").every(z=>z.checked);if(!all){toast("Completa le prove al banco");return}v="tutte le prove superate"}
+      if(k==="diagnosi"){const cc=$("#rp-c").value.trim();if(cc)c.comp.push({t:nowS(),area:"REP",az:"montato",code:cc,sn:"(al banco)"})}
+      r.fatti[k]=nowS()+" · "+v;addAtt(c,"riparazione",t,k==="banco"?"OK":"INFO",v);if(k==="ingresso")c.stato="IN MAGAZZINO"}
+    if(k==="riparata"||k==="dismessa"){c.stato=k==="riparata"?"RIPARATA":"DISMESSA";addAtt(c,"esito",k==="riparata"?"Stazione riparata: pronta per reinstallo":"Stazione dismessa",k==="riparata"?"OK":"KO","")}await S()})}
+
+$$(".areas5 button").forEach(b=>b.onclick=()=>{R.area=b.dataset.area;R.cdoc="";if(R.page==="caso"&&CASE)render();else go(R.page==="caso"?"casiloc":R.page)});
+window.onhashchange=act(async()=>{const[p,id]=location.hash.slice(1).split("/");if(p==="caso"&&id&&id!==R.cid)return apriCaso(id);if(p&&p!==R.page){R.page=p;render()}});
+setInterval(()=>{const k=$("#clock");if(k)k.textContent=new Date().toLocaleString("it-IT",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})},1000);
+(async()=>{try{await loadAll();const[p,id]=location.hash.slice(1).split("/");if(p==="caso"&&id){await apriCaso(id);return}if(p&&PAGES[p])R.page=p;render()}catch(e){$("#main").innerHTML=`<div class="note">Il server non risponde: avvia avvia.bat e ricarica la pagina. (${esc(e.message)})</div>`}})();
+
+</script>
+</body>
+</html>
