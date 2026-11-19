@@ -1,0 +1,10 @@
+nome;ip;porta_web;porta_ssh;cuid_atteso;note
+Prova sana;127.0.0.1;18081;;;simulatore
+Prova schermo;127.0.0.1;18082;;;simulatore
+Prova MCB;127.0.0.1;18083;;;simulatore
+Prova AUX;127.0.0.1;18084;;;simulatore
+Prova modem;127.0.0.1;18085;;;simulatore
+Prova contattore;127.0.0.1;18086;;N.22XPALTRO00000;CUID atteso diverso
+Prova RFID;127.0.0.1;18087;;;simulatore
+Prova in carica;127.0.0.1;18088;;;simulatore
+Non raggiungibile;127.0.0.1;18099;;;porta chiusa
