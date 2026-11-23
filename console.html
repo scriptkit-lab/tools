@@ -2060,10 +2060,11 @@ function anCompute(){const {a,b}=anGroups();
   $("#anCnt").innerHTML=`<span class="ga ${a.length<5?"few":""}">A: ${a.length} prove</span> · <span class="gb ${b.length<5?"few":""}">B: ${b.length} prove</span>${a.length<5||b.length<5?` <span class="few">meno di 5 prove in un gruppo: i confronti non sono un risultato</span>`:""}`;
   {const bs=anBase(),L=[...new Set(bs.map(r=>r.luogo||"non indicato"))],Q=[...new Set(bs.map(r=>r.seq||"?"))];
    $("#anMix").innerHTML=(AN.fzTxt||"")+((L.length>1||Q.length>1)?`<span class="few">Attenzione: nel confronto ci sono ${L.length>1?`luoghi diversi (${L.map(esc).join(", ")})`:""}${L.length>1&&Q.length>1?" e ":""}${Q.length>1?`sequenze diverse (${Q.map(esc).join(", ")})`:""}: le soglie non si mescolano, filtra per luogo e sequenza.</span>`:"")}
-  const res=AN_IND.map(([k,l,u])=>{const A=a.map(r=>anNum(k==="Q"||k==="P"?(anTipo(r)==="taratura"?null:r[k]):r[k])).filter(v=>v!=null&&isFinite(v)),B=b.map(r=>anNum(k==="Q"||k==="P"?(anTipo(r)==="taratura"?null:r[k]):r[k])).filter(v=>v!=null&&isFinite(v));
+  const pick=(rs,k)=>rs.map(r=>({v:anNum(k==="Q"||k==="P"?(anTipo(r)==="taratura"?null:r[k]):r[k]),r})).filter(o=>o.v!=null&&isFinite(o.v));
+  const res=AN_IND.map(([k,l,u])=>{const Ar=pick(a,k),Br=pick(b,k),A=Ar.map(o=>o.v),B=Br.map(o=>o.v);
     const sa=anStats(A),sb=anStats(B);let d=null,best=null,sep=false;
     if(sa.n&&sb.n){const ps=Math.sqrt((sa.sd**2+sb.sd**2)/2);d=ps?Math.abs(sa.m-sb.m)/ps:(sa.m!==sb.m?Infinity:0);best=anBest(A,B);sep=sa.max<sb.min||sb.max<sa.min}
-    return{k,l,u,A,B,sa,sb,d,best,sep}}).filter(x=>x.sa.n||x.sb.n);
+    return{k,l,u,A,B,Ar,Br,sa,sb,d,best,sep}}).filter(x=>x.sa.n||x.sb.n);
   res.sort((x,y)=>(y.d??-1)-(x.d??-1));
   const f=v=>v==null||!isFinite(v)?"–":(+v.toFixed(Math.abs(v)>=100?0:Math.abs(v)>=10?1:Math.abs(v)>=0.1||v===0?2:4)).toLocaleString("it-IT");
   $("#anTab").innerHTML=res.length?`<table class="antab"><thead><tr><th>indicatore</th><th class="num ga">A media ± dev.</th><th class="num gb">B media ± dev.</th><th class="num" title="distanza tra le medie in deviazioni standard: sopra 2 buona, sopra 3 ottima">separazione d′</th><th>soglia migliore</th><th class="num" title="media tra prove A e prove B classificate bene">accuratezza</th><th>valori</th></tr></thead><tbody>
@@ -2072,21 +2073,39 @@ function anCompute(){const {a,b}=anGroups();
       <td class="num"><b>${x.d==null?"–":x.d===Infinity?"∞":f(x.d)}</b>${x.sep?(Math.min(x.sa.n,x.sb.n)<5?` <span class="badge few" title="con meno di 5 prove per gruppo la separazione non è un risultato">separati (${Math.min(x.sa.n,x.sb.n)} prove)</span>`:` <span class="badge ok">separati</span>`):""}</td>
       <td>${x.best?`B ${x.best.dir>0?"≥":"≤"} <b>${f(x.best.t)}</b>`:"–"}</td><td class="num">${x.best?Math.round(x.best.acc*100)+"%":"–"}</td>
       <td><canvas data-an="${i}" style="width:220px;height:30px"></canvas></td></tr>`).join("")}</tbody></table>
-    <div class="hint" style="padding:8px 14px">Ordinati per separazione. Con poche prove i numeri sono indicativi: la soglia migliore va confermata con prove nuove. Punti in alto = gruppo A, in basso = gruppo B, tratteggio = soglia.</div>`:`<div class="empty">Definisci i due gruppi: servono prove valide in entrambi.</div>`;
+    <div class="hint" style="padding:8px 14px">Ordinati per separazione. Con poche prove i numeri sono indicativi: la soglia migliore va confermata con prove nuove. Pallini in alto = gruppo A, in basso = gruppo B, tratteggio = soglia migliore, <b>anello</b> = prova dalla parte dell'altro gruppo. Passa sopra un pallino per sapere quale prova è, clic per aprirla, escluderla o trovarla nella lista.</div>`:`<div class="empty">Definisci i due gruppi: servono prove valide in entrambi.</div>`;
   AN.res=res;$$("#anTab canvas").forEach(cv=>anStrip(cv,res[+cv.dataset.an]));
   $("#anList").innerHTML=anBase().map(r=>{const ia=anMatch(r,AN.g.a),ib=anMatch(r,AN.g.b),x=r.esclusa==="si";
     return `<div class="${x&&!AN.all?"x":""}" data-anx="${esc(r.file)}" title="${x?"esclusa: "+esc(r.esclusa_motivo||"nessun motivo")+" · clic per reincluderla":"clic per escluderla dalle analisi"}"><span>${ia?'<b class="ga">A</b>':""}${ib?'<b class="gb">B</b>':""}</span><span>${esc(r.data_ora)} · …${esc((r.cuid||"").slice(-5))} · ${anTipo(r)==="taratura"?"taratura":esc(r.configurazione)} · ${esc(r.luogo||"")}${r.temp_esterna?` ${esc(r.temp_esterna)} °C`:""}</span><span class="hint">Ī ${fv(r.I_medio)} <span class="badge ${ESITO_CLS[r.esito]||""}">${esc(r.esito||"")}</span>${r.forzata==="si"?` <span class="fz" title="era non valida per: ${esc(r.forzata_motivi)}${r.forzata_nota?" · nota: "+esc(r.forzata_nota):""}">⚠ forzata</span>`:""}${x?` <span class="hint">esclusa${r.esclusa_motivo?": "+esc(r.esclusa_motivo):""}</span>`:""} ${pqBtn(r.file)}</span></div>`}).join("")||`<div class="hint">Nessuna prova</div>`;
   const cp=$("#anCamp").value;$("#anTitle").textContent=cp?`Campagna: ${cp}`:"Tutte le prove";$("#anPrintInfo").textContent=`${cp&&AN.camps[cp]?.obiettivo?"Obiettivo: "+AN.camps[cp].obiettivo+" · ":""}Gruppo A: ${anDesc(AN.g.a)} · Gruppo B: ${anDesc(AN.g.b)} · ${new Date().toLocaleString("it-IT")}`}
 const anDesc=g=>AN_FIELDS.filter(([f])=>g[f]).map(([f,l])=>`${l} ${g[f]}`).concat(g.q?[`“${g.q}”`]:[]).join(", ")||"tutte";
-function anStack(vals,X){const placed=[];return vals.slice().sort((p,q)=>p-q).map(v=>{const x=X(v);let lv=0;while(placed.some(p=>p.lv===lv&&Math.abs(p.x-x)<7))lv++;placed.push({x,lv});return{x,lv}})}
+function anStack(objs,X){const placed=[];return objs.slice().sort((p,q)=>p.v-q.v).map(o=>{const x=X(o.v);let lv=0;while(placed.some(p=>p.lv===lv&&Math.abs(p.x-x)<7))lv++;placed.push({x,lv});return{x,lv,v:o.v,r:o.r}})}
 function anStrip(cv,x){const g=cv.getContext("2d"),dpr=devicePixelRatio||1,W=220;const all=[...x.A,...x.B];if(!all.length)return;
   let lo=Math.min(...all),hi=Math.max(...all);if(lo===hi){lo-=1;hi+=1}const X=v=>6+(v-lo)/(hi-lo)*(W-12);
-  const sa=anStack(x.A,X),sb=anStack(x.B,X),na=Math.max(0,...sa.map(p=>p.lv)),nb=Math.max(0,...sb.map(p=>p.lv)),H=Math.max(30,22+7*(na+nb+2));
+  const sa=anStack(x.Ar||x.A.map(v=>({v})),X),sb=anStack(x.Br||x.B.map(v=>({v})),X),na=Math.max(0,...sa.map(p=>p.lv)),nb=Math.max(0,...sb.map(p=>p.lv)),H=Math.max(30,22+7*(na+nb+2));
   cv.style.width=W+"px";cv.style.height=H+"px";cv.width=W*dpr;cv.height=H*dpr;g.scale(dpr,dpr);const mid=8+7*(na+1);
-  cv.title=`${x.A.length} prove nel gruppo A, ${x.B.length} nel gruppo B: un pallino per prova (impilati se coincidono)`;
+  cv.title="";cv.style.cursor="pointer";
   g.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--line");g.beginPath();g.moveTo(4,mid);g.lineTo(W-4,mid);g.stroke();
   if(x.best){g.setLineDash([3,3]);g.strokeStyle="#888";g.beginPath();g.moveTo(X(x.best.t),2);g.lineTo(X(x.best.t),H-2);g.stroke();g.setLineDash([])}
-  g.globalAlpha=.85;sa.forEach(p=>{g.fillStyle="#1667D9";g.beginPath();g.arc(p.x,mid-6-7*p.lv,3,0,7);g.fill()});sb.forEach(p=>{g.fillStyle="#E8590C";g.beginPath();g.arc(p.x,mid+6+7*p.lv,3,0,7);g.fill()});g.globalAlpha=1}
+  // pallino con l'anello: prova dalla parte sbagliata della soglia migliore (classificata come l'altro gruppo)
+  const wrong=(v,grp)=>x.best?(grp==="A"?!(x.best.dir>0?v<x.best.t:v>x.best.t):!(x.best.dir>0?v>x.best.t:v<x.best.t)):false;
+  cv._dots=[];g.globalAlpha=.85;
+  [[sa,"A","#1667D9",-1],[sb,"B","#E8590C",1]].forEach(([L,grp,col,sg])=>L.forEach(p=>{const y=mid+sg*(6+7*p.lv),w=wrong(p.v,grp);
+    g.fillStyle=col;g.beginPath();g.arc(p.x,y,3,0,7);g.fill();if(w){g.globalAlpha=1;g.strokeStyle=col;g.lineWidth=1.4;g.beginPath();g.arc(p.x,y,5.4,0,7);g.stroke();g.globalAlpha=.85}
+    cv._dots.push({x:p.x,y,v:p.v,r:p.r,grp,w})}));g.globalAlpha=1;cv._ind=x}
+function anDotAt(cv,e){const b=cv.getBoundingClientRect(),mx=e.clientX-b.left,my=e.clientY-b.top;let best=null,bd=64;(cv._dots||[]).forEach(d=>{const q=(d.x-mx)**2+(d.y-my)**2;if(q<bd){bd=q;best=d}});return best}
+const anDotTxt=(d,x)=>d.r?`${d.r.data_ora} · ${d.r.colonnina||""} …${(d.r.cuid||"").slice(-5)} · ${d.r.seq||""} · ${d.r.luogo||"luogo n.i."}\n${x.l}: ${(+d.v.toPrecision(4)).toLocaleString("it-IT")} (gruppo ${d.grp})${d.w?" · dalla parte dell'altro gruppo rispetto alla soglia":""}\nesito: ${d.r.esito||""}${d.r.forzata==="si"?" · ⚠ forzata":""}${d.r.esclusa==="si"?" · esclusa":""}`:"";
+$("#anTab").addEventListener("mousemove",e=>{const cv=e.target.closest("canvas[data-an]");if(!cv)return;const d=anDotAt(cv,e);cv.title=d?anDotTxt(d,cv._ind)+"\n(clic per aprire)":`${cv._ind.A.length} prove nel gruppo A, ${cv._ind.B.length} nel gruppo B · un pallino per prova · anello = prova dalla parte sbagliata della soglia`});
+$("#anTab").addEventListener("click",e=>{const cv=e.target.closest("canvas[data-an]");if(!cv)return;const d=anDotAt(cv,e);anDotMenu(d,cv._ind,e)});
+function anDotMenu(d,x,e){let m=$("#anDotMenu");if(!m){m=document.createElement("div");m.id="anDotMenu";m.className="card no-print";m.style.cssText="position:fixed;z-index:50;padding:10px 12px;max-width:360px;display:grid;gap:6px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.18)";document.body.append(m);
+    document.addEventListener("click",ev=>{if(!ev.target.closest("#anDotMenu")&&!ev.target.closest("canvas[data-an]"))m.hidden=true})}
+  if(!d||!d.r){m.hidden=true;return}const r=d.r;
+  m.innerHTML=`<div style="white-space:pre-line">${esc(anDotTxt(d,x))}</div><div class="row" style="gap:6px">${pqBtn(r.file).replace("no-print","")}
+    <button class="btn" data-dotx="${esc(r.file)}">${r.esclusa==="si"?"Reincludi":"Escludi…"}</button><button class="btn" data-dotl="${esc(r.file)}">Trova nella lista</button><button class="btn" data-dotc>✕</button></div>`;
+  m.hidden=false;m.style.left=Math.min(e.clientX+8,innerWidth-380)+"px";m.style.top=Math.min(e.clientY+8,innerHeight-160)+"px";
+  m.onclick=async ev=>{const t=ev.target;if(t.dataset.dotc!==undefined){m.hidden=true;return}
+    if(t.dataset.dotl){m.hidden=true;const it=[...$$("#anList [data-anx]")].find(n=>n.dataset.anx===t.dataset.dotl);if(it){it.scrollIntoView({block:"center"});it.style.outline="2px solid var(--accent)";setTimeout(()=>it.style.outline="",2500)}return}
+    if(t.dataset.dotx){m.hidden=true;try{if(r.esclusa==="si")await api("/api/prove/escludi",{file:r.file,escludi:false});else{const mo=prompt("Escludere la prova dalle analisi? Motivo:","");if(mo===null)return;await api("/api/prove/escludi",{file:r.file,escludi:true,motivo:mo})}await anLoad()}catch(err){fail(err)}}}}
 $("#anGa").parentElement.addEventListener("change",e=>{const t=e.target;if(!t.dataset.g)return;AN.g[t.dataset.g][t.dataset.f]=t.value;anCompute()});
 $("#anGa").parentElement.addEventListener("input",e=>{const t=e.target;if(t.dataset.f!=="q")return;AN.g[t.dataset.g].q=t.value;anCompute()});
 $("#anCamp").onchange=()=>{AN.excl.clear();anRender()};$("#anValid").onchange=anCompute;
