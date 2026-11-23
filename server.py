@@ -36,7 +36,7 @@ import paramiko
 PARAMIKO_VER = getattr(paramiko, "__version__", "?")
 
 APP_NAME = "PoleDesk"
-VERSION = "1.30.0"
+VERSION = "1.30.1"
 
 FROZEN = getattr(sys, "frozen", False)          # True quando gira come PoleDesk.exe
 UPDATED = os.environ.get("POLEDESK_UPDATED") == "1"
@@ -5408,6 +5408,8 @@ def sc_precheck(body):
 ESITI = ["staccato (diagnostica)", "staccato", "sospetto", "incerto", "attaccato", "taratura", "non valida", "interrotta",
          "non partita", "solo indicatori"]
 F_SC_META = SC_DIR / "prove_meta.json"     # dati inseriti a mano per le prove di Prova e Campo (luogo, tipo, schermo, campagna, note)
+F_FORZ = SC_DIR / "forzature.json"          # prove forzate valide dall'operatore: {file: {data, nota, motivi}} (tutte le origini)
+F_ESCL = SC_DIR / "esclusioni_analisi.json"  # prove escluse a mano dalle analisi: {file: {data, motivo}}
 _EV_CACHE = {}
 _UNI = {"key": None, "rows": None, "dec": None}
 COND_FRAST = ("frast_min", "frast", ">=", "frastagliatura in ventola ≥ {} °C (solo all'aperto)")
@@ -5494,6 +5496,17 @@ def _decidi(u, so, ctx):
                              "regola": f"{va.get('notte_dalle', '19:00')}–{va.get('notte_alle', '06:00')}" + ("" if serve else " · non richiesta per " + (u["luogo"] or "luogo non indicato")),
                              "ok": (bool(ev.get("notte")) if serve else None)})
     motivi = [x for x in d["validita"] if x["ok"] is False]
+    d["forzata"] = None
+    if u.get("forzata") and motivi:
+        fz = u["forzata"]
+        d["forzata"] = {"data": fz.get("data", ""), "nota": fz.get("nota", ""), "motivi": [f"{x['nome']}: {x['valore']} (richiesto {x['regola']})" for x in motivi]}
+        for x in motivi:
+            x["ok"], x["forzata"] = None, True
+        d["catena"].append(f"FORZATA VALIDA dall'operatore{(' il ' + fz['data'][:16].replace('T', ' ')) if fz.get('data') else ''}"
+                           f"{(' (' + fz['nota'] + ')') if fz.get('nota') else ''}: ignorate " + "; ".join(d["forzata"]["motivi"]))
+        motivi = []
+    elif u.get("forzata"):
+        d["forzata"] = {"data": u["forzata"].get("data", ""), "nota": u["forzata"].get("nota", ""), "motivi": []}
     if u.get("stato_script") in ("interrotta", "non partita"):
         d["catena"].append(f"prova {u['stato_script']}: {u.get('motivo_script', '')}")
         d["esito_termico"] = u["stato_script"]
@@ -5592,7 +5605,7 @@ def prove_unite(force=False):
     """Tutte le prove (Prova, Campo, Profilo termico) con lo stesso formato e la stessa decisione."""
     so = sc_soglie()
     mt = lambda p: p.stat().st_mtime if p.exists() else 0
-    key = tuple(mt(p) for p in (F_SC_PROVE, F_PROF_SUMMARY, F_SC_SOGLIE, F_SC_DIAG, F_SC_META, SC_SEQ))
+    key = tuple(mt(p) for p in (F_SC_PROVE, F_PROF_SUMMARY, F_SC_SOGLIE, F_SC_DIAG, F_SC_META, SC_SEQ, F_FORZ, F_ESCL))
     if not force and _UNI["key"] == key and _UNI["rows"] is not None:
         return _UNI["rows"]
     items = []
@@ -5627,6 +5640,15 @@ def prove_unite(force=False):
                       "seq": seq, "t": t, "notte": _notte(t), "luogo": luogo, "tipo": "taratura" if (r.get("tipo") == "taratura" or r.get("riferimento") == "si") else "rilevamento",
                       "configurazione": r.get("configurazione", ""), "campagna": r.get("campagna", ""), "note": r.get("note", ""), "test": False,
                       "stato_script": "interrotta" if r.get("esito") == "interrotta" else "", "motivo_script": r.get("motivo", ""), "ev": ev, "row": r})
+    forz, escl = load(F_FORZ, {}), load(F_ESCL, {})
+    for u in items:
+        f = forz.get(u["file"])
+        if f is None and (u.get("row") or {}).get("forzata") == "si":
+            f = {"data": "", "nota": "forzata valida nel Profilo termico"}
+        u["forzata"] = f
+        u["esclusa"] = escl.get(u["file"])
+        if f:                                   # forzata: la validità vale anche per il metodo B (taratura)
+            u["ev"] = dict(u["ev"], valida=True)
     # tarature valide per colonnina e sequenza (metodo B), diagnostica
     ctx = {"tar": {}, "diag": _diag_storico()}
     for u in items:
@@ -5692,11 +5714,14 @@ def _row_unita(u):
                  "Ie": s(ind.get("I")), "IA": s(ind.get("IA")), "A_amp": s(ind.get("A")), "R_ar": s(ind.get("R")), "rimbalzo": s(ind.get("rimbalzo"), 1),
                  "In": s(ind.get("In")), "QA": s(ind.get("Q")), "tau_e": s(ind.get("tau"), 1), "C_e": s(ind.get("C")),
                  "frast_base": s(fr.get("base")), "frast_rif": s(fr.get("rif")), "frast_carica": s(fr.get("carica")), "frast_ventola": s(fr.get("ventola")),
-                 "frast_recupero": s(fr.get("recupero")), "test": "si" if u["test"] else "", "perche": " · ".join(d["catena"])})
+                 "frast_recupero": s(fr.get("recupero")), "test": "si" if u["test"] else "", "perche": " · ".join(d["catena"]),
+                 "forzata": "si" if d.get("forzata") else "", "forzata_motivi": "; ".join((d.get("forzata") or {}).get("motivi") or []),
+                 "forzata_nota": (d.get("forzata") or {}).get("nota", ""), "esclusa": "si" if u.get("esclusa") else "",
+                 "esclusa_motivo": (u.get("esclusa") or {}).get("motivo", "")})
     if not u.get("row"):            # prove di Prova e Campo: campi del riepilogo che Analisi e Conclusioni usano
         base.update({"I_medio": s(ind.get("I")), "C": s(ind.get("C")), "tau_medio": s(ind.get("tau"), 1), "deriva": s(ind.get("deriva"), 4),
                      "temp_esterna": s(ev.get("Text"), 1), "Q": s(d["QB"], 3), "riferimento": "si" if u["tipo"] == "taratura" else "no",
-                     "campioni": "", "forzata": "", "modello": ""})
+                     "campioni": "", "modello": ""})
     return base
 
 
@@ -5715,6 +5740,8 @@ def prova_perche(file):
             "esito_A": d["esito_A"], "esito_B": d["esito_B"], "QB": d["QB"], "I0": d["I0"], "catena": d["catena"],
             "regola": next((x["regola"] for x in esiti_legenda(so)["esiti"] if x["esito"] == d["esito"]), ""),
             "frastagliatura": [{"fase": k, "valore": fr.get(k)} for k in ("base", "rif", "carica", "ventola", "recupero")],
+            "forzata": d.get("forzata"), "esclusa": u.get("esclusa"),
+            "forzabile": bool(d.get("forzata")) or any(x["ok"] is False for x in d["validita"]),
             "indicatori": ev.get("ind") or {}, "Text": ev.get("Text"), "avvisi": ev.get("avvisi") or [], "test": u["test"]}
 
 
@@ -5743,6 +5770,44 @@ def prove_meta_edit(body):
     if ch:
         audit(None, "prove", f"dati della prova modificati: {f}", True, "; ".join(ch))
     return {"changed": ch}
+
+
+def prove_forza(body):
+    """Forza valida (o annulla la forzatura di) una prova: decisione dell'operatore, con nota obbligatoria e traccia."""
+    f = str(body.get("file") or "")
+    prove_unite()
+    u = (_UNI["dec"] or {}).get(f)
+    if not u:
+        raise KeyError("prova non trovata")
+    with LOCK:
+        d = load(F_FORZ, {})
+        if body.get("forza"):
+            nota = str(body.get("nota") or "").strip()
+            if not nota:
+                raise ValueError("scrivi il motivo della forzatura")
+            motivi = [f"{x['nome']}: {x['valore']}" for x in u["d"]["validita"] if x["ok"] is False] or (u["d"].get("forzata") or {}).get("motivi") or []
+            d[f] = {"data": datetime.now().isoformat(timespec="seconds"), "nota": nota[:300], "motivi_al_momento": motivi}
+            msg = f"prova forzata valida: {f}"
+        else:
+            d.pop(f, None)
+            msg = f"forzatura annullata: {f}"
+        save(F_FORZ, d)
+    audit(None, "prove", msg, True, (body.get("nota") or "")[:200])
+    return {"ok": True}
+
+
+def prove_escludi(body):
+    """Esclude (o reinclude) una prova dalle analisi, con il motivo; resta salvato."""
+    f = str(body.get("file") or "")
+    with LOCK:
+        d = load(F_ESCL, {})
+        if body.get("escludi"):
+            d[f] = {"data": datetime.now().isoformat(timespec="seconds"), "motivo": str(body.get("motivo") or "").strip()[:300]}
+        else:
+            d.pop(f, None)
+        save(F_ESCL, d)
+    audit(None, "prove", ("esclusa dalle analisi: " if body.get("escludi") else "reinclusa nelle analisi: ") + f, True, (body.get("motivo") or "")[:200])
+    return {"ok": True}
 
 
 def prove_luogo_edit(body):
@@ -6853,6 +6918,10 @@ def route(method, path, q, body):
             return profile_import(body)
         if path == "/api/profile/edit":
             return prove_luogo_edit(body)
+        if path == "/api/prove/forza":
+            return prove_forza(body)
+        if path == "/api/prove/escludi":
+            return prove_escludi(body)
         if path == "/api/profile/campaign":
             return {"campaigns": campaign_save(body)}
         if path == "/api/profile/meteo":

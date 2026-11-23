@@ -145,6 +145,9 @@ table.monst tr.cur td{outline:1px solid var(--accent)}table.monst .pv{color:var(
 dialog#dPerche{width:min(980px,96vw);max-height:92vh;overflow:auto;padding:18px 20px}.pq h4{margin:14px 0 6px;font:600 13.5px var(--ui)}.pq table{width:100%}.pq td,.pq th{font-size:12.5px;padding:4px 8px;text-align:left;border-bottom:1px solid var(--line)}
 .pq .y{color:var(--ok);font-weight:700}.pq .n{color:var(--err);font-weight:700}.pq .q{color:var(--muted)}.pq .chain li{margin:3px 0}.pq .esito{font:700 18px var(--ui)}
 .few{background:color-mix(in srgb,var(--warn) 22%,transparent);border-radius:4px;padding:0 4px}
+.fz{display:inline-block;background:color-mix(in srgb,var(--warn) 28%,transparent);color:var(--warn);font:700 11px var(--ui);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.fzbox{border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent);padding:8px 10px;border-radius:4px;margin:8px 0;font-size:13px}
+.anlist .x{opacity:.55;text-decoration:line-through}.anall{outline:2px solid var(--warn)}
 @media print{body.pqprint>*:not(#dPerche){display:none!important}body.pqprint dialog#dPerche[open]{position:static;width:auto;max-height:none;border:0;display:block}}
 .cprule{display:grid;grid-template-columns:minmax(0,1fr) 96px 96px 96px 96px auto;gap:8px;align-items:center}
 /* console AUX */
@@ -699,11 +702,12 @@ a.btn{text-decoration:none;color:inherit}
           <div class="card"><h3>Campagna<span class="grow"></span><button class="btn no-print" id="anNew">Nuova</button></h3><div class="b" style="display:grid;gap:8px">
             <select id="anCamp" aria-label="Campagna"></select>
             <div id="anObjBox" hidden><div style="display:grid;gap:6px"><label class="f">Obiettivo<textarea id="anObj" rows="2" style="width:100%"></textarea></label><button class="btn no-print" id="anObjSave">Salva obiettivo</button></div></div>
+            <button class="btn no-print" id="anAll" title="Ignora campagna, validità, luogo, sequenza ed esclusioni: entrano tutte le prove (restano solo i gruppi A e B)">Mostra tutte le prove</button>
             <label class="row no-print" style="gap:6px"><input type="checkbox" id="anValid" checked> solo prove valide</label>
             <div class="row no-print"><label class="f">luogo<select id="anLuogo" style="width:auto"><option value="">tutti</option><option value="aperto">all'aperto</option><option value="laboratorio">laboratorio</option><option value="-">non indicato</option></select></label>
               <label class="f">sequenza<select id="anSeq" style="width:auto"></select></label></div><div id="anMix" class="hint"></div></div></div>
           <div class="card no-print"><h3>Gruppi da confrontare<span class="grow"></span><button class="btn" id="anSwap">A ⇄ B</button></h3><div class="b" style="display:grid;gap:8px"><div class="grp a" id="anGa"></div><div class="grp b" id="anGb"></div><div id="anCnt" class="hint"></div></div></div>
-          <div class="card"><h3>Prove<span class="grow"></span><span class="hint">clic per escludere</span></h3><div class="b"><div class="anlist" id="anList"></div></div></div>
+          <div class="card"><h3>Prove<span class="grow"></span><span class="hint">clic per escludere (resta salvato)</span></h3><div class="b"><div class="anlist" id="anList"></div></div></div>
         </div>
         <div style="display:grid;gap:14px;align-content:start;min-width:0"><div class="card"><h3><span id="anTitle"></span><span class="grow"></span><button class="btn no-print" id="anPrint">Stampa report</button></h3><div class="hint" id="anPrintInfo" style="padding:8px 14px 0"></div><div id="anTab" style="overflow-x:auto"></div></div>
         <details class="card" open><summary style="padding:11px 14px;cursor:pointer;font:600 14px var(--ui)">Legenda degli esiti</summary><div class="b leg" id="anLeg"></div></details></div>
@@ -1959,7 +1963,7 @@ function pgList(){const c=$("#pgCuid").value,tp=$("#pgTipo").value,q=$("#pgQ").v
   $("#pgList").innerHTML=rows.length?rows.map(r=>{const k=PG.sel.indexOf(r.file),tar=r.tipo==="taratura"||r.riferimento==="si";
     return `<label class="${k>=0?"on":""}"><input type="checkbox" data-f="${esc(r.file)}" ${k>=0?"checked":""}>
       <span>${k>=0?`<i class="pgsw" style="background:${PG_COL[k%8]}"></i>`:""}<b>${esc(r.data_ora)}</b> · ${tar?"<b>taratura</b>":esc(r.configurazione)}<small>${esc(r.cuid)} · ${esc(r.luogo||"")}${r.temp_esterna?` ${esc(r.temp_esterna)} °C`:""} · Ī ${fv(r.I_medio)}${r.Q?` · Q ${fv(r.Q)}`:""}${r.S_medio?` · S̄ ${fv(r.S_medio)}`:""}${r.P?` · P ${fv(r.P)}`:""}</small></span>
-      <span class="badge ${ESITO_CLS[r.esito]||""}">${esc(r.esito||"")}</span>${pqBtn(r.file)}</label>`}).join(""):`<div class="empty">Nessuna prova con questi filtri</div>`}
+      <span class="badge ${ESITO_CLS[r.esito]||""}">${esc(r.esito||"")}</span>${r.forzata==="si"?`<span class="fz" title="era non valida per: ${esc(r.forzata_motivi)}">⚠ forzata</span>`:""}${pqBtn(r.file)}</label>`}).join(""):`<div class="empty">Nessuna prova con questi filtri</div>`}
 ["#pgCuid","#pgTipo","#pgCamp"].forEach(s=>$(s).onchange=pgList);$("#pgMA").onchange=()=>pgDraw();$("#pgQ").oninput=pgList;$("#pgReload").onclick=pgLoad;
 $("#pgNone").onclick=()=>{PG.sel=[];pgList();pgDraw()};
 $("#pgList").addEventListener("change",async e=>{const f=e.target.dataset.f;if(!f)return;
@@ -2021,7 +2025,7 @@ $("#pgPng").onclick=()=>{const a=$("#pgC1"),b=$("#pgC2");if(!PG.map)return toast
   const l=document.createElement("a");l.href=c.toDataURL("image/png");l.download=`prove_${new Date().toISOString().slice(0,16).replace(/[-:T]/g,"")}.png`;l.click()};
 
 /* ---------- analisi: quale indicatore separa i due gruppi ---------- */
-const AN={rows:[],excl:new Set(),camps:{},g:{a:{configurazione:"attaccato"},b:{configurazione:"tolto"}}};
+const AN={rows:[],excl:new Set(),camps:{},all:false,g:{a:{configurazione:"attaccato"},b:{configurazione:"tolto"}}};
 const AN_FIELDS=[["seq","sequenza"],["fonte","origine"],["esito","esito"],["modello","modello"],["notte","al buio"],["tipo","tipo"],["configurazione","schermo"],["luogo","luogo"],["cuid","CUID"],["ruolo_coppia","ruolo in coppia"]];
 const AN_IND=[["I_medio","Ī","°C/min"],["IA","Ī/A",""],["A_amp","A = calo in ventola","°C"],["R_ar","R = A/salita in carica",""],["rimbalzo","rimbalzo a 15 min","%"],["In","In = Ī/ΔT aria",""],["QA","Q = A/ΔT aria",""],["QB","Ī/I₀ (metodo B, motore unico)",""],
   ["frast_ventola","frastagliatura in ventola","°C"],["frast_rif","frastagliatura in riferimento","°C"],["frast_carica","frastagliatura in carica","°C"],["frast_recupero","frastagliatura in recupero","°C"],["frast_base","frastagliatura in attesa base","°C"],["n_vere","condizioni vere",""],["Q","Q = Ī/I₀ (riferimento del Profilo termico)",""],["Q_coppia","Q coppia",""],["F_medio","F (120 s)",""],["k_aria_medio","k rispetto all’aria","1/min"],["dT_riposo","AUX − T aria a riposo","°C"],["Tinf_medio","T∞","°C"],["deriva","deriva della base","°C/min"],["k_medio","k","1/min"],["tau_medio","τ (asintoto libero)","s"],["I_n","I_n compensato","°C/min"],
@@ -2034,9 +2038,10 @@ $("#anLuogo").onchange=()=>anCompute();$("#anSeq").onchange=()=>anCompute();
 function anOpts(field,cur){const vals=[...new Set(AN.rows.map(r=>field==="tipo"?anTipo(r):r[field]).filter(Boolean))].sort();
   return `<option value="">qualsiasi</option>`+vals.map(v=>`<option ${v===cur?"selected":""}>${esc(v)}</option>`).join("")}
 function anBase(){const cp=$("#anCamp").value,val=$("#anValid").checked,lu=$("#anLuogo").value,sq=$("#anSeq").value;
+  if(AN.all)return AN.rows.slice();
   return AN.rows.filter(r=>(!cp||r.campagna===cp)&&(!val||r.valida==="si")&&(!lu||(lu==="-"?!r.luogo:r.luogo===lu))&&(!sq||r.seq===sq))}
 const anMatch=(r,g)=>AN_FIELDS.every(([f])=>!g[f]||(f==="tipo"?anTipo(r):r[f])===g[f])&&(!g.q||[r.note,r.data_ora,r.colonnina].join(" ").toLowerCase().includes(g.q.toLowerCase()));
-function anGroups(){const base=anBase().filter(r=>!AN.excl.has(r.file));return{a:base.filter(r=>anMatch(r,AN.g.a)),b:base.filter(r=>anMatch(r,AN.g.b))}}
+function anGroups(){const base=anBase().filter(r=>AN.all||r.esclusa!=="si");return{a:base.filter(r=>anMatch(r,AN.g.a)),b:base.filter(r=>anMatch(r,AN.g.b))}}
 function anRender(){const sc=$("#anCamp"),cc=sc.value;const names=Object.keys(AN.camps).filter(n=>!n.startsWith("_")).sort();
   sc.innerHTML=`<option value="">tutte le prove</option>`+names.map(n=>`<option ${n===cc?"selected":""}>${esc(n)}</option>`).join("");
   $("#anObj").value=cc?(AN.camps[cc]?.obiettivo||""):"";$("#anObjBox").hidden=!cc;
@@ -2049,9 +2054,12 @@ function anBest(A,B){const all=[...new Set([...A,...B])].sort((x,y)=>x-y);let be
     for(const dir of[1,-1]){const ta=A.filter(v=>dir>0?v<t:v>t).length/A.length,tb=B.filter(v=>dir>0?v>t:v<t).length/B.length,acc=(ta+tb)/2;
       if(!best||acc>best.acc)best={t,dir,acc}}}return best}
 function anCompute(){const {a,b}=anGroups();
+  {const fz=[...a,...b].filter(r=>r.forzata==="si"),ex=AN.rows.filter(r=>r.esclusa==="si").length;
+   $("#anMix").innerHTML=($("#anMix").innerHTML||"");AN.fzTxt=(fz.length?`<div class="fzbox">⚠ <b>${fz.length} prov${fz.length===1?"a forzata valida":"e forzate valide"}</b> nel confronto: ${fz.map(r=>`${esc(r.data_ora)} …${esc((r.cuid||"").slice(-5))} (era non valida per: ${esc(r.forzata_motivi||"motivo non registrato")}${r.forzata_nota?"; nota: "+esc(r.forzata_nota):""})`).join(" · ")}</div>`:"")+
+     (AN.all?`<div class="fzbox">Mostrate <b>tutte</b> le prove: ignorati campagna, validità, luogo, sequenza ed esclusioni.</div>`:ex?`<div class="hint">${ex} prove escluse a mano (barrate nella lista).</div>`:"")}
   $("#anCnt").innerHTML=`<span class="ga ${a.length<5?"few":""}">A: ${a.length} prove</span> · <span class="gb ${b.length<5?"few":""}">B: ${b.length} prove</span>${a.length<5||b.length<5?` <span class="few">meno di 5 prove in un gruppo: i confronti non sono un risultato</span>`:""}`;
   {const bs=anBase(),L=[...new Set(bs.map(r=>r.luogo||"non indicato"))],Q=[...new Set(bs.map(r=>r.seq||"?"))];
-   $("#anMix").innerHTML=(L.length>1||Q.length>1)?`<span class="few">Attenzione: nel confronto ci sono ${L.length>1?`luoghi diversi (${L.map(esc).join(", ")})`:""}${L.length>1&&Q.length>1?" e ":""}${Q.length>1?`sequenze diverse (${Q.map(esc).join(", ")})`:""}: le soglie non si mescolano, filtra per luogo e sequenza.</span>`:""}
+   $("#anMix").innerHTML=(AN.fzTxt||"")+((L.length>1||Q.length>1)?`<span class="few">Attenzione: nel confronto ci sono ${L.length>1?`luoghi diversi (${L.map(esc).join(", ")})`:""}${L.length>1&&Q.length>1?" e ":""}${Q.length>1?`sequenze diverse (${Q.map(esc).join(", ")})`:""}: le soglie non si mescolano, filtra per luogo e sequenza.</span>`:"")}
   const res=AN_IND.map(([k,l,u])=>{const A=a.map(r=>anNum(k==="Q"||k==="P"?(anTipo(r)==="taratura"?null:r[k]):r[k])).filter(v=>v!=null&&isFinite(v)),B=b.map(r=>anNum(k==="Q"||k==="P"?(anTipo(r)==="taratura"?null:r[k]):r[k])).filter(v=>v!=null&&isFinite(v));
     const sa=anStats(A),sb=anStats(B);let d=null,best=null,sep=false;
     if(sa.n&&sb.n){const ps=Math.sqrt((sa.sd**2+sb.sd**2)/2);d=ps?Math.abs(sa.m-sb.m)/ps:(sa.m!==sb.m?Infinity:0);best=anBest(A,B);sep=sa.max<sb.min||sb.max<sa.min}
@@ -2063,22 +2071,30 @@ function anCompute(){const {a,b}=anGroups();
       <td class="num">${x.sa.n?`${f(x.sa.m)} ± ${f(x.sa.sd)} <span class="${x.sa.n<5?"few":"hint"}" title="prove nel gruppo A">(${x.sa.n})</span>`:"–"}</td><td class="num">${x.sb.n?`${f(x.sb.m)} ± ${f(x.sb.sd)} <span class="${x.sb.n<5?"few":"hint"}" title="prove nel gruppo B">(${x.sb.n})</span>`:"–"}</td>
       <td class="num"><b>${x.d==null?"–":x.d===Infinity?"∞":f(x.d)}</b>${x.sep?(Math.min(x.sa.n,x.sb.n)<5?` <span class="badge few" title="con meno di 5 prove per gruppo la separazione non è un risultato">separati (${Math.min(x.sa.n,x.sb.n)} prove)</span>`:` <span class="badge ok">separati</span>`):""}</td>
       <td>${x.best?`B ${x.best.dir>0?"≥":"≤"} <b>${f(x.best.t)}</b>`:"–"}</td><td class="num">${x.best?Math.round(x.best.acc*100)+"%":"–"}</td>
-      <td><canvas data-an="${i}" style="width:150px;height:30px"></canvas></td></tr>`).join("")}</tbody></table>
+      <td><canvas data-an="${i}" style="width:220px;height:30px"></canvas></td></tr>`).join("")}</tbody></table>
     <div class="hint" style="padding:8px 14px">Ordinati per separazione. Con poche prove i numeri sono indicativi: la soglia migliore va confermata con prove nuove. Punti in alto = gruppo A, in basso = gruppo B, tratteggio = soglia.</div>`:`<div class="empty">Definisci i due gruppi: servono prove valide in entrambi.</div>`;
   AN.res=res;$$("#anTab canvas").forEach(cv=>anStrip(cv,res[+cv.dataset.an]));
-  $("#anList").innerHTML=anBase().map(r=>{const ia=anMatch(r,AN.g.a),ib=anMatch(r,AN.g.b),x=AN.excl.has(r.file);
-    return `<div class="${x?"x":""}" data-anx="${esc(r.file)}" title="clic per escludere o includere"><span>${ia?'<b class="ga">A</b>':""}${ib?'<b class="gb">B</b>':""}</span><span>${esc(r.data_ora)} · …${esc((r.cuid||"").slice(-5))} · ${anTipo(r)==="taratura"?"taratura":esc(r.configurazione)} · ${esc(r.luogo||"")}${r.temp_esterna?` ${esc(r.temp_esterna)} °C`:""}</span><span class="hint">Ī ${fv(r.I_medio)} <span class="badge ${ESITO_CLS[r.esito]||""}">${esc(r.esito||"")}</span> ${pqBtn(r.file)}</span></div>`}).join("")||`<div class="hint">Nessuna prova</div>`;
+  $("#anList").innerHTML=anBase().map(r=>{const ia=anMatch(r,AN.g.a),ib=anMatch(r,AN.g.b),x=r.esclusa==="si";
+    return `<div class="${x&&!AN.all?"x":""}" data-anx="${esc(r.file)}" title="${x?"esclusa: "+esc(r.esclusa_motivo||"nessun motivo")+" · clic per reincluderla":"clic per escluderla dalle analisi"}"><span>${ia?'<b class="ga">A</b>':""}${ib?'<b class="gb">B</b>':""}</span><span>${esc(r.data_ora)} · …${esc((r.cuid||"").slice(-5))} · ${anTipo(r)==="taratura"?"taratura":esc(r.configurazione)} · ${esc(r.luogo||"")}${r.temp_esterna?` ${esc(r.temp_esterna)} °C`:""}</span><span class="hint">Ī ${fv(r.I_medio)} <span class="badge ${ESITO_CLS[r.esito]||""}">${esc(r.esito||"")}</span>${r.forzata==="si"?` <span class="fz" title="era non valida per: ${esc(r.forzata_motivi)}${r.forzata_nota?" · nota: "+esc(r.forzata_nota):""}">⚠ forzata</span>`:""}${x?` <span class="hint">esclusa${r.esclusa_motivo?": "+esc(r.esclusa_motivo):""}</span>`:""} ${pqBtn(r.file)}</span></div>`}).join("")||`<div class="hint">Nessuna prova</div>`;
   const cp=$("#anCamp").value;$("#anTitle").textContent=cp?`Campagna: ${cp}`:"Tutte le prove";$("#anPrintInfo").textContent=`${cp&&AN.camps[cp]?.obiettivo?"Obiettivo: "+AN.camps[cp].obiettivo+" · ":""}Gruppo A: ${anDesc(AN.g.a)} · Gruppo B: ${anDesc(AN.g.b)} · ${new Date().toLocaleString("it-IT")}`}
 const anDesc=g=>AN_FIELDS.filter(([f])=>g[f]).map(([f,l])=>`${l} ${g[f]}`).concat(g.q?[`“${g.q}”`]:[]).join(", ")||"tutte";
-function anStrip(cv,x){const g=cv.getContext("2d"),dpr=devicePixelRatio||1,W=150,H=30;cv.width=W*dpr;cv.height=H*dpr;g.scale(dpr,dpr);const all=[...x.A,...x.B];if(!all.length)return;
+function anStack(vals,X){const placed=[];return vals.slice().sort((p,q)=>p-q).map(v=>{const x=X(v);let lv=0;while(placed.some(p=>p.lv===lv&&Math.abs(p.x-x)<7))lv++;placed.push({x,lv});return{x,lv}})}
+function anStrip(cv,x){const g=cv.getContext("2d"),dpr=devicePixelRatio||1,W=220;const all=[...x.A,...x.B];if(!all.length)return;
   let lo=Math.min(...all),hi=Math.max(...all);if(lo===hi){lo-=1;hi+=1}const X=v=>6+(v-lo)/(hi-lo)*(W-12);
-  g.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--line");g.beginPath();g.moveTo(4,H/2);g.lineTo(W-4,H/2);g.stroke();
+  const sa=anStack(x.A,X),sb=anStack(x.B,X),na=Math.max(0,...sa.map(p=>p.lv)),nb=Math.max(0,...sb.map(p=>p.lv)),H=Math.max(30,22+7*(na+nb+2));
+  cv.style.width=W+"px";cv.style.height=H+"px";cv.width=W*dpr;cv.height=H*dpr;g.scale(dpr,dpr);const mid=8+7*(na+1);
+  cv.title=`${x.A.length} prove nel gruppo A, ${x.B.length} nel gruppo B: un pallino per prova (impilati se coincidono)`;
+  g.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--line");g.beginPath();g.moveTo(4,mid);g.lineTo(W-4,mid);g.stroke();
   if(x.best){g.setLineDash([3,3]);g.strokeStyle="#888";g.beginPath();g.moveTo(X(x.best.t),2);g.lineTo(X(x.best.t),H-2);g.stroke();g.setLineDash([])}
-  g.globalAlpha=.8;x.A.forEach(v=>{g.fillStyle="#1667D9";g.beginPath();g.arc(X(v),H/2-6,3.2,0,7);g.fill()});x.B.forEach(v=>{g.fillStyle="#E8590C";g.beginPath();g.arc(X(v),H/2+6,3.2,0,7);g.fill()});g.globalAlpha=1}
+  g.globalAlpha=.85;sa.forEach(p=>{g.fillStyle="#1667D9";g.beginPath();g.arc(p.x,mid-6-7*p.lv,3,0,7);g.fill()});sb.forEach(p=>{g.fillStyle="#E8590C";g.beginPath();g.arc(p.x,mid+6+7*p.lv,3,0,7);g.fill()});g.globalAlpha=1}
 $("#anGa").parentElement.addEventListener("change",e=>{const t=e.target;if(!t.dataset.g)return;AN.g[t.dataset.g][t.dataset.f]=t.value;anCompute()});
 $("#anGa").parentElement.addEventListener("input",e=>{const t=e.target;if(t.dataset.f!=="q")return;AN.g[t.dataset.g].q=t.value;anCompute()});
 $("#anCamp").onchange=()=>{AN.excl.clear();anRender()};$("#anValid").onchange=anCompute;
-$("#anList").addEventListener("click",e=>{if(e.target.closest("[data-pq]"))return;const f=e.target.closest("[data-anx]")?.dataset.anx;if(!f)return;AN.excl.has(f)?AN.excl.delete(f):AN.excl.add(f);anCompute()});
+$("#anList").addEventListener("click",async e=>{if(e.target.closest("[data-pq]"))return;const f=e.target.closest("[data-anx]")?.dataset.anx;if(!f)return;const r=AN.rows.find(x=>x.file===f);if(!r)return;
+  try{if(r.esclusa==="si"){if(!confirm("Reincludere la prova nelle analisi?"))return;await api("/api/prove/escludi",{file:f,escludi:false})}
+    else{const m=prompt("Escludere la prova dalle analisi? Scrivi il motivo (resta salvato):","");if(m===null)return;await api("/api/prove/escludi",{file:f,escludi:true,motivo:m})}
+    await anLoad()}catch(err){fail(err)}});
+$("#anAll").onclick=()=>{AN.all=!AN.all;$("#anAll").textContent=AN.all?"Torna ai filtri":"Mostra tutte le prove";$("#anAll").classList.toggle("anall",AN.all);anCompute()};
 $("#anSwap").onclick=()=>{[AN.g.a,AN.g.b]=[AN.g.b,AN.g.a];anRender()};
 $("#anObjSave").onclick=async()=>{const n=$("#anCamp").value;if(!n)return;try{const d=await api("/api/profile/campaign",{name:n,obiettivo:$("#anObj").value});AN.camps=d.campaigns;toast("Obiettivo salvato")}catch(e){fail(e)}};
 $("#anNew").onclick=async()=>{const n=prompt("Nome della nuova campagna (es. 004 vs gemella, esterno, novembre)");if(!n)return;
@@ -2113,7 +2129,7 @@ function coRender(){const cp=$("#coCamp").value,ix=S.profile?.index||{},all=CO.r
   $("#coLeg").innerHTML=legHTML(LEG);$("#coLegFile").textContent=LEG?LEG.file:"";
   const P=rows.slice().sort((x,y)=>(y.data_ora||"").split(" ")[0].split("/").reverse().join("").localeCompare((x.data_ora||"").split(" ")[0].split("/").reverse().join(""))||(y.data_ora||"").localeCompare(x.data_ora||""));
   $("#coProve").innerHTML=P.length?`<table class="antab"><thead><tr><th>data</th><th>colonnina</th><th>sequenza</th><th>luogo</th><th>tipo</th><th>esito</th><th class="num">condizioni</th><th>metodo</th><th>perché</th><th class="no-print"></th></tr></thead><tbody>${P.map(r=>`<tr data-pq="${esc(r.file)}" style="cursor:pointer"><td style="white-space:nowrap">${esc(r.data_ora)}</td><td>${esc(r.colonnina||"")} <span class="hint">…${esc((r.cuid||"").slice(-5))}</span></td><td>${esc(r.seq||"")}</td><td>${esc(r.luogo||"–")}</td><td>${esc(r.tipo||"")}</td>
-      <td><span class="badge ${ESITO_CLS[r.esito]||""}">${esc(r.esito||"")}</span>${r.esito_termico&&r.esito_termico!==r.esito?` <span class="hint">termica: ${esc(r.esito_termico)}</span>`:""}</td><td class="num">${r.n_calc&&r.n_calc!=="0"?`${esc(r.n_vere)}/${esc(r.n_calc)}`:"–"}</td><td>${esc(r.metodo||"")}</td><td class="hint" style="min-width:260px;white-space:normal">${esc(r.perche||r.motivo||"")}</td><td class="no-print">${pqBtn(r.file)}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">Nessuna prova</div>`}
+      <td><span class="badge ${ESITO_CLS[r.esito]||""}">${esc(r.esito||"")}</span>${r.forzata==="si"?` <span class="fz" title="era non valida per: ${esc(r.forzata_motivi)}">⚠ forzata: ${esc(r.forzata_motivi||"")}</span>`:""}${r.esclusa==="si"?` <span class="hint">esclusa dalle analisi</span>`:""}${r.esito_termico&&r.esito_termico!==r.esito?` <span class="hint">termica: ${esc(r.esito_termico)}</span>`:""}</td><td class="num">${r.n_calc&&r.n_calc!=="0"?`${esc(r.n_vere)}/${esc(r.n_calc)}`:"–"}</td><td>${esc(r.metodo||"")}</td><td class="hint" style="min-width:260px;white-space:normal">${esc(r.perche||r.motivo||"")}</td><td class="no-print">${pqBtn(r.file)}</td></tr>`).join("")}</tbody></table>`:`<div class="empty">Nessuna prova</div>`}
 function coFindings(all,val,ix){const out=[],li=(icon,html)=>out.push(`<li><span class="coi">${icon}</span><div>${html}</div></li>`);
   if(!all.length)return `<div class="empty">Nessuna prova registrata${$("#coCamp").value?" in questa campagna":""}.</div>`;
   // validità
@@ -2608,11 +2624,14 @@ function pqHTML(d,edit){const l0=d.livello0||{};const pr=d.fonte==="Profilo term
       <label class="f">schermo (verificato)<input data-pqf="configurazione" value="${esc(d.schermo||"")}" placeholder="attaccato, staccato…" style="width:150px"></label><button class="btn" id="pqSave" style="align-self:end">Salva</button></div>`:"";
   return `<div class="row" style="gap:12px;align-items:baseline"><span class="esito badge ${ESITO_CLS[d.esito]||""}">${esc(d.esito)}</span><b>${esc(d.colonnina||"")}</b> <span style="font:12px var(--mono)">${esc(d.cuid)}</span>
       <span class="hint">${esc(d.data)} · sequenza ${esc(d.seq)} · ${esc(d.fonte)} · luogo ${esc(d.luogo)} · ${esc(d.tipo)}${d.schermo?" · schermo "+esc(d.schermo):""}${d.test?" · tempi ridotti":""}</span></div>${ed}
+    ${d.forzata?`<div class="fzbox">⚠ <b>FORZATA VALIDA</b> dall'operatore${d.forzata.data?" il "+esc(d.forzata.data.slice(0,16).replace("T"," ")):""}${d.forzata.nota?` · nota: ${esc(d.forzata.nota)}`:""}<br>Era non valida per: <b>${esc((d.forzata.motivi||[]).join("; ")||"(nessun motivo oggi: le condizioni ora sono rispettate)")}</b>
+      ${edit?`<div class="no-print" style="margin-top:6px"><button class="btn" id="pqUnforce">Annulla la forzatura</button></div>`:""}</div>`:(edit&&d.forzabile?`<div class="no-print" style="margin:6px 0"><button class="btn" id="pqForce" title="Considera valida la prova ignorando le condizioni di validità mancanti; resta segnalata ovunque">Forza valida…</button></div>`:"")}
+    ${d.esclusa?`<div class="hint">Esclusa dalle analisi${d.esclusa.motivo?": "+esc(d.esclusa.motivo):""}</div>`:""}
     <div class="hint" style="margin-top:4px"><b>Regola:</b> ${esc(d.regola||"")}</div>
     <h4>Come si arriva all'esito</h4><ol class="chain">${(d.catena||[]).map(x=>`<li>${esc(x)}</li>`).join("")}</ol>
     ${d.esito!==d.esito_termico?`<div class="hint">Esito della prova termica: <b>${esc(d.esito_termico)}</b></div>`:""}
     <h4>Livello 0 (diagnostica)</h4>${l0.eseguito?`<table><thead><tr><th>controllo</th><th>valore</th><th>regola</th><th></th></tr></thead><tbody>${l0.controlli.map(c=>`<tr><td>${esc(c.nome)}</td><td>${esc(c.valore)}</td><td>${esc(c.regola)}</td><td>${c.scattato===true?`<span class="n">scattato</span>`:c.scattato===false?`<span class="y">ok</span>`:`<span class="q">–</span>`}</td></tr>`).join("")}</tbody></table><div class="hint">diagnostica del ${esc(l0.data||"")}</div>`:`<div class="hint">${esc(l0.testo||"")}</div>`}
-    <h4>Validità</h4><table><thead><tr><th>condizione</th><th>valore</th><th>richiesto</th><th></th></tr></thead><tbody>${(d.validita||[]).map(c=>`<tr><td>${esc(c.nome)}</td><td>${esc(c.valore)}</td><td>${esc(c.regola)}</td><td>${pqOk(c.ok)}</td></tr>`).join("")}</tbody></table>
+    <h4>Validità</h4><table><thead><tr><th>condizione</th><th>valore</th><th>richiesto</th><th></th></tr></thead><tbody>${(d.validita||[]).map(c=>`<tr><td>${esc(c.nome)}</td><td>${esc(c.valore)}</td><td>${esc(c.regola)}</td><td>${c.forzata?`<span class="fz">✗ ignorata (forzata)</span>`:pqOk(c.ok)}</td></tr>`).join("")}</tbody></table>
     <div class="hint">✓ rispettata · ✗ manca (prova non valida) · – non verificabile o non richiesta</div>
     ${d.metodo?`<h4>Metodo: ${d.metodo==="A"?"A (soglie fisse)":"A (soglie fisse) + B (riferimento della colonnina)"}</h4><div>${esc(d.metodo_perche)}</div>${d.QB!=null?`<div>Ī/I₀ = <b>${pqV(d.QB)}</b> (I₀ ${pqV(d.I0)} °C/min) → B: <b>${esc(d.esito_B)}</b></div>`:""}`:""}
     ${(d.condizioni||[]).length?`<h4>Condizioni di distacco (metodo A): ${d.n_vere} vere su ${d.n_calc} calcolabili → ${esc(d.esito_A)}</h4><table><thead><tr><th>indicatore</th><th class="num">valore</th><th>verso</th><th class="num">soglia</th><th></th><th></th></tr></thead><tbody>${d.condizioni.map(c=>`<tr><td>${esc(c.condizione)}</td><td class="num">${pqV(c.valore)}</td><td>${esc(c.verso)}</td><td class="num">${pqV(c.soglia)}</td><td>${pqOk(c.vera)}</td><td class="hint">${c.nota?esc(c.nota):c.decisiva?`<span class="warn">⚠ entro la tolleranza e decisiva</span>`:c.vicina?"vicina alla soglia":""}</td></tr>`).join("")}</tbody></table>`:""}
@@ -2620,7 +2639,12 @@ function pqHTML(d,edit){const l0=d.livello0||{};const pr=d.fonte==="Profilo term
     ${(d.avvisi||[]).length?`<div class="warn">${d.avvisi.map(esc).join("; ")}</div>`:""}`}
 $("#pqClose").onclick=()=>$("#dPerche").close();
 $("#pqPrint").onclick=()=>{document.body.classList.add("pqprint");const done=()=>{document.body.classList.remove("pqprint");window.removeEventListener("afterprint",done)};window.addEventListener("afterprint",done);window.print()};
-$("#pqBody").addEventListener("click",async e=>{if(e.target.id!=="pqSave")return;const fields={};$$("#pqBody [data-pqf]").forEach(i=>fields[i.dataset.pqf]=i.value);
+$("#pqBody").addEventListener("click",async e=>{
+  if(e.target.id==="pqForce"||e.target.id==="pqUnforce"){const on=e.target.id==="pqForce";let nota="";
+    if(on){nota=prompt("Forza valida: la prova verrà valutata ignorando le condizioni di validità che mancano, e resterà segnalata come forzata.\n\nMotivo (obbligatorio):","");if(nota===null)return;if(!nota.trim())return toast("Serve il motivo",true)}
+    else if(!confirm("Annullare la forzatura? La prova torna non valida."))return;
+    try{await api("/api/prove/forza",{file:PQ.file,forza:on,nota});toast(on?"Prova forzata valida":"Forzatura annullata");await openPerche(PQ.file,PQ.after);if(PQ.after)PQ.after()}catch(err){fail(err)}return}
+  if(e.target.id!=="pqSave")return;const fields={};$$("#pqBody [data-pqf]").forEach(i=>fields[i.dataset.pqf]=i.value);
   try{const r=await api("/api/profile/edit",{file:PQ.file,fields});toast(r.changed?.length?"Salvato: "+r.changed.join("; "):"Nessuna modifica");await openPerche(PQ.file,PQ.after);if(PQ.after)PQ.after()}catch(err){fail(err)}});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-pq]");if(!b)return;e.preventDefault();e.stopPropagation();
   const after=b.closest("#p-an")?anLoad:b.closest("#p-co")?coLoad:b.closest("#p-pg")?pgLoad:b.closest("#p-lab")?lbLoad:null;openPerche(b.dataset.pq,after)},true);
