@@ -36,7 +36,7 @@ import paramiko
 PARAMIKO_VER = getattr(paramiko, "__version__", "?")
 
 APP_NAME = "PoleDesk"
-VERSION = "1.30.2"
+VERSION = "1.30.3"
 
 FROZEN = getattr(sys, "frozen", False)          # True quando gira come PoleDesk.exe
 UPDATED = os.environ.get("POLEDESK_UPDATED") == "1"
