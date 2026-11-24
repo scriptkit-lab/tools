@@ -1,0 +1,3130 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engineering Control Tower · Collettore</title>
+<style>:root {
+  --sfondo: #f5f6f8; --carta: #fff; --testo: #1c2230; --tenue: #5b6475; --bordo: #d9dde4;
+  --primario: #1f5fbf; --allarme: #b3261e; --avviso: #a15c00; --ok: #2e7d4f; --raggio: 8px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 14px/1.45 "Segoe UI", system-ui, sans-serif; color: var(--testo); background: var(--sfondo); min-width: 1280px; }
+button, input, select, textarea { font: inherit; }
+button { padding: 5px 12px; border: 1px solid var(--bordo); border-radius: 6px; background: var(--carta); color: var(--testo); cursor: pointer; }
+button:hover { border-color: var(--primario); }
+button.primario { background: var(--primario); border-color: var(--primario); color: #fff; }
+button.pericolo { color: var(--allarme); border-color: var(--allarme); }
+button:disabled { opacity: .5; cursor: default; }
+button.link { border: 0; padding: 0; background: none; color: var(--primario); font-weight: 600; }
+code { background: #eef0f4; padding: 1px 4px; border-radius: 4px; }
+
+.iniziale { max-width: 640px; margin: 80px auto; background: var(--carta); padding: 32px; border-radius: 12px; border: 1px solid var(--bordo); }
+.scelte-iniziali { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.scelte-iniziali button, .bottone { padding: 10px 14px; text-align: left; }
+.bottone { border: 1px solid var(--bordo); border-radius: 6px; cursor: pointer; }
+
+.barra { display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: #16233b; color: #fff; position: sticky; top: 0; z-index: 2; }
+.marchio { font-weight: 700; font-size: 16px; letter-spacing: .3px; }
+.viste { display: flex; gap: 4px; }
+.viste button { background: transparent; color: #cfd8ea; border-color: transparent; }
+.viste button.attiva { background: #2c3d5e; color: #fff; }
+#cerca { width: 240px; padding: 5px 10px; border-radius: 6px; border: 0; }
+.destra { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.stato-salvataggio { color: #a9d3b8; font-size: 13px; }
+.stato-salvataggio.sporco { color: #ffd38a; }
+.avviso-demo { color: #ffd38a; }
+#conflitti { background: var(--avviso); color: #fff; border-color: var(--avviso); }
+.sottobarra { display: flex; align-items: center; gap: 6px; padding: 8px 20px; background: var(--carta); border-bottom: 1px solid var(--bordo); }
+.sottobarra .utente { margin-left: auto; }
+.fonte-dati { color: var(--tenue); font-size: 12px; margin-left: 12px; }
+
+#vista { padding: 16px 20px 60px; }
+.testata-vista { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.testata-vista h1 { font-size: 22px; margin: 0; }
+.meta { color: var(--tenue); font-size: 12.5px; }
+.conta { color: var(--tenue); font-weight: 400; }
+.vuoto { color: var(--tenue); font-style: italic; margin: 4px 0; }
+
+.settimanale { display: flex; flex-direction: column; gap: 14px; }
+.stream { background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: 12px 16px; }
+.stream h3 { margin: 0 0 8px; font-size: 16px; }
+.blocchi { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.blocco h4 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .4px; color: var(--tenue); }
+.blocco.allarme h4 { color: var(--allarme); }
+.voci { list-style: none; margin: 0; padding: 0; }
+.riga-voce { padding: 4px 0; border-bottom: 1px solid #eef0f3; }
+.riga-voce .meta { display: block; }
+.scaduta { color: var(--allarme); font-weight: 600; }
+.data { color: var(--tenue); font-variant-numeric: tabular-nums; margin-right: 4px; }
+
+.badge { display: inline-block; font-size: 11.5px; padding: 0 7px; border-radius: 10px; background: #e8ebf0; color: #384152; }
+.stato-bloccata { background: #fbe1df; color: var(--allarme); }
+.stato-in-corso { background: #e1ecfb; color: #174a95; }
+.stato-chiusa { background: #e2f3e8; color: var(--ok); }
+
+.schede { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.scheda.attiva { background: var(--primario); color: #fff; border-color: var(--primario); }
+.prodotto, .progetto { background: var(--carta); border: 1px solid var(--bordo); border-radius: var(--raggio); padding: 14px 18px; margin-bottom: 14px; }
+.prodotto h2, .progetto h2 { margin: 0; font-size: 18px; }
+.colonne { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin: 12px 0; }
+.condiviso { font-size: 12px; color: var(--avviso); margin-left: 6px; }
+.milestone { display: flex; gap: 18px; padding: 0; list-style: none; margin: 8px 0; }
+.milestone li { padding: 3px 10px; border-radius: 6px; background: #e1ecfb; }
+.milestone li.passata { background: #eef0f3; color: var(--tenue); }
+
+.matrice { border-collapse: collapse; background: var(--carta); border: 1px solid var(--bordo); }
+.matrice th, .matrice td { padding: 6px 12px; border-bottom: 1px solid #eef0f3; text-align: left; }
+.matrice thead th { background: #eef1f6; font-size: 12.5px; }
+.matrice td.presente { color: var(--primario); text-align: center; font-size: 18px; }
+.matrice td.assente { color: #c3c8d1; text-align: center; }
+.matrice td.num { text-align: right; }
+
+dialog { border: 1px solid var(--bordo); border-radius: 12px; padding: 20px 24px; width: 760px; max-height: 88vh; }
+dialog::backdrop { background: rgba(20, 28, 45, .45); }
+dialog h2 { margin-top: 0; }
+.griglia-campi { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+.campo { display: flex; flex-direction: column; gap: 3px; }
+.campo textarea, .campo[data-campo="titolo"], .campo[data-campo="testo"], .campo[data-campo="descrizione"] { grid-column: 1 / -1; }
+.etichetta { font-weight: 600; font-size: 12.5px; }
+.obbl { color: var(--allarme); }
+.campo input, .campo select, .campo textarea { padding: 5px 8px; border: 1px solid var(--bordo); border-radius: 6px; }
+.scelte { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.errore-campo { color: var(--allarme); font-size: 12px; min-height: 0; }
+.errori { color: var(--allarme); }
+.errori ul { margin: 4px 0 10px; }
+.azioni-form { display: flex; gap: 8px; margin-top: 16px; }
+.scheda-voce .tipo { color: var(--tenue); margin: 0; text-transform: uppercase; font-size: 12px; letter-spacing: .4px; }
+.campi th { text-align: left; color: var(--tenue); font-weight: 600; padding: 3px 14px 3px 0; vertical-align: top; }
+
+#messaggi { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 10; }
+.messaggio { background: #16233b; color: #fff; padding: 10px 14px; border-radius: 8px; max-width: 420px; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+.messaggio.errore { background: var(--allarme); }
+.messaggio.avviso { background: var(--avviso); }
+body { min-width: 0; background: #eef2f7; }
+.barra, .sottobarra, .viste, .destra { flex-wrap: wrap; }
+.barra { background: #0d1729; gap: 10px 20px; }
+.barra .marchio { color: #87e4cf; }
+#vista { overflow-x: auto; }
+.pmo { max-width: 1480px; margin: auto; display: grid; gap: 18px; color: #14243a; }
+.pmo-hero { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 22px; padding: clamp(24px, 4vw, 58px); border-radius: 22px; color: white; background: radial-gradient(ellipse at top right, #155465, transparent 66%), linear-gradient(135deg,#0c162a,#172e4b); }
+.pmo-hero h1 { margin: 4px 0 10px; font-size: clamp(2rem, 5vw, 4.5rem); line-height: 1; letter-spacing: -.055em; }
+.pmo-hero p { margin: 0; color: #d1e3f1; }
+.pmo-hero .pmo-eyebrow { color: #87e4cf; font-size: .78em; font-weight: 750; letter-spacing: .19em; }
+.pmo-controls, .pmo-deck { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pmo-controls button { border: 0; background: #87e4cf; color: #0c2230; font-weight: 700; }
+.pmo-controls input { color-scheme: dark; background: #172e4b; color: white; border: 1px solid #8196aa; border-radius: 6px; padding: 4px; }
+.pmo-kpis, .pmo-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)); gap: 14px; }
+.pmo-kpi, .pmo-panel { border: 1px solid #d9e2ed; border-radius: 16px; padding: 20px; background: #fff; box-shadow: 0 5px 18px #1836580a; }
+.pmo-kpi { text-align: left; border-top: 4px solid #14756d; }
+.pmo-kpi.attenzione { border-top-color: #ba483a; }
+.pmo-kpi[aria-pressed="true"] { background: #e2f3f0; }
+.pmo-kpi strong { display: block; font-size: 2.8em; line-height: 1.08; letter-spacing: -.045em; }
+.pmo-kpi span { font-weight: 650; }
+.pmo-panel { min-width: 0; overflow-wrap: anywhere; }
+.pmo-panel h2 { margin: 0 0 12px; font-size: 1.22em; }
+.pmo-stream { border-top: 1px solid #e3e9f0; padding: 8px 0; }
+.pmo-stream summary { cursor: pointer; }
+.pmo-stream progress { margin: 0 10px; width: clamp(64px, 15vw, 180px); accent-color: #14756d; }
+.pmo-roadmap { padding: 0; margin: 0; list-style: none; }
+.pmo-roadmap li { display: flex; gap: 16px; padding: 10px; border-left: 3px solid #14756d; border-bottom: 1px solid #e3e9f0; }
+.pmo-roadmap time { white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pmo-deck [aria-current="step"] { background: #163853; color: #fff; }
+body.pmo-meeting .barra, body.pmo-meeting .sottobarra { display: none; }
+body.pmo-meeting .pmo { font-size: clamp(16px, 1.6vw, 24px); }
+.pmo-warning { border-left: 5px solid #a65b0b; }
+.pmo-warning-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pmo-warning-header h2 { margin: 0; }
+.pmo-warning-header h2 span { display: inline-block; padding: 2px 10px; border-radius: 20px; background: #fff0d8; color: #754006; }
+.pmo-warning-header button { background: #fff4df; color: #623703; border-color: #dfbc83; font-weight: 700; }
+.pmo-warning-list { list-style: none; padding: 0; margin: 14px 0 0; }
+.pmo-warning-list li { border-top: 1px solid #e9e1d5; padding: 10px 0; font-weight: 650; }
+.pmo-warning-list .meta { font-weight: 400; }
+.pmo-controls .pmo-alert-button { background: #ffe0a6; color: #623703; }
+.pmo-avvisi li { border-top: 1px solid #e9e1d5; padding: 10px 0; overflow-wrap: anywhere; }
+.pmo-avvisi li p { margin: 4px 0 0; white-space: pre-wrap; }
+.pmo-guida { grid-template-columns: repeat(auto-fit,minmax(min(100%,365px),1fr)); }
+.pmo-guida p:last-child { margin-bottom: 0; }
+.pmo-stream-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,340px),1fr)); gap: 14px; align-items: start; }
+.pmo-stream-card summary { cursor: pointer; }
+.pmo-stream-card summary strong { color: #163853; }
+.pmo-stream-card summary span { display: block; margin-top: 6px; color: #42556c; font-size: .82em; }
+.pmo-accesso { display: grid; justify-items: start; gap: 12px; max-width: 560px; }
+.pmo-accesso p { margin: 0; }
+.pmo-accesso label { display: grid; gap: 4px; }
+.pmo-accesso input { padding: 8px; border: 1px solid #8196aa; border-radius: 6px; }
+.pmo-accesso [role="alert"] { color: #9c3028; }
+.pmo-team-voci li { display: flex; justify-content: space-between; align-items: start; gap: 8px; flex-wrap: wrap; }
+.pmo-team-voci button[aria-pressed="true"] { background: #e2f3f0; border-color: #18796f; }
+.pmo-deck [aria-current="page"] { background: #163853; color: #fff; }
+body.pmo-meeting { background: #dfe8f3; }
+body.pmo-meeting .pmo-hero { padding: clamp(20px, 3vw, 48px); }
+body.pmo-meeting .pmo-deck { padding: 8px; border-radius: 12px; background: #f7faff; }
+@media (max-width: 760px) { .barra { position: static; } #vista { padding: 12px 12px 36px; } .iniziale { margin: 20px 12px; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>(() => {
+  // data/demo.json
+  var demo_default = {
+    schema: 1,
+    elenchi: {
+      famiglie: [
+        "Floor mount",
+        "Wall mount",
+        "DC"
+      ],
+      stream: [
+        "HW",
+        "FW",
+        "Validazione",
+        "PM di prodotto",
+        "Safety",
+        "Qualità di produzione"
+      ],
+      persone: [
+        "Marta Fabbri",
+        "Luca Serra",
+        "Giulia Neri",
+        "Paolo Riva",
+        "Elena Galli",
+        "Davide Conti",
+        "Sara Moretti"
+      ],
+      fasi: [
+        "Concept",
+        "Sviluppo",
+        "Industrializzazione",
+        "Produzione",
+        "Fine vita"
+      ]
+    },
+    voci: {
+      "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343": {
+        nome: "Totem Aurora",
+        famiglia: "Floor mount",
+        fase: "Produzione",
+        pm: "Marta Fabbri",
+        uid: "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+        codice: "PRD-001",
+        tipo: "PRD",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe": {
+        nome: "Wallbox Brezza",
+        famiglia: "Wall mount",
+        fase: "Industrializzazione",
+        pm: "Luca Serra",
+        uid: "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+        codice: "PRD-002",
+        tipo: "PRD",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "82517af3-4821-4aad-9984-dfec73aee1a8": {
+        nome: "Fast DC Vela 150",
+        famiglia: "DC",
+        fase: "Sviluppo",
+        pm: "Giulia Neri",
+        uid: "82517af3-4821-4aad-9984-dfec73aee1a8",
+        codice: "PRD-003",
+        tipo: "PRD",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "64ea1dae-492b-44d9-bb3d-30f1d392b47d": {
+        nome: "Brezza 2ª generazione",
+        owner: "Luca Serra",
+        fase: "Industrializzazione",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        milestone: [
+          {
+            nome: "DVT",
+            data: "2026-10-15"
+          },
+          {
+            nome: "PVT",
+            data: "2027-01-20"
+          },
+          {
+            nome: "SOP",
+            data: "2027-04-01"
+          }
+        ],
+        uid: "64ea1dae-492b-44d9-bb3d-30f1d392b47d",
+        codice: "PRJ-001",
+        tipo: "PRJ",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "e6403b47-91e1-4763-a28e-0728b9ce7ac7": {
+        nome: "Vela 150 kW",
+        owner: "Giulia Neri",
+        fase: "Sviluppo",
+        prodotti: [
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        milestone: [
+          {
+            nome: "EVT",
+            data: "2026-11-25"
+          },
+          {
+            nome: "DVT",
+            data: "2027-03-10"
+          }
+        ],
+        uid: "e6403b47-91e1-4763-a28e-0728b9ce7ac7",
+        codice: "PRJ-002",
+        tipo: "PRJ",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "2c2cc078-7137-4672-a640-756fcbd8a17c": {
+        titolo: "Distacco display (incollaggio)",
+        descrizione: "Prova di invecchiamento accelerato sul nuovo adesivo.",
+        owner: "Paolo Riva",
+        stato: "In corso",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: [
+          "HW",
+          "Validazione"
+        ],
+        uid: "2c2cc078-7137-4672-a640-756fcbd8a17c",
+        codice: "TEM-001",
+        tipo: "TEM",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "22f59582-1e8b-4ac0-b490-5624ee8c495e": {
+        titolo: "Certificazione CE / RED",
+        descrizione: "",
+        owner: "Elena Galli",
+        stato: "In corso",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: [
+          "Safety",
+          "PM di prodotto"
+        ],
+        uid: "22f59582-1e8b-4ac0-b490-5624ee8c495e",
+        codice: "TEM-002",
+        tipo: "TEM",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "a99de655-c0f0-47c1-814f-514b1bc91637": {
+        titolo: "Aggiornamento firmware da remoto",
+        descrizione: "",
+        owner: "Davide Conti",
+        stato: "In corso",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: [
+          "FW"
+        ],
+        uid: "a99de655-c0f0-47c1-814f-514b1bc91637",
+        codice: "TEM-003",
+        tipo: "TEM",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "84529040-2920-45a4-9fd0-b7e00c78746d": {
+        titolo: "Connettività modem 4G",
+        descrizione: "",
+        owner: "Davide Conti",
+        stato: "Bloccata",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: [
+          "HW",
+          "FW"
+        ],
+        uid: "84529040-2920-45a4-9fd0-b7e00c78746d",
+        codice: "TEM-004",
+        tipo: "TEM",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "01b53cfe-1311-4b68-aae3-5d806ab31a1c": {
+        titolo: "Protezione differenziale DC 6 mA",
+        descrizione: "",
+        owner: "Elena Galli",
+        stato: "In corso",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: [
+          "Safety",
+          "HW"
+        ],
+        uid: "01b53cfe-1311-4b68-aae3-5d806ab31a1c",
+        codice: "TEM-005",
+        tipo: "TEM",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "46c2e5f1-2d3a-4c2b-b61f-31f84a5498d2": {
+        titolo: "Resa della linea di produzione",
+        descrizione: "",
+        owner: "Sara Moretti",
+        stato: "In corso",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: [
+          "Qualità di produzione"
+        ],
+        uid: "46c2e5f1-2d3a-4c2b-b61f-31f84a5498d2",
+        codice: "TEM-006",
+        tipo: "TEM",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "0fcfbc8f-d888-4214-88ae-7589ac278278": {
+        titolo: "Gestione termica moduli di potenza",
+        descrizione: "",
+        owner: "Paolo Riva",
+        stato: "In corso",
+        prodotti: [
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: [
+          "HW",
+          "Validazione"
+        ],
+        uid: "0fcfbc8f-d888-4214-88ae-7589ac278278",
+        codice: "TEM-007",
+        tipo: "TEM",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "325c58d1-1bd4-438f-a286-d37ce2e4aada": {
+        titolo: "Lettore RFID utente",
+        descrizione: "",
+        owner: "Luca Serra",
+        stato: "Aperta",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: [
+          "HW",
+          "FW",
+          "Validazione"
+        ],
+        uid: "325c58d1-1bd4-438f-a286-d37ce2e4aada",
+        codice: "TEM-008",
+        tipo: "TEM",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "d52ad271-cca0-43c3-a6a0-b2190e890c24": {
+        titolo: "Obsolescenza componenti",
+        descrizione: "",
+        owner: "Sara Moretti",
+        stato: "Aperta",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: [
+          "HW",
+          "Qualità di produzione"
+        ],
+        uid: "d52ad271-cca0-43c3-a6a0-b2190e890c24",
+        codice: "TEM-009",
+        tipo: "TEM",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "e63c1ee4-881a-4dad-9078-fac37b0132f7": {
+        titolo: "Ripetere prova di adesione a 85 °C / 85 %",
+        tema: "2c2cc078-7137-4672-a640-756fcbd8a17c",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: "Validazione",
+        owner: "Paolo Riva",
+        stato: "In corso",
+        priorita: "Alta",
+        scadenza: "2026-12-09",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "e63c1ee4-881a-4dad-9078-fac37b0132f7",
+        codice: "ATT-001",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "d8919c3c-e972-4388-a60d-4eb0151c6269": {
+        titolo: "Campionare adesivo alternativo dal fornitore",
+        tema: "2c2cc078-7137-4672-a640-756fcbd8a17c",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "HW",
+        owner: "Paolo Riva",
+        stato: "Aperta",
+        priorita: "Alta",
+        scadenza: "2026-12-04",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "d8919c3c-e972-4388-a60d-4eb0151c6269",
+        codice: "ATT-002",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "466469d4-24e4-4003-98b0-c1f0568561cc": {
+        titolo: "Valutare impatto su Vela del nuovo adesivo",
+        tema: "2c2cc078-7137-4672-a640-756fcbd8a17c",
+        prodotti: [
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "HW",
+        owner: "Giulia Neri",
+        stato: "Aperta",
+        priorita: "Media",
+        scadenza: "2027-01-15",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "466469d4-24e4-4003-98b0-c1f0568561cc",
+        codice: "ATT-003",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "e0942552-e626-4ba1-86db-ced133b909a9": {
+        titolo: "Analisi dei ritorni dal campo per distacco",
+        tema: "2c2cc078-7137-4672-a640-756fcbd8a17c",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: "Qualità di produzione",
+        owner: "Sara Moretti",
+        stato: "Chiusa",
+        priorita: "Media",
+        scadenza: "2026-11-20",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "e0942552-e626-4ba1-86db-ced133b909a9",
+        codice: "ATT-004",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "d8d8a801-d48b-4a5f-936f-d960d770f42d": {
+        titolo: "Preparare fascicolo tecnico RED",
+        tema: "22f59582-1e8b-4ac0-b490-5624ee8c495e",
+        progetto: "64ea1dae-492b-44d9-bb3d-30f1d392b47d",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: "Safety",
+        owner: "Elena Galli",
+        stato: "In corso",
+        priorita: "Alta",
+        scadenza: "2026-12-12",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "d8d8a801-d48b-4a5f-936f-d960d770f42d",
+        codice: "ATT-005",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "5f6c4c89-b989-4c8a-ac32-8f51360eb19f": {
+        titolo: "Prenotare laboratorio EMC",
+        tema: "22f59582-1e8b-4ac0-b490-5624ee8c495e",
+        progetto: "e6403b47-91e1-4763-a28e-0728b9ce7ac7",
+        prodotti: [
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "PM di prodotto",
+        owner: "Giulia Neri",
+        stato: "Bloccata",
+        priorita: "Alta",
+        scadenza: "2026-12-05",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "5f6c4c89-b989-4c8a-ac32-8f51360eb19f",
+        codice: "ATT-006",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "393f34b2-11c8-4209-8cb7-5f707d4bb17e": {
+        titolo: "Allineare dichiarazione di conformità Aurora",
+        tema: "22f59582-1e8b-4ac0-b490-5624ee8c495e",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: "PM di prodotto",
+        owner: "Marta Fabbri",
+        stato: "Aperta",
+        priorita: "Media",
+        scadenza: "2027-01-30",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "393f34b2-11c8-4209-8cb7-5f707d4bb17e",
+        codice: "ATT-007",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "f418ebce-eff6-43e2-a4e9-5ab4fd685ac1": {
+        titolo: "Revisione analisi dei rischi",
+        tema: "22f59582-1e8b-4ac0-b490-5624ee8c495e",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "Safety",
+        owner: "Elena Galli",
+        stato: "In corso",
+        priorita: "Media",
+        scadenza: "2026-12-18",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "f418ebce-eff6-43e2-a4e9-5ab4fd685ac1",
+        codice: "ATT-008",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "c4e22f33-0490-49a6-ae06-0a2a4f08578b": {
+        titolo: "Definire procedura di rollback OTA",
+        tema: "a99de655-c0f0-47c1-814f-514b1bc91637",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "FW",
+        owner: "Davide Conti",
+        stato: "In corso",
+        priorita: "Alta",
+        scadenza: "2026-12-10",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "c4e22f33-0490-49a6-ae06-0a2a4f08578b",
+        codice: "ATT-009",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "5f3b3935-14ca-4b37-a173-6bdeb8448a5d": {
+        titolo: "Test OTA su 20 unità pilota",
+        tema: "a99de655-c0f0-47c1-814f-514b1bc91637",
+        progetto: "64ea1dae-492b-44d9-bb3d-30f1d392b47d",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: "Validazione",
+        owner: "Paolo Riva",
+        stato: "Aperta",
+        priorita: "Media",
+        scadenza: "2027-01-12",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "5f3b3935-14ca-4b37-a173-6bdeb8448a5d",
+        codice: "ATT-010",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "4faa91d2-661c-4583-b666-a1d04fe9823d": {
+        titolo: "Firma digitale dei pacchetti firmware",
+        tema: "a99de655-c0f0-47c1-814f-514b1bc91637",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "FW",
+        owner: "Davide Conti",
+        stato: "Aperta",
+        priorita: "Alta",
+        scadenza: "2027-01-08",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "4faa91d2-661c-4583-b666-a1d04fe9823d",
+        codice: "ATT-011",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "0ef40371-69eb-44a2-bab0-17e85e3b7779": {
+        titolo: "Sostituire modem a fine vita",
+        tema: "84529040-2920-45a4-9fd0-b7e00c78746d",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: "HW",
+        owner: "Davide Conti",
+        stato: "Bloccata",
+        priorita: "Alta",
+        scadenza: "2026-12-03",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "0ef40371-69eb-44a2-bab0-17e85e3b7779",
+        codice: "ATT-012",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "a0f30d2d-56f4-4d02-9495-67285519d396": {
+        titolo: "Porting driver sul nuovo modem",
+        tema: "84529040-2920-45a4-9fd0-b7e00c78746d",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: "FW",
+        owner: "Davide Conti",
+        stato: "Bloccata",
+        priorita: "Alta",
+        scadenza: "2026-12-20",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "a0f30d2d-56f4-4d02-9495-67285519d396",
+        codice: "ATT-013",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "f690c60b-f81c-4026-a5d5-258ab1d20f83": {
+        titolo: "Prove di copertura in cantina",
+        tema: "84529040-2920-45a4-9fd0-b7e00c78746d",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: "Validazione",
+        owner: "Paolo Riva",
+        stato: "Aperta",
+        priorita: "Media",
+        scadenza: "2027-01-20",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "f690c60b-f81c-4026-a5d5-258ab1d20f83",
+        codice: "ATT-014",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "7abbf83d-5164-4950-88e8-bcebd3412b3f": {
+        titolo: "Scelta componente RCD-DD",
+        tema: "01b53cfe-1311-4b68-aae3-5d806ab31a1c",
+        progetto: "64ea1dae-492b-44d9-bb3d-30f1d392b47d",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: "HW",
+        owner: "Luca Serra",
+        stato: "In corso",
+        priorita: "Alta",
+        scadenza: "2026-12-08",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "7abbf83d-5164-4950-88e8-bcebd3412b3f",
+        codice: "ATT-015",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "72e8bb35-08e5-48ab-936c-8dc6b31db8bc": {
+        titolo: "Prova di intervento a 6 mA DC",
+        tema: "01b53cfe-1311-4b68-aae3-5d806ab31a1c",
+        progetto: "64ea1dae-492b-44d9-bb3d-30f1d392b47d",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: "Validazione",
+        owner: "Paolo Riva",
+        stato: "Aperta",
+        priorita: "Alta",
+        scadenza: "2026-12-22",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "72e8bb35-08e5-48ab-936c-8dc6b31db8bc",
+        codice: "ATT-016",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "93fc05b8-970c-47fa-8fc2-3e5858a680c0": {
+        titolo: "Verifica norma IEC 62955",
+        tema: "01b53cfe-1311-4b68-aae3-5d806ab31a1c",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: "Safety",
+        owner: "Elena Galli",
+        stato: "Chiusa",
+        priorita: "Media",
+        scadenza: "2026-11-18",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "93fc05b8-970c-47fa-8fc2-3e5858a680c0",
+        codice: "ATT-017",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "a1e96aea-71dc-4304-89f7-f2b0c9646312": {
+        titolo: "Analisi scarti della settimana 47",
+        tema: "46c2e5f1-2d3a-4c2b-b61f-31f84a5498d2",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: "Qualità di produzione",
+        owner: "Sara Moretti",
+        stato: "Chiusa",
+        priorita: "Media",
+        scadenza: "2026-11-27",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "a1e96aea-71dc-4304-89f7-f2b0c9646312",
+        codice: "ATT-018",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "189ba78a-b003-4335-85d1-5ada569c4174": {
+        titolo: "Nuova maschera di collaudo",
+        tema: "46c2e5f1-2d3a-4c2b-b61f-31f84a5498d2",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: "Qualità di produzione",
+        owner: "Sara Moretti",
+        stato: "In corso",
+        priorita: "Alta",
+        scadenza: "2026-12-11",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "189ba78a-b003-4335-85d1-5ada569c4174",
+        codice: "ATT-019",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "71c411a7-799a-4e24-8475-ff3eb9b21549": {
+        titolo: "Istruzioni di montaggio aggiornate",
+        tema: "46c2e5f1-2d3a-4c2b-b61f-31f84a5498d2",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: "PM di prodotto",
+        owner: "Marta Fabbri",
+        stato: "Aperta",
+        priorita: "Bassa",
+        scadenza: "2027-02-01",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "71c411a7-799a-4e24-8475-ff3eb9b21549",
+        codice: "ATT-020",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "6e074439-44d8-49db-a403-94e54ff728bf": {
+        titolo: "Simulazione termica del cabinet",
+        tema: "0fcfbc8f-d888-4214-88ae-7589ac278278",
+        progetto: "e6403b47-91e1-4763-a28e-0728b9ce7ac7",
+        prodotti: [
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "HW",
+        owner: "Giulia Neri",
+        stato: "In corso",
+        priorita: "Alta",
+        scadenza: "2026-12-14",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "6e074439-44d8-49db-a403-94e54ff728bf",
+        codice: "ATT-021",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "eb6aaf7e-d5ce-456d-b28c-5ab641a21dc0": {
+        titolo: "Prova in camera climatica a 50 °C",
+        tema: "0fcfbc8f-d888-4214-88ae-7589ac278278",
+        progetto: "e6403b47-91e1-4763-a28e-0728b9ce7ac7",
+        prodotti: [
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "Validazione",
+        owner: "Paolo Riva",
+        stato: "Aperta",
+        priorita: "Alta",
+        scadenza: "2027-01-25",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "eb6aaf7e-d5ce-456d-b28c-5ab641a21dc0",
+        codice: "ATT-022",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "85fef5dd-3f7d-4077-9f51-4c08f3022f83": {
+        titolo: "Derating di potenza da firmware",
+        tema: "0fcfbc8f-d888-4214-88ae-7589ac278278",
+        progetto: "e6403b47-91e1-4763-a28e-0728b9ce7ac7",
+        prodotti: [
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "FW",
+        owner: "Davide Conti",
+        stato: "Aperta",
+        priorita: "Media",
+        scadenza: "2027-02-10",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "85fef5dd-3f7d-4077-9f51-4c08f3022f83",
+        codice: "ATT-023",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "5245ad77-26d6-4dc0-8855-60f4ee568c4f": {
+        titolo: "Scegliere lettore RFID comune",
+        tema: "325c58d1-1bd4-438f-a286-d37ce2e4aada",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "HW",
+        owner: "Luca Serra",
+        stato: "Aperta",
+        priorita: "Media",
+        scadenza: "2027-01-15",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "5245ad77-26d6-4dc0-8855-60f4ee568c4f",
+        codice: "ATT-024",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "a4677e7e-6e47-43d4-98df-4308cf6baa13": {
+        titolo: "Libreria RFID unica per tutti i prodotti",
+        tema: "325c58d1-1bd4-438f-a286-d37ce2e4aada",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "FW",
+        owner: "Davide Conti",
+        stato: "Aperta",
+        priorita: "Media",
+        scadenza: "2027-02-15",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "a4677e7e-6e47-43d4-98df-4308cf6baa13",
+        codice: "ATT-025",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "34e1d9d6-99fc-4675-8d1e-d6caacd21e80": {
+        titolo: "Test di lettura carte con guanti",
+        tema: "325c58d1-1bd4-438f-a286-d37ce2e4aada",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: "Validazione",
+        owner: "Paolo Riva",
+        stato: "Aperta",
+        priorita: "Bassa",
+        scadenza: "2027-02-20",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "34e1d9d6-99fc-4675-8d1e-d6caacd21e80",
+        codice: "ATT-026",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "d7f06687-06b0-4629-a48b-c74f8bd05a9c": {
+        titolo: "Elenco componenti a rischio obsolescenza",
+        tema: "d52ad271-cca0-43c3-a6a0-b2190e890c24",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: "HW",
+        owner: "Luca Serra",
+        stato: "In corso",
+        priorita: "Media",
+        scadenza: "2026-12-19",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "d7f06687-06b0-4629-a48b-c74f8bd05a9c",
+        codice: "ATT-027",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "83281a05-b5d5-48b1-b032-a31619117f51": {
+        titolo: "Qualificare secondo fornitore per relè",
+        tema: "d52ad271-cca0-43c3-a6a0-b2190e890c24",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: "Qualità di produzione",
+        owner: "Sara Moretti",
+        stato: "Aperta",
+        priorita: "Media",
+        scadenza: "2027-01-29",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "83281a05-b5d5-48b1-b032-a31619117f51",
+        codice: "ATT-028",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "ef5ed52c-b3d4-4371-8382-5fce0ce8a3d1": {
+        titolo: "Piano di acquisto ultimi lotti",
+        tema: "d52ad271-cca0-43c3-a6a0-b2190e890c24",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: "PM di prodotto",
+        owner: "Marta Fabbri",
+        stato: "Aperta",
+        priorita: "Bassa",
+        scadenza: "2027-03-01",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "ef5ed52c-b3d4-4371-8382-5fce0ce8a3d1",
+        codice: "ATT-029",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "5d2f45bc-f08e-48c9-9f6b-96cdecd14aee": {
+        titolo: "Valutare impatto sicurezza del nuovo relè",
+        tema: "d52ad271-cca0-43c3-a6a0-b2190e890c24",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343"
+        ],
+        stream: "Safety",
+        owner: "Elena Galli",
+        stato: "Aperta",
+        priorita: "Bassa",
+        scadenza: "2027-02-05",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "5d2f45bc-f08e-48c9-9f6b-96cdecd14aee",
+        codice: "ATT-030",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "eee8a424-c9f1-4bd9-bdc1-7138f2cd8530": {
+        titolo: "Aggiornare roadmap di prodotto Vela",
+        tema: "22f59582-1e8b-4ac0-b490-5624ee8c495e",
+        progetto: "e6403b47-91e1-4763-a28e-0728b9ce7ac7",
+        prodotti: [
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        stream: "PM di prodotto",
+        owner: "Giulia Neri",
+        stato: "In corso",
+        priorita: "Media",
+        scadenza: "2026-12-07",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "eee8a424-c9f1-4bd9-bdc1-7138f2cd8530",
+        codice: "ATT-031",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "e5a3e059-e2c3-4043-8786-613bb64f1e84": {
+        titolo: "Riesame di progetto DVT Brezza",
+        tema: "01b53cfe-1311-4b68-aae3-5d806ab31a1c",
+        progetto: "64ea1dae-492b-44d9-bb3d-30f1d392b47d",
+        prodotti: [
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        stream: "PM di prodotto",
+        owner: "Luca Serra",
+        stato: "Aperta",
+        priorita: "Alta",
+        scadenza: "2027-01-10",
+        fonte: {
+          tipo: "Riunione",
+          data: "2026-11-24"
+        },
+        uid: "e5a3e059-e2c3-4043-8786-613bb64f1e84",
+        codice: "ATT-032",
+        tipo: "ATT",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "291b5056-55ab-491b-8db3-eb7dec68299b": {
+        testo: "La certificazione è seguita dal PM di ogni prodotto",
+        data: "2026-11-24",
+        owner: "Marta Fabbri",
+        tema: "22f59582-1e8b-4ac0-b490-5624ee8c495e",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        uid: "291b5056-55ab-491b-8db3-eb7dec68299b",
+        codice: "DEC-001",
+        tipo: "DEC",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "c2dd4392-16aa-4292-924e-7cf7fd12e9db": {
+        testo: "Un solo lettore RFID per tutta la gamma",
+        data: "2026-11-26",
+        owner: "Luca Serra",
+        tema: "325c58d1-1bd4-438f-a286-d37ce2e4aada",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        uid: "c2dd4392-16aa-4292-924e-7cf7fd12e9db",
+        codice: "DEC-002",
+        tipo: "DEC",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "912625d0-9f91-4243-9659-d814e3747f14": {
+        testo: "Il modem attuale esce di produzione a marzo",
+        data: "2026-11-20",
+        owner: "Davide Conti",
+        impatto: "Alto",
+        tema: "84529040-2920-45a4-9fd0-b7e00c78746d",
+        prodotti: [
+          "7bbb55bf-adab-4b1e-8d38-3e5ddcacf343",
+          "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe"
+        ],
+        uid: "912625d0-9f91-4243-9659-d814e3747f14",
+        codice: "RIS-001",
+        tipo: "RIS",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "e627b8ca-ff1a-41ab-9fb7-c3a350106c3a": {
+        testo: "Laboratorio EMC saturo fino a gennaio",
+        data: "2026-11-25",
+        owner: "Giulia Neri",
+        impatto: "Medio",
+        tema: "22f59582-1e8b-4ac0-b490-5624ee8c495e",
+        prodotti: [
+          "82517af3-4821-4aad-9984-dfec73aee1a8"
+        ],
+        uid: "e627b8ca-ff1a-41ab-9fb7-c3a350106c3a",
+        codice: "RIS-002",
+        tipo: "RIS",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Marta Fabbri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Marta Fabbri",
+        eliminata: false
+      },
+      "77ebde5b-01a0-46ad-9799-74367f3b77a6": {
+        rif: "2c2cc078-7137-4672-a640-756fcbd8a17c",
+        data: "2026-11-26",
+        testo: "Primi 3 campioni su 10 con distacco dopo 500 h",
+        autore: "Paolo Riva",
+        uid: "77ebde5b-01a0-46ad-9799-74367f3b77a6",
+        codice: "AGG-001",
+        tipo: "AGG",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Paolo Riva",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Paolo Riva",
+        eliminata: false
+      },
+      "075c2e83-26c1-4849-a57b-6a6933ddff02": {
+        rif: "84529040-2920-45a4-9fd0-b7e00c78746d",
+        data: "2026-11-27",
+        testo: "Fornitore non conferma la data del nuovo modulo",
+        autore: "Davide Conti",
+        uid: "075c2e83-26c1-4849-a57b-6a6933ddff02",
+        codice: "AGG-002",
+        tipo: "AGG",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Davide Conti",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Davide Conti",
+        eliminata: false
+      },
+      "34afba45-6427-4a8d-ad07-99d20ea1bcfc": {
+        rif: "22f59582-1e8b-4ac0-b490-5624ee8c495e",
+        data: "2026-11-25",
+        testo: "Fascicolo RED Brezza al 70 %",
+        autore: "Elena Galli",
+        uid: "34afba45-6427-4a8d-ad07-99d20ea1bcfc",
+        codice: "AGG-003",
+        tipo: "AGG",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Elena Galli",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Elena Galli",
+        eliminata: false
+      },
+      "cea4c646-9fec-4c1d-87cf-d50c18f81a6e": {
+        rif: "a99de655-c0f0-47c1-814f-514b1bc91637",
+        data: "2026-11-28",
+        testo: "Rollback provato con successo in laboratorio",
+        autore: "Davide Conti",
+        uid: "cea4c646-9fec-4c1d-87cf-d50c18f81a6e",
+        codice: "AGG-004",
+        tipo: "AGG",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Davide Conti",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Davide Conti",
+        eliminata: false
+      },
+      "233ffed8-1186-435d-89d4-72fad6f80bc7": {
+        rif: "46c2e5f1-2d3a-4c2b-b61f-31f84a5498d2",
+        data: "2026-11-27",
+        testo: "Scarti scesi dal 4,1 % al 2,8 %",
+        autore: "Sara Moretti",
+        uid: "233ffed8-1186-435d-89d4-72fad6f80bc7",
+        codice: "AGG-005",
+        tipo: "AGG",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Sara Moretti",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Sara Moretti",
+        eliminata: false
+      },
+      "1aaced80-1000-41ad-89ae-da65518041fc": {
+        rif: "0fcfbc8f-d888-4214-88ae-7589ac278278",
+        data: "2026-11-26",
+        testo: "Simulazione: 8 °C oltre il limite a pieno carico",
+        autore: "Giulia Neri",
+        uid: "1aaced80-1000-41ad-89ae-da65518041fc",
+        codice: "AGG-006",
+        tipo: "AGG",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Giulia Neri",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Giulia Neri",
+        eliminata: false
+      },
+      "0fc9df6d-82e9-47c5-80fb-6f1488963990": {
+        rif: "dc8abf85-4d73-4bc9-95d2-e4e9f19ed2fe",
+        data: "2026-11-28",
+        testo: "Pre-serie di 50 pezzi confermata per gennaio",
+        autore: "Luca Serra",
+        uid: "0fc9df6d-82e9-47c5-80fb-6f1488963990",
+        codice: "AGG-007",
+        tipo: "AGG",
+        creataIl: "2026-11-30T08:00:00.000Z",
+        creataDa: "Luca Serra",
+        modificataIl: "2026-11-30T08:00:00.000Z",
+        modificataDa: "Luca Serra",
+        eliminata: false
+      }
+    }
+  };
+
+  // src/model.js
+  var SCHEMA = 1;
+  var TIPI = ["PRD", "PRJ", "TEM", "ATT", "DEC", "RIS", "AGG"];
+  var PREFISSI = { PRD: "PRD", PRJ: "PRJ", TEM: "TEM", ATT: "ATT", DEC: "DEC", RIS: "RIS", AGG: "AGG" };
+  var NOMI_TIPO = {
+    PRD: "Prodotto",
+    PRJ: "Progetto",
+    TEM: "Tema",
+    ATT: "Attività",
+    DEC: "Decisione",
+    RIS: "Rischio",
+    AGG: "Aggiornamento"
+  };
+  var STATI = ["Aperta", "In corso", "Bloccata", "Chiusa"];
+  var PRIORITA = ["Alta", "Media", "Bassa"];
+  var IMPATTI = ["Alto", "Medio", "Basso"];
+  var FONTI = ["Minuta", "Riunione", "Email"];
+  function nuovoDataset() {
+    return {
+      schema: SCHEMA,
+      elenchi: {
+        famiglie: ["Floor mount", "Wall mount", "DC"],
+        stream: ["HW", "FW", "Validazione", "PM di prodotto", "Safety", "Qualità di produzione"],
+        persone: [],
+        fasi: ["Concept", "Sviluppo", "Industrializzazione", "Produzione", "Fine vita"]
+      },
+      voci: {}
+    };
+  }
+  function nuovoUid() {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    const b = globalThis.crypto.getRandomValues(new Uint8Array(16));
+    b[6] = b[6] & 15 | 64;
+    b[8] = b[8] & 63 | 128;
+    const h = [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
+  function numeroCodice(codice) {
+    const m = /^[A-Z]{3}-(\d+)$/.exec(codice || "");
+    return m ? Number(m[1]) : 0;
+  }
+  function formattaCodice(tipo, n) {
+    return `${PREFISSI[tipo]}-${String(n).padStart(3, "0")}`;
+  }
+  function prossimoCodice(ds, tipo) {
+    let max = 0;
+    for (const v of Object.values(ds.voci)) if (v.tipo === tipo) max = Math.max(max, numeroCodice(v.codice));
+    return formattaCodice(tipo, max + 1);
+  }
+  function creaVoce(ds, tipo, campi, autore2, adesso) {
+    if (!TIPI.includes(tipo)) throw new Error(`Tipo sconosciuto: ${tipo}`);
+    const quando = adesso.toISOString();
+    return {
+      ...structuredClone(campi),
+      uid: nuovoUid(),
+      codice: prossimoCodice(ds, tipo),
+      tipo,
+      creataIl: quando,
+      creataDa: autore2,
+      modificataIl: quando,
+      modificataDa: autore2,
+      eliminata: false
+    };
+  }
+  function aggiornaVoce(voce, modifiche, autore2, adesso) {
+    const { uid, codice, tipo, creataIl, creataDa, ...resto } = modifiche;
+    return { ...voce, ...structuredClone(resto), modificataIl: adesso.toISOString(), modificataDa: autore2 };
+  }
+  function eliminaVoce(voce, autore2, adesso) {
+    return aggiornaVoce(voce, { eliminata: true }, autore2, adesso);
+  }
+  var DATA = /^\d{4}-\d{2}-\d{2}$/;
+  var linkSicuro = (x) => /^(https?:|mailto:|file:)/i.test(String(x ?? "").trim());
+  var vuoto = (x) => x === void 0 || x === null || String(x).trim() === "";
+  function validaVoce(ds, voce) {
+    const e = [];
+    const el = ds.elenchi;
+    const vivo = (uid, tipo) => {
+      const v = ds.voci[uid];
+      return v && !v.eliminata && v.tipo === tipo;
+    };
+    const obbl = (campo, nome = campo) => {
+      if (vuoto(voce[campo])) e.push(`${nome}: obbligatorio`);
+    };
+    const inElenco = (campo, lista2, nome = campo, obbligatorio = false) => {
+      const x = voce[campo];
+      if (vuoto(x)) {
+        if (obbligatorio) e.push(`${nome}: obbligatorio`);
+        return;
+      }
+      if (!lista2.includes(x)) e.push(`${nome}: «${x}» non è nell'elenco`);
+    };
+    const persona = (campo, nome = campo) => inElenco(campo, el.persone, nome);
+    const rif = (campo, tipo, nome = campo, obbligatorio = false) => {
+      const x = voce[campo];
+      if (vuoto(x)) {
+        if (obbligatorio) e.push(`${nome}: obbligatorio`);
+        return;
+      }
+      if (!vivo(x, tipo)) e.push(`${nome}: riferimento non valido o eliminato`);
+    };
+    const rifMulti = (campo, tipo, nome = campo) => {
+      const xs = voce[campo] ?? [];
+      if (!Array.isArray(xs)) {
+        e.push(`${nome}: deve essere un elenco`);
+        return;
+      }
+      for (const x of xs) if (!vivo(x, tipo)) e.push(`${nome}: riferimento non valido o eliminato`);
+    };
+    const data = (campo, nome = campo, obbligatorio = false) => {
+      const x = voce[campo];
+      if (vuoto(x)) {
+        if (obbligatorio) e.push(`${nome}: obbligatorio`);
+        return;
+      }
+      if (!DATA.test(x)) e.push(`${nome}: data non valida (AAAA-MM-GG)`);
+    };
+    switch (voce.tipo) {
+      case "PRD":
+        obbl("nome");
+        inElenco("famiglia", el.famiglie, "famiglia", true);
+        inElenco("fase", el.fasi);
+        persona("pm", "PM");
+        break;
+      case "PRJ":
+        obbl("nome");
+        persona("owner");
+        inElenco("fase", el.fasi);
+        rifMulti("prodotti", "PRD");
+        for (const m of voce.milestone ?? []) {
+          if (vuoto(m.nome)) e.push("milestone: nome obbligatorio");
+          if (!DATA.test(m.data || "")) e.push("milestone: data non valida (AAAA-MM-GG)");
+        }
+        break;
+      case "TEM":
+        obbl("titolo");
+        persona("owner");
+        inElenco("stato", STATI, "stato", true);
+        rifMulti("prodotti", "PRD");
+        for (const s of voce.stream ?? []) if (!el.stream.includes(s)) e.push(`stream: «${s}» non è nell'elenco`);
+        break;
+      case "ATT":
+        obbl("titolo");
+        rif("tema", "TEM", "tema", true);
+        rif("progetto", "PRJ");
+        rifMulti("prodotti", "PRD");
+        inElenco("stream", el.stream, "stream", true);
+        if (voce.streamAggiuntivi !== undefined && (!Array.isArray(voce.streamAggiuntivi) ||
+          voce.streamAggiuntivi.some(nome => !el.stream.includes(nome)))) {
+          e.push("Altri team coinvolti: seleziona team presenti nell’elenco.");
+        }
+        persona("owner");
+        inElenco("stato", STATI, "stato", true);
+        inElenco("priorita", PRIORITA, "priorità", true);
+        data("scadenza");
+        if (voce.fonte) {
+          if (!vuoto(voce.fonte.tipo) && !FONTI.includes(voce.fonte.tipo)) e.push(`fonte: «${voce.fonte.tipo}» non è nell'elenco`);
+          if (!vuoto(voce.fonte.data) && !DATA.test(voce.fonte.data)) e.push("fonte: data non valida (AAAA-MM-GG)");
+          if (!vuoto(voce.fonte.link) && !linkSicuro(voce.fonte.link)) e.push("fonte: il link deve iniziare con https://, http://, mailto: o file:");
+        }
+        break;
+      case "DEC":
+      case "RIS":
+        obbl("testo");
+        data("data", "data", true);
+        persona("owner");
+        rif("tema", "TEM", "tema", true);
+        rifMulti("prodotti", "PRD");
+        if (voce.tipo === "RIS") inElenco("impatto", IMPATTI);
+        break;
+      case "AGG": {
+        obbl("testo");
+        data("data", "data", true);
+        const r = ds.voci[voce.rif];
+        if (!r || r.eliminata) e.push("rif: riferimento non valido o eliminato");
+        break;
+      }
+      default:
+        e.push(`tipo: «${voce.tipo}» sconosciuto`);
+    }
+    return e;
+  }
+  function validaDataset(x) {
+    const errori = [];
+    if (!x || typeof x !== "object") return { ok: false, errori: ["Il file non contiene un oggetto JSON"] };
+    if (x.schema !== SCHEMA) errori.push(`Versione dello schema non supportata: ${x.schema}`);
+    if (!x.elenchi || typeof x.elenchi !== "object") errori.push("Mancano gli elenchi");
+    else for (const k of ["famiglie", "stream", "persone", "fasi"]) if (!Array.isArray(x.elenchi[k])) errori.push(`Elenco mancante: ${k}`);
+    if (!x.voci || typeof x.voci !== "object" || Array.isArray(x.voci)) errori.push("Mancano le voci");
+    else for (const [k, v] of Object.entries(x.voci)) {
+      if (!v || v.uid !== k || !TIPI.includes(v.tipo) || typeof v.modificataIl !== "string") {
+        errori.push(`Voce malformata: ${k}`);
+        break;
+      }
+    }
+    return { ok: errori.length === 0, errori };
+  }
+
+  // src/merge.js
+  var unisciElenco = (a = [], b = []) => [.../* @__PURE__ */ new Set([...a, ...b])];
+  function unisci(locale, remoto) {
+    const voci = {};
+    for (const v of Object.values(locale.voci)) voci[v.uid] = v;
+    for (const r of Object.values(remoto.voci)) {
+      const l = voci[r.uid];
+      if (!l || r.modificataIl >= l.modificataIl) voci[r.uid] = r;
+    }
+    const tl = locale.elenchiModificatiIl ?? "";
+    const tr = remoto.elenchiModificatiIl ?? "";
+    let elenchi;
+    let elenchiModificatiIl;
+    if (tl || tr) {
+      const vinceLocale = tl > tr;
+      elenchi = vinceLocale ? locale.elenchi : remoto.elenchi;
+      elenchiModificatiIl = vinceLocale ? tl : tr;
+    } else {
+      elenchi = {};
+      for (const k of /* @__PURE__ */ new Set([...Object.keys(locale.elenchi), ...Object.keys(remoto.elenchi)])) {
+        elenchi[k] = unisciElenco(locale.elenchi[k], remoto.elenchi[k]);
+      }
+    }
+    const dataset = structuredClone({ ...locale, elenchi, voci, ...elenchiModificatiIl ? { elenchiModificatiIl } : {} });
+    const rinumerate = rinumeraDuplicati(dataset);
+    return { dataset, rinumerate };
+  }
+  function rinumeraDuplicati(ds) {
+    const perCodice2 = /* @__PURE__ */ new Map();
+    const max = {};
+    for (const v of Object.values(ds.voci)) {
+      const k = v.codice;
+      if (!perCodice2.has(k)) perCodice2.set(k, []);
+      perCodice2.get(k).push(v);
+      max[v.tipo] = Math.max(max[v.tipo] ?? 0, numeroCodice(v.codice));
+    }
+    const rinumerate = [];
+    for (const gruppo of perCodice2.values()) {
+      if (gruppo.length < 2) continue;
+      gruppo.sort((a, b) => a.creataIl < b.creataIl ? -1 : a.creataIl > b.creataIl ? 1 : a.uid < b.uid ? -1 : 1);
+      for (const v of gruppo.slice(1)) {
+        max[v.tipo] += 1;
+        const nuovo = formattaCodice(v.tipo, max[v.tipo]);
+        rinumerate.push({ uid: v.uid, da: v.codice, a: nuovo });
+        v.codice = nuovo;
+      }
+    }
+    return rinumerate;
+  }
+
+  // src/date.js
+  var fmt = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Rome", year: "numeric", month: "2-digit", day: "2-digit" });
+  var oggiRoma = (adesso) => fmt.format(adesso);
+  function aggiungiGiorni(giorno, n) {
+    const d = /* @__PURE__ */ new Date(`${giorno}T12:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  }
+  function differenzaGiorni(da, a) {
+    return Math.round((Date.parse(`${a}T12:00:00Z`) - Date.parse(`${da}T12:00:00Z`)) / 864e5);
+  }
+
+  // src/store.js
+  var NOME_FILE = "collettore.json";
+  var CHIAVE_CARTELLA = "cartella-collettore";
+  var CONFLITTO = /^collettore(-.+| \(\d+\))\.json$/i;
+  var ErroreFileVuoto = class extends Error {
+    constructor() {
+      super("La cartella non contiene ancora una base dati.");
+      this.name = "ErroreFileVuoto";
+    }
+  };
+  var ErroreDatiNonValidi = class extends Error {
+    constructor(dettagli) {
+      super(`Il file dati non è valido: ${dettagli.join("; ")}. Non è stato modificato.`);
+      this.name = "ErroreDatiNonValidi";
+      this.dettagli = dettagli;
+    }
+  };
+  var supportaAccessoDiretto = () => typeof globalThis.showDirectoryPicker === "function";
+  function analizza(testo) {
+    let x;
+    try {
+      x = JSON.parse(testo);
+    } catch (e) {
+      throw new ErroreDatiNonValidi([`JSON non leggibile (${e.message})`]);
+    }
+    const { ok, errori } = validaDataset(x);
+    if (!ok) throw new ErroreDatiNonValidi(errori);
+    return x;
+  }
+  async function caricaDaFile(file) {
+    return analizza(await file.text());
+  }
+  function scaricaJson(ds, nome = NOME_FILE) {
+    const blob = new Blob([JSON.stringify(ds, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = nome;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1e3);
+  }
+  var Archivio = class _Archivio {
+    constructor(cartella, { adesso = () => /* @__PURE__ */ new Date() } = {}) {
+      this.cartella = cartella;
+      this.adesso = adesso;
+      this.modo = "diretto";
+    }
+    get nome() {
+      return this.cartella.name;
+    }
+    static async scegli({ salvaRif: salvaRif2 } = {}) {
+      const cartella = await globalThis.showDirectoryPicker({ mode: "readwrite", id: "collettore" });
+      if (salvaRif2) await salvaRif2(CHIAVE_CARTELLA, cartella);
+      return new _Archivio(cartella);
+    }
+    static async ricorda({ leggiRif: leggiRif2 }) {
+      const cartella = await leggiRif2(CHIAVE_CARTELLA);
+      return cartella ? new _Archivio(cartella) : null;
+    }
+    async permesso() {
+      return this.cartella.queryPermission({ mode: "readwrite" });
+    }
+    async chiediPermesso() {
+      return await this.cartella.requestPermission({ mode: "readwrite" }) === "granted";
+    }
+    async #testo(nome) {
+      try {
+        return await (await (await this.cartella.getFileHandle(nome)).getFile()).text();
+      } catch (e) {
+        if (e.name === "NotFoundError") return null;
+        throw e;
+      }
+    }
+    async #scrivi(nome, testo) {
+      const w = await (await this.cartella.getFileHandle(nome, { create: true })).createWritable();
+      await w.write(testo);
+      await w.close();
+    }
+    async leggi() {
+      const t = await this.#testo(NOME_FILE);
+      if (t === null || t.trim() === "") throw new ErroreFileVuoto();
+      return analizza(t);
+    }
+    async apri() {
+      return this.leggi();
+    }
+    async creaNuovo() {
+      const t = await this.#testo(NOME_FILE);
+      if (t !== null && t.trim() !== "") throw new Error("La cartella contiene già una base dati: aprila invece di crearne una nuova.");
+      const ds = nuovoDataset();
+      await this.#scrivi(NOME_FILE, JSON.stringify(ds, null, 2));
+      return ds;
+    }
+    async salva(ds) {
+      const t = await this.#testo(NOME_FILE);
+      const suDisco = t === null || t.trim() === "" ? null : analizza(t);
+      const { dataset, rinumerate } = suDisco ? unisci(ds, suDisco) : { dataset: structuredClone(ds), rinumerate: [] };
+      if (t) {
+        const nomeBackup = `collettore.backup-${oggiRoma(this.adesso())}.json`;
+        if (await this.#testo(nomeBackup) === null) await this.#scrivi(nomeBackup, t);
+      }
+      await this.#scrivi(NOME_FILE, JSON.stringify(dataset, null, 2));
+      return { dataset, rinumerate };
+    }
+    async cercaConflitti() {
+      const nomi = [];
+      for await (const [nome] of this.cartella.entries()) if (CONFLITTO.test(nome)) nomi.push(nome);
+      return nomi;
+    }
+    // Unisce in un solo salvataggio le modifiche locali (anche non salvate), le copie in conflitto e il disco.
+    // Le copie si cancellano solo dopo che la scrittura è riuscita.
+    async unisciConflitti(locale) {
+      const nomi = await this.cercaConflitti();
+      let ds = locale;
+      for (const nome of nomi) ds = unisci(ds, analizza(await this.#testo(nome) ?? "")).dataset;
+      const risultato = await this.salva(ds);
+      for (const nome of nomi) await this.cartella.removeEntry(nome);
+      return { ...risultato, unite: nomi };
+    }
+    async unisciConflitto(nome) {
+      const t = await this.#testo(nome);
+      const copia = analizza(t ?? "");
+      const { dataset } = await this.salva(copia);
+      await this.cartella.removeEntry(nome);
+      return dataset;
+    }
+  };
+
+  // src/idb.js
+  var DB = "collettore";
+  var STORE = "riferimenti";
+  function apriDb() {
+    return new Promise((ok, ko) => {
+      const r = indexedDB.open(DB, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore(STORE);
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => ko(r.error);
+    });
+  }
+  async function op(modo, fn) {
+    const db = await apriDb();
+    return new Promise((ok, ko) => {
+      const tx = db.transaction(STORE, modo);
+      const req = fn(tx.objectStore(STORE));
+      tx.oncomplete = () => {
+        db.close();
+        ok(req.result);
+      };
+      tx.onerror = () => {
+        db.close();
+        ko(tx.error);
+      };
+    });
+  }
+  var salvaRif = (chiave, valore) => op("readwrite", (s) => s.put(valore, chiave));
+  var leggiRif = (chiave) => op("readonly", (s) => s.get(chiave));
+
+  // src/xlsx.js
+  var enc = new TextEncoder();
+  var esc = (s) => String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  function lettereColonna(i) {
+    let s = "";
+    for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s;
+    return s;
+  }
+  function xmlFoglio(righe) {
+    const r = righe.map((celle, ri) => `<row r="${ri + 1}">${celle.map((v, ci) => {
+      if (v === null || v === void 0 || v === "") return "";
+      const rif = `${lettereColonna(ci)}${ri + 1}`;
+      const stile = ri === 0 ? ' s="1"' : "";
+      return `<c r="${rif}" t="inlineStr"${stile}><is><t xml:space="preserve">${esc(v)}</t></is></c>`;
+    }).join("")}</row>`).join("");
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetData>${r}</sheetData></worksheet>`;
+  }
+  var CRC = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(b) {
+    let c = 4294967295;
+    for (const x of b) c = CRC[(c ^ x) & 255] ^ c >>> 8;
+    return (c ^ 4294967295) >>> 0;
+  }
+  function zip(file) {
+    const parti = [];
+    const centrale = [];
+    let off = 0;
+    for (const [nome, testo] of file) {
+      const n = enc.encode(nome);
+      const d = enc.encode(testo);
+      const crc = crc32(d);
+      const h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 67324752, true);
+      h.setUint16(4, 20, true);
+      h.setUint16(6, 2048, true);
+      h.setUint32(14, crc, true);
+      h.setUint32(18, d.length, true);
+      h.setUint32(22, d.length, true);
+      h.setUint16(26, n.length, true);
+      parti.push(new Uint8Array(h.buffer), n, d);
+      const c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 33639248, true);
+      c.setUint16(4, 20, true);
+      c.setUint16(6, 20, true);
+      c.setUint16(8, 2048, true);
+      c.setUint32(16, crc, true);
+      c.setUint32(20, d.length, true);
+      c.setUint32(24, d.length, true);
+      c.setUint16(28, n.length, true);
+      c.setUint32(42, off, true);
+      centrale.push(new Uint8Array(c.buffer), n);
+      off += 30 + n.length + d.length;
+    }
+    const dimC = centrale.reduce((s, x) => s + x.length, 0);
+    const e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 101010256, true);
+    e.setUint16(8, file.length, true);
+    e.setUint16(10, file.length, true);
+    e.setUint32(12, dimC, true);
+    e.setUint32(16, off, true);
+    const tutto = [...parti, ...centrale, new Uint8Array(e.buffer)];
+    const out = new Uint8Array(tutto.reduce((s, x) => s + x.length, 0));
+    let p = 0;
+    for (const x of tutto) {
+      out.set(x, p);
+      p += x.length;
+    }
+    return out;
+  }
+  function scriviXlsx(fogli) {
+    const ns = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+    const file = [
+      ["[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${fogli.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`],
+      ["_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="${ns}/officeDocument" Target="xl/workbook.xml"/></Relationships>`],
+      ["xl/workbook.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${ns}"><sheets>${fogli.map((f, i) => `<sheet name="${esc(f.nome)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join("")}</sheets></workbook>`],
+      ["xl/_rels/workbook.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${fogli.map((_, i) => `<Relationship Id="rId${i + 1}" Type="${ns}/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join("")}<Relationship Id="rId${fogli.length + 1}" Type="${ns}/styles" Target="styles.xml"/></Relationships>`],
+      ["xl/styles.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="2"><xf fontId="0"/><xf fontId="1" applyFont="1"/></cellXfs></styleSheet>`],
+      ...fogli.map((f, i) => [`xl/worksheets/sheet${i + 1}.xml`, xmlFoglio(f.righe)])
+    ];
+    return zip(file);
+  }
+
+  // src/export.js
+  var nomeFileExport = (oggi2) => `collettore_${oggi2}.xlsx`;
+  var COMUNI = [["Modificata il", (v) => v.modificataIl.slice(0, 10)], ["Modificata da", (v) => v.modificataDa]];
+  function tabelleExport(ds) {
+    const cod = (uid) => ds.voci[uid]?.codice ?? "";
+    const codici = (xs) => (xs ?? []).map(cod).filter(Boolean).join(", ");
+    const vive4 = (tipo) => Object.values(ds.voci).filter((v) => v.tipo === tipo && !v.eliminata).sort((a, b) => a.codice < b.codice ? -1 : 1);
+    const tabella = (nome, tipo, colonne) => {
+      const cols = [["Codice", (v) => v.codice], ...colonne, ...COMUNI];
+      return { nome, righe: [cols.map(([n]) => n), ...vive4(tipo).map((v) => cols.map(([, f]) => f(v) ?? ""))] };
+    };
+    const elenchi = ds.elenchi;
+    const chiaviElenchi = [["Famiglie", "famiglie"], ["Stream", "stream"], ["Persone", "persone"], ["Fasi", "fasi"]];
+    const altezza = Math.max(...chiaviElenchi.map(([, k]) => elenchi[k].length));
+    return [
+      tabella("Prodotti", "PRD", [["Nome", (v) => v.nome], ["Famiglia", (v) => v.famiglia], ["Fase", (v) => v.fase], ["PM", (v) => v.pm]]),
+      tabella("Progetti", "PRJ", [
+        ["Nome", (v) => v.nome],
+        ["Owner", (v) => v.owner],
+        ["Fase", (v) => v.fase],
+        ["Prodotti", (v) => codici(v.prodotti)],
+        ["Milestone", (v) => (v.milestone ?? []).map((m) => `${m.nome} ${m.data}`).join("; ")]
+      ]),
+      tabella("Temi", "TEM", [
+        ["Titolo", (v) => v.titolo],
+        ["Descrizione", (v) => v.descrizione],
+        ["Owner", (v) => v.owner],
+        ["Stato", (v) => v.stato],
+        ["Prodotti", (v) => codici(v.prodotti)],
+        ["Stream", (v) => (v.stream ?? []).join(", ")]
+      ]),
+      tabella("Attività", "ATT", [
+        ["Titolo", (v) => v.titolo],
+        ["Tema", (v) => cod(v.tema)],
+        ["Progetto", (v) => cod(v.progetto)],
+        ["Prodotti", (v) => codici(v.prodotti)],
+        ["Stream", (v) => v.stream],
+        ["Altri team coinvolti", (v) => streamAttivita(v).filter(nome => nome !== v.stream).join(", ")],
+        ["Owner", (v) => v.owner],
+        ["Stato", (v) => v.stato],
+        ["Priorità", (v) => v.priorita],
+        ["Scadenza", (v) => v.scadenza],
+        ["Fonte", (v) => v.fonte?.tipo],
+        ["Data fonte", (v) => v.fonte?.data],
+        ["Link fonte", (v) => v.fonte?.link]
+      ]),
+      tabella("Decisioni", "DEC", [
+        ["Testo", (v) => v.testo],
+        ["Data", (v) => v.data],
+        ["Owner", (v) => v.owner],
+        ["Tema", (v) => cod(v.tema)],
+        ["Prodotti", (v) => codici(v.prodotti)]
+      ]),
+      tabella("Rischi", "RIS", [
+        ["Testo", (v) => v.testo],
+        ["Data", (v) => v.data],
+        ["Owner", (v) => v.owner],
+        ["Impatto", (v) => v.impatto],
+        ["Tema", (v) => cod(v.tema)],
+        ["Prodotti", (v) => codici(v.prodotti)]
+      ]),
+      tabella("Aggiornamenti", "AGG", [["Riferimento", (v) => cod(v.rif)], ["Data", (v) => v.data], ["Testo", (v) => v.testo], ["Autore", (v) => v.autore]]),
+      { nome: "Elenchi", righe: [
+        chiaviElenchi.map(([n]) => n),
+        ...Array.from({ length: altezza }, (_, i) => chiaviElenchi.map(([, k]) => elenchi[k][i] ?? ""))
+      ] }
+    ];
+  }
+  var creaXlsx = (ds) => scriviXlsx(tabelleExport(ds));
+
+  // src/demo.js
+  var DATA_DEMO = "2026-12-01";
+  function traslaDate(ds, oggi2) {
+    const n = differenzaGiorni(DATA_DEMO, oggi2);
+    const sposta = (d) => typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d) ? aggiungiGiorni(d, n) : d;
+    const out = structuredClone(ds);
+    for (const v of Object.values(out.voci)) {
+      if (v.scadenza) v.scadenza = sposta(v.scadenza);
+      if (v.data) v.data = sposta(v.data);
+      if (v.fonte?.data) v.fonte.data = sposta(v.fonte.data);
+      for (const m of v.milestone ?? []) m.data = sposta(m.data);
+    }
+    return out;
+  }
+
+  // src/ui/util.js
+  var esc2 = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  var dataIt = (d) => d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : "";
+  var etichetta = (v) => v ? `${v.codice} · ${v.titolo ?? v.nome ?? v.testo ?? ""}` : "";
+  var link = (v) => v ? `<button type="button" class="link" data-apri="${esc2(v.uid)}">${esc2(v.codice)}</button> ${esc2(v.titolo ?? v.nome ?? v.testo ?? "")}` : "";
+  var badgeStato = (s) => s ? `<span class="badge stato-${esc2(s.toLowerCase().replace(/\s+/g, "-"))}">${esc2(s)}</span>` : "";
+
+  // src/ui/forms.js
+  var CAMPI = {
+    PRD: [["nome", "Nome", "testo", 1], ["famiglia", "Famiglia", "elenco:famiglie", 1], ["fase", "Fase", "elenco:fasi"], ["pm", "PM", "persona"]],
+    PRJ: [
+      ["nome", "Nome", "testo", 1],
+      ["owner", "Owner", "persona"],
+      ["fase", "Fase", "elenco:fasi"],
+      ["prodotti", "Prodotti", "multi:PRD"],
+      ["milestone", "Milestone (una per riga: nome AAAA-MM-GG)", "milestone"]
+    ],
+    TEM: [
+      ["titolo", "Titolo", "testo", 1],
+      ["descrizione", "Descrizione", "area"],
+      ["owner", "Owner", "persona"],
+      ["stato", "Stato", "scelta:STATI", 1],
+      ["prodotti", "Prodotti", "multi:PRD"],
+      ["stream", "Stream", "multistream"]
+    ],
+    ATT: [
+      ["titolo", "Titolo", "testo", 1],
+      ["tema", "Tema", "rif:TEM", 1],
+      ["progetto", "Progetto", "rif:PRJ"],
+      ["prodotti", "Prodotti", "multi:PRD"],
+      ["stream", "Team principale", "elenco:stream", 1],
+      ["streamAggiuntivi", "Altri team coinvolti", "multistream"],
+      ["warningAttivita", "Warning (vuoto per rimuoverlo)", "area"],
+      ["owner", "Owner", "persona"],
+      ["stato", "Stato", "scelta:STATI", 1],
+      ["priorita", "Priorità", "scelta:PRIORITA", 1],
+      ["scadenza", "Scadenza", "data"],
+      ["fonte.tipo", "Fonte", "scelta:FONTI"],
+      ["fonte.data", "Data della fonte", "data"],
+      ["fonte.link", "Link alla fonte", "testo"]
+    ],
+    DEC: [["testo", "Decisione", "area", 1], ["data", "Data", "data", 1], ["owner", "Owner", "persona"], ["tema", "Tema", "rif:TEM", 1], ["prodotti", "Prodotti", "multi:PRD"]],
+    RIS: [
+      ["testo", "Rischio", "area", 1],
+      ["data", "Data", "data", 1],
+      ["owner", "Owner", "persona"],
+      ["impatto", "Impatto", "scelta:IMPATTI"],
+      ["tema", "Tema", "rif:TEM", 1],
+      ["prodotti", "Prodotti", "multi:PRD"]
+    ],
+    AGG: [["testo", "Aggiornamento", "area", 1], ["data", "Data", "data", 1]]
+  };
+  var COSTANTI = { STATI, PRIORITA, IMPATTI, FONTI };
+  var leggiCampo = (v, campo) => campo.split(".").reduce((o, k) => o?.[k], v);
+  var vive = (ds, tipo) => Object.values(ds.voci).filter((x) => x.tipo === tipo && !x.eliminata).sort((a, b) => a.codice < b.codice ? -1 : 1);
+  function opzioni(lista2, scelto, vuota = true) {
+    return (vuota ? '<option value=""></option>' : "") + lista2.map((o) => {
+      const [val, lab] = Array.isArray(o) ? o : [o, o];
+      return `<option value="${esc2(val)}"${val === scelto ? " selected" : ""}>${esc2(lab)}</option>`;
+    }).join("");
+  }
+  function controllo(ds, [campo, lab, tipo, obbl], valore) {
+    const nome = esc2(campo);
+    const req = obbl ? ' <span class="obbl">*</span>' : "";
+    const [genere, arg] = tipo.split(":");
+    let input;
+    if (genere === "testo") input = `<input name="${nome}" value="${esc2(valore)}">`;
+    else if (genere === "area") input = `<textarea name="${nome}" rows="3">${esc2(valore)}</textarea>`;
+    else if (genere === "data") input = `<input type="date" name="${nome}" value="${esc2(valore)}">`;
+    else if (genere === "elenco") input = `<select name="${nome}">${opzioni(ds.elenchi[arg], valore)}</select>`;
+    else if (genere === "scelta") input = `<select name="${nome}">${opzioni(COSTANTI[arg], valore)}</select>`;
+    else if (genere === "persona") input = `<select name="${nome}">${opzioni(ds.elenchi.persone, valore)}</select>`;
+    else if (genere === "rif") input = `<select name="${nome}">${opzioni(vive(ds, arg).map((x) => [x.uid, etichetta(x)]), valore)}</select>`;
+    else if (genere === "multi") {
+      input = `<div class="scelte">${vive(ds, arg).map((x) => `<label><input type="checkbox" name="${nome}" value="${esc2(x.uid)}" data-nome="${esc2(x.nome ?? x.titolo)}"${(valore ?? []).includes(x.uid) ? " checked" : ""}> ${esc2(x.nome ?? x.titolo)}</label>`).join("")}</div>`;
+    } else if (genere === "multistream") {
+      input = `<div class="scelte">${ds.elenchi.stream.map((s) => `<label><input type="checkbox" name="${nome}" value="${esc2(s)}"${(valore ?? []).includes(s) ? " checked" : ""}> ${esc2(s)}</label>`).join("")}</div>`;
+    } else if (genere === "milestone") {
+      input = `<textarea name="${nome}" rows="3" placeholder="DVT 2027-01-20">${esc2((valore ?? []).map((m) => `${m.nome} ${m.data}`).join("\n"))}</textarea>`;
+    }
+    return `<div class="campo" data-campo="${nome}"><label class="etichetta">${esc2(lab)}${req}</label>${input}<div class="errore-campo"></div></div>`;
+  }
+  function htmlForm(ds, tipo, voce = {}, titolo) {
+    const campi = CAMPI[tipo];
+    return `<form class="voce" data-tipo="${tipo}" novalidate>
+    <h2>${esc2(titolo ?? `${voce.codice ? "Modifica" : "Nuova"} ${NOMI_TIPO[tipo].toLowerCase()}${voce.codice ? ` ${voce.codice}` : ""}`)}</h2>
+    <div class="errori" role="alert"></div>
+    <div class="griglia-campi">${campi.map((c) => controllo(ds, c, leggiCampo(voce, c[0]))).join("")}</div>
+    <div class="azioni-form"><button type="submit" class="primario">Salva voce</button><button type="button" data-annulla>Annulla</button></div>
+  </form>`;
+  }
+  function leggiForm(form, tipo) {
+    const fd = new FormData(form);
+    const out = {};
+    for (const [campo, , t] of CAMPI[tipo]) {
+      const [genere] = t.split(":");
+      let val;
+      if (genere === "multi" || genere === "multistream") val = fd.getAll(campo);
+      else if (genere === "milestone") {
+        val = String(fd.get(campo) ?? "").split("\n").map((r) => r.trim()).filter(Boolean).map((r) => {
+          const m = /^(.*?)\s+(\d{4}-\d{2}-\d{2})$/.exec(r);
+          return m ? { nome: m[1], data: m[2] } : { nome: r, data: "" };
+        });
+      } else val = String(fd.get(campo) ?? "").trim();
+      if (campo.includes(".")) {
+        const [a, b] = campo.split(".");
+        out[a] ??= {};
+        out[a][b] = val;
+      } else if (val === "" && (genere === "rif" || genere === "data")) out[campo] = void 0;
+      else out[campo] = val;
+    }
+    return out;
+  }
+  function mostraErrori(form, errori) {
+    form.querySelector(".errori").innerHTML = errori.length ? `<p>Correggi prima di salvare:</p><ul>${errori.map((e) => `<li>${esc2(e)}</li>`).join("")}</ul>` : "";
+    form.querySelectorAll(".errore-campo").forEach((n) => {
+      n.textContent = "";
+    });
+    const alias = { "priorità": "priorita", PM: "pm", fonte: "fonte.tipo" };
+    for (const e of errori) {
+      const chiave = e.split(":")[0];
+      const box = form.querySelector(`[data-campo="${CSS.escape(alias[chiave] ?? chiave)}"] .errore-campo`);
+      if (box) box.textContent = e.slice(chiave.length + 1).trim();
+    }
+  }
+
+  // src/views.js
+  var vive2 = (ds, tipo) => Object.values(ds.voci).filter((v) => !v.eliminata && (!tipo || v.tipo === tipo));
+  var perCodice = (a, b) => a.codice < b.codice ? -1 : a.codice > b.codice ? 1 : 0;
+  var viva = (ds, uid) => {
+    const v = ds.voci[uid];
+    return v && !v.eliminata ? v : null;
+  };
+  var comprende = (xs, x) => Array.isArray(xs) && xs.includes(x);
+  function streamAttivita(voce) {
+    const altri = Array.isArray(voce.streamAggiuntivi) ? voce.streamAggiuntivi : [];
+    return [...new Set([voce.stream, ...altri].filter(Boolean))];
+  }
+  function streamDi(ds, v) {
+    if (!v) return [];
+    if (v.tipo === "ATT") return streamAttivita(v);
+    if (v.tipo === "TEM") return v.stream ?? [];
+    if (v.tipo === "DEC" || v.tipo === "RIS") return streamDi(ds, viva(ds, v.tema));
+    return [];
+  }
+  function vistaSettimanale(ds, { dal, oggi: oggi2 }) {
+    const fine = aggiungiGiorni(oggi2, 14);
+    const att = vive2(ds, "ATT");
+    const agg = vive2(ds, "AGG").filter((a) => a.data >= dal && a.data <= oggi2);
+    const dec = vive2(ds, "DEC").filter((d) => d.data >= dal && d.data <= oggi2);
+    const aperta = (a) => a.stato !== "Chiusa";
+    const righe = ds.elenchi.stream.map((s) => ({
+      stream: s,
+      aggiornamenti: agg.filter((a) => streamDi(ds, viva(ds, a.rif)).includes(s)).sort((a, b) => b.data.localeCompare(a.data)),
+      bloccate: att.filter((a) => streamAttivita(a).includes(s) && a.stato === "Bloccata").sort(perCodice),
+      scadute: att.filter((a) => streamAttivita(a).includes(s) && aperta(a) && a.scadenza && a.scadenza < oggi2).sort((a, b) => a.scadenza.localeCompare(b.scadenza)),
+      inScadenza: att.filter((a) => streamAttivita(a).includes(s) && aperta(a) && a.scadenza && a.scadenza >= oggi2 && a.scadenza <= fine).sort((a, b) => a.scadenza.localeCompare(b.scadenza)),
+      decisioni: dec.filter((d) => streamDi(ds, d).includes(s)).sort(perCodice)
+    }));
+    const generali = agg.filter((a) => streamDi(ds, viva(ds, a.rif)).length === 0 && viva(ds, a.rif));
+    if (generali.length) righe.push({ stream: "Generale", aggiornamenti: generali, bloccate: [], scadute: [], inScadenza: [], decisioni: [] });
+    return righe;
+  }
+  function vistaProdotto(ds, uidProdotto) {
+    const prodotto = viva(ds, uidProdotto);
+    const att = vive2(ds, "ATT").filter((a) => comprende(a.prodotti, uidProdotto)).sort(perCodice);
+    const uidTemi = new Set(vive2(ds, "TEM").filter((t) => comprende(t.prodotti, uidProdotto)).map((t) => t.uid));
+    for (const a of att) if (viva(ds, a.tema)) uidTemi.add(a.tema);
+    const temi = [...uidTemi].map((u) => ds.voci[u]).sort(perCodice).map((tema) => ({
+      tema,
+      condivisoCon: (tema.prodotti ?? []).filter((p) => p !== uidProdotto).map((p) => viva(ds, p)).filter(Boolean).sort(perCodice)
+    }));
+    const attivitaPerStream = {};
+    for (const a of att) {
+      for (const nome of streamAttivita(a)) (attivitaPerStream[nome] ??= []).push(a);
+    }
+    return {
+      prodotto,
+      temi,
+      attivitaPerStream,
+      rischi: vive2(ds, "RIS").filter((r) => comprende(r.prodotti, uidProdotto)).sort(perCodice),
+      decisioni: vive2(ds, "DEC").filter((d) => comprende(d.prodotti, uidProdotto)).sort(perCodice)
+    };
+  }
+  function matriceTemi(ds) {
+    const prodotti = vive2(ds, "PRD").sort(perCodice);
+    const righe = vive2(ds, "TEM").map((tema) => ({ tema, presenza: prodotti.map((p) => comprende(tema.prodotti, p.uid)) }));
+    const conta = (r) => r.presenza.filter(Boolean).length;
+    righe.sort((a, b) => conta(b) - conta(a) || perCodice(a.tema, b.tema));
+    return { prodotti, righe };
+  }
+  function vistaProgetto(ds, uidProgetto, { oggi: oggi2 }) {
+    const progetto = viva(ds, uidProgetto);
+    return {
+      progetto,
+      milestone: (progetto?.milestone ?? []).map((m) => ({ ...m, scaduta: m.data < oggi2 })).sort((a, b) => a.data.localeCompare(b.data)),
+      attivita: vive2(ds, "ATT").filter((a) => a.progetto === uidProgetto).sort(perCodice)
+    };
+  }
+  function vistaStream(ds) {
+    const att = vive2(ds, "ATT").filter((a) => a.stato !== "Chiusa").sort(perCodice);
+    return ds.elenchi.stream.map((stream) => {
+      const perPersona = {};
+      for (const a of att.filter((x) => streamAttivita(x).includes(stream))) (perPersona[a.owner || "Senza owner"] ??= []).push(a);
+      return { stream, perPersona };
+    });
+  }
+  var CAMPI_TESTO = ["codice", "titolo", "testo", "nome", "descrizione"];
+  function filtra(voci, { testo, prodotto, stream, owner, stato: stato2 } = {}) {
+    const q = testo?.trim().toLowerCase();
+    return voci.filter((v) => {
+      if (v.eliminata) return false;
+      if (q && !CAMPI_TESTO.some((c) => String(v[c] ?? "").toLowerCase().includes(q))) return false;
+      if (prodotto && !comprende(v.prodotti, prodotto)) return false;
+      if (stream && !(v.tipo === "ATT" ? streamAttivita(v).includes(stream) : v.stream === stream || comprende(v.stream, stream))) return false;
+      if (owner && v.owner !== owner) return false;
+      if (stato2 && v.stato !== stato2) return false;
+      return true;
+    });
+  }
+
+  // src/ui/render.js
+  var vive3 = (ds, tipo) => Object.values(ds.voci).filter((v) => v.tipo === tipo && !v.eliminata).sort((a, b) => a.codice < b.codice ? -1 : 1);
+  var nomeDi = (ds, uid) => ds.voci[uid]?.nome ?? ds.voci[uid]?.titolo ?? "";
+  function rigaAttivita(ds, a, { oggi: oggi2 } = {}) {
+    const scaduta = oggi2 && a.scadenza && a.scadenza < oggi2 && a.stato !== "Chiusa";
+    const prodotti = (a.prodotti ?? []).map((p) => nomeDi(ds, p)).join(", ");
+    return `<li class="riga-voce">${link(a)} ${badgeStato(a.stato)}
+    <span class="meta">${esc2(a.owner || "senza owner")}${a.scadenza ? ` · <span class="${scaduta ? "scaduta" : ""}">entro ${dataIt(a.scadenza)}</span>` : ""}${prodotti ? ` · ${esc2(prodotti)}` : ""}</span></li>`;
+  }
+  var lista = (ds, voci, vuoto2 = "Niente da segnalare", opz) => voci.length ? `<ul class="voci">${voci.map((v) => v.tipo === "ATT" ? rigaAttivita(ds, v, opz) : rigaGenerica(ds, v)).join("")}</ul>` : `<p class="vuoto">${esc2(vuoto2)}</p>`;
+  function rigaGenerica(ds, v) {
+    if (v.tipo === "AGG") {
+      const rif = ds.voci[v.rif];
+      return `<li class="riga-voce"><span class="data">${dataIt(v.data)}</span> ${link(rif)} — ${esc2(v.testo)} <span class="meta">${esc2(v.autore)}</span></li>`;
+    }
+    return `<li class="riga-voce">${link(v)} ${badgeStato(v.stato)} ${v.data ? `<span class="meta">${dataIt(v.data)}</span>` : ""}</li>`;
+  }
+  function htmlSettimanale(ds, { dal, oggi: oggi2 }) {
+    const righe = vistaSettimanale(ds, { dal, oggi: oggi2 });
+    const blocco = (titolo, voci, classe = "") => `<div class="blocco ${classe}"><h4>${titolo} <span class="conta">${voci.length}</span></h4>${lista(ds, voci, "Niente", { oggi: oggi2 })}</div>`;
+    return `<header class="testata-vista"><h1>Settimanale</h1>
+      <label>Novità dal <input type="date" id="settimanale-dal" value="${esc2(dal)}"></label>
+      <span class="meta">oggi ${dataIt(oggi2)} · scadenze fino a 14 giorni</span></header>
+    <div class="settimanale">${righe.map((r) => `<section class="stream" data-stream="${esc2(r.stream)}">
+      <h3>${esc2(r.stream)}</h3>
+      <div class="blocchi">
+        ${blocco("Bloccate", r.bloccate, r.bloccate.length ? "allarme" : "")}
+        ${blocco("Scadute", r.scadute, r.scadute.length ? "allarme" : "")}
+        ${blocco("In scadenza", r.inScadenza)}
+        ${blocco("Aggiornamenti", r.aggiornamenti)}
+        ${blocco("Decisioni", r.decisioni)}
+      </div></section>`).join("")}</div>`;
+  }
+  function htmlProdotti(ds, uidScelto, { oggi: oggi2 }) {
+    const prodotti = vive3(ds, "PRD");
+    const scelto = uidScelto && ds.voci[uidScelto] && !ds.voci[uidScelto].eliminata ? uidScelto : prodotti[0]?.uid;
+    const schede = `<nav class="schede">${prodotti.map((p2) => `<button type="button" class="scheda${p2.uid === scelto ? " attiva" : ""}" data-prodotto="${esc2(p2.uid)}">${esc2(p2.nome)}</button>`).join("")}</nav>`;
+    if (!scelto) return `<header class="testata-vista"><h1>Prodotti</h1></header><p class="vuoto">Nessun prodotto: aggiungine uno con «Nuovo prodotto».</p>`;
+    const v = vistaProdotto(ds, scelto);
+    const p = v.prodotto;
+    const temi = v.temi.map(({ tema, condivisoCon }) => `<li class="riga-voce">${link(tema)} ${badgeStato(tema.stato)}
+    ${condivisoCon.length ? `<span class="condiviso">condiviso con ${condivisoCon.map((c) => esc2(c.nome)).join(", ")}</span>` : ""}</li>`).join("");
+    const perStream = ds.elenchi.stream.filter((s) => v.attivitaPerStream[s]).map((s) => `<div class="blocco"><h4>${esc2(s)} <span class="conta">${v.attivitaPerStream[s].length}</span></h4>${lista(ds, v.attivitaPerStream[s], "", { oggi: oggi2 })}</div>`).join("");
+    return `<header class="testata-vista"><h1>Prodotti</h1></header>${schede}
+    <section class="prodotto"><h2>${link(p)}</h2>
+      <p class="meta">${esc2(p.famiglia)} · fase ${esc2(p.fase || "—")} · PM ${esc2(p.pm || "—")}</p>
+      <div class="colonne">
+        <div class="blocco"><h4>Temi <span class="conta">${v.temi.length}</span></h4>${temi ? `<ul class="voci">${temi}</ul>` : '<p class="vuoto">Nessun tema</p>'}</div>
+        <div class="blocco"><h4>Rischi</h4>${lista(ds, v.rischi, "Nessun rischio")}<h4>Decisioni</h4>${lista(ds, v.decisioni, "Nessuna decisione")}</div>
+      </div>
+      <h3>Attività per stream</h3><div class="blocchi">${perStream || '<p class="vuoto">Nessuna attività</p>'}</div>
+    </section>`;
+  }
+  function htmlTemi(ds) {
+    const m = matriceTemi(ds);
+    return `<header class="testata-vista"><h1>Temi trasversali</h1><span class="meta">Ordinati per numero di prodotti coinvolti. Clic su un tema per tutte le sue attività.</span></header>
+    <table class="matrice"><thead><tr><th>Tema</th><th>Stato</th>${m.prodotti.map((p) => `<th>${esc2(p.nome)}</th>`).join("")}<th>Attività aperte</th></tr></thead>
+    <tbody>${m.righe.map(({ tema, presenza }) => {
+      const aperte = Object.values(ds.voci).filter((a) => a.tipo === "ATT" && !a.eliminata && a.tema === tema.uid && a.stato !== "Chiusa").length;
+      return `<tr><th scope="row">${link(tema)}</th><td>${badgeStato(tema.stato)}</td>${presenza.map((x) => x ? '<td class="presente">●</td>' : '<td class="assente">·</td>').join("")}<td class="num">${aperte}</td></tr>`;
+    }).join("")}</tbody></table>`;
+  }
+  function htmlProgetti(ds, { oggi: oggi2 }) {
+    const progetti = vive3(ds, "PRJ");
+    if (!progetti.length) return '<header class="testata-vista"><h1>Progetti</h1></header><p class="vuoto">Nessun progetto.</p>';
+    return `<header class="testata-vista"><h1>Progetti</h1></header>${progetti.map((p) => {
+      const v = vistaProgetto(ds, p.uid, { oggi: oggi2 });
+      return `<section class="progetto"><h2>${link(p)}</h2><p class="meta">${esc2(p.owner || "—")} · fase ${esc2(p.fase || "—")} · ${(p.prodotti ?? []).map((x) => esc2(nomeDi(ds, x))).join(", ")}</p>
+      <ol class="milestone">${v.milestone.map((m) => `<li class="${m.scaduta ? "passata" : "futura"}"><strong>${esc2(m.nome)}</strong> ${dataIt(m.data)}</li>`).join("")}</ol>
+      ${lista(ds, v.attivita, "Nessuna attività collegata", { oggi: oggi2 })}</section>`;
+    }).join("")}`;
+  }
+  function htmlStream(ds, { oggi: oggi2 }) {
+    return `<header class="testata-vista"><h1>Stream</h1><span class="meta">Attività non chiuse per persona</span></header>
+    <div class="settimanale">${vistaStream(ds).map(({ stream, perPersona }) => `<section class="stream"><h3>${esc2(stream)}</h3><div class="blocchi">
+      ${Object.entries(perPersona).sort().map(([persona, att]) => `<div class="blocco"><h4>${esc2(persona)} <span class="conta">${att.length}</span></h4>${lista(ds, att, "", { oggi: oggi2 })}</div>`).join("") || '<p class="vuoto">Nessuna attività aperta</p>'}
+    </div></section>`).join("")}</div>`;
+  }
+  function htmlRicerca(ds, filtro, { oggi: oggi2 }) {
+    const tutte = Object.values(ds.voci).filter((v) => v.tipo !== "AGG");
+    const risultati = filtra(tutte, filtro).sort((a, b) => a.codice < b.codice ? -1 : 1);
+    const sel = (nome, lab, valori) => `<label>${lab} <select data-filtro="${nome}"><option value="">tutti</option>${valori.map(([v, l]) => `<option value="${esc2(v)}"${filtro[nome] === v ? " selected" : ""}>${esc2(l)}</option>`).join("")}</select></label>`;
+    return `<header class="testata-vista"><h1>Ricerca</h1>
+      ${sel("prodotto", "Prodotto", vive3(ds, "PRD").map((p) => [p.uid, p.nome]))}
+      ${sel("stream", "Stream", ds.elenchi.stream.map((s) => [s, s]))}
+      ${sel("owner", "Owner", ds.elenchi.persone.map((s) => [s, s]))}
+      ${sel("stato", "Stato", STATI.map((s) => [s, s]))}
+      <span class="meta">${risultati.length} risultati${filtro.testo ? ` per «${esc2(filtro.testo)}»` : ""}</span></header>
+    ${lista(ds, risultati, "Nessun risultato", { oggi: oggi2 })}`;
+  }
+  function htmlScheda(ds, uid) {
+    const v = ds.voci[uid];
+    if (!v) return "<p>Voce non trovata.</p>";
+    const nome = (x) => ds.voci[x] ? `${link(ds.voci[x])}` : "";
+    const righe = [];
+    const r = (lab, val) => {
+      if (val) righe.push(`<tr><th>${esc2(lab)}</th><td>${val}</td></tr>`);
+    };
+    r("Stato", badgeStato(v.stato));
+    if (v.tipo === "ATT") r("Warning", esc2(v.warningAttivita));
+    r("Famiglia", esc2(v.famiglia));
+    r("Fase", esc2(v.fase));
+    r("PM", esc2(v.pm));
+    r("Owner", esc2(v.owner));
+    r("Descrizione", esc2(v.descrizione));
+    r("Testo", esc2(v.testo));
+    r("Tema", nome(v.tema));
+    r("Progetto", nome(v.progetto));
+    r("Riferimento", nome(v.rif));
+    r("Prodotti", (v.prodotti ?? []).map(nome).join("<br>"));
+    r(v.tipo === "ATT" ? "Team principale" : "Stream", esc2(Array.isArray(v.stream) ? v.stream.join(", ") : v.stream));
+    if (v.tipo === "ATT") r("Altri team coinvolti", esc2(streamAttivita(v).filter(nome => nome !== v.stream).join(", ")));
+    r("Priorità", esc2(v.priorita));
+    r("Impatto", esc2(v.impatto));
+    r("Scadenza", dataIt(v.scadenza));
+    r("Data", dataIt(v.data));
+    r("Milestone", (v.milestone ?? []).map((m) => `${esc2(m.nome)} ${dataIt(m.data)}`).join("<br>"));
+    if (v.fonte?.tipo || v.fonte?.data) r("Fonte", `${esc2(v.fonte.tipo)} ${dataIt(v.fonte.data)} ${v.fonte.link && linkSicuro(v.fonte.link) ? `<a href="${esc2(v.fonte.link)}" target="_blank" rel="noopener">link</a>` : ""}`);
+    r("Ultima modifica", `${dataIt(v.modificataIl.slice(0, 10))} · ${esc2(v.modificataDa)}`);
+    const collegate = Object.values(ds.voci).filter((x) => !x.eliminata && x.uid !== uid && x.tipo !== "AGG" && (x.tema === uid || x.progetto === uid || (x.prodotti ?? []).includes(uid))).sort((a, b) => a.codice < b.codice ? -1 : 1);
+    const storico = Object.values(ds.voci).filter((x) => x.tipo === "AGG" && !x.eliminata && x.rif === uid).sort((a, b) => b.data.localeCompare(a.data));
+    return `<div class="scheda-voce" data-uid="${esc2(uid)}">
+    <p class="tipo">${esc2(NOMI_TIPO[v.tipo])}${v.eliminata ? " · eliminata" : ""}</p>
+    <h2>${esc2(v.codice)} ${esc2(v.titolo ?? v.nome ?? "")}</h2>
+    <table class="campi">${righe.join("")}</table>
+    ${collegate.length ? `<h3>Collegate <span class="conta">${collegate.length}</span></h3>${lista(ds, collegate)}` : ""}
+    <h3>Storico</h3>${storico.length ? `<ul class="voci">${storico.map((a) => `<li class="riga-voce"><span class="data">${dataIt(a.data)}</span> ${esc2(a.testo)} <span class="meta">${esc2(a.autore)}</span></li>`).join("")}</ul>` : '<p class="vuoto">Nessun aggiornamento</p>'}
+    <div class="azioni-form">
+      ${v.eliminata ? "" : `<button type="button" class="primario" data-aggiorna="${esc2(uid)}">Aggiungi aggiornamento</button>
+      <button type="button" data-modifica="${esc2(uid)}">Modifica</button>
+      <button type="button" class="pericolo" data-elimina="${esc2(uid)}">Elimina</button>`}
+      <button type="button" data-chiudi>Chiudi</button>
+    </div></div>`;
+  }
+  function htmlImpostazioni(ds) {
+    const area = (k, lab) => `<div class="campo"><label class="etichetta">${esc2(lab)} (una voce per riga)</label><textarea name="${k}" rows="6">${esc2(ds.elenchi[k].join("\n"))}</textarea></div>`;
+    return `<form class="impostazioni"><h2>Impostazioni — elenchi</h2>
+    <p class="meta">Gli elenchi chiusi garantiscono etichette coerenti. Rinominare una voce non aggiorna le voci che la usano.</p>
+    <div class="griglia-campi">${area("persone", "Persone")}${area("stream", "Stream")}${area("famiglie", "Famiglie di prodotto")}${area("fasi", "Fasi")}</div>
+    <div class="azioni-form"><button type="submit" class="primario">Salva elenchi</button><button type="button" data-annulla>Annulla</button></div></form>`;
+  }
+
+  // src/ui/app.js
+  var CHIAVE_UTENTE = "collettore-utente";
+  function datiExecutive(dataset, giorno, dal) {
+    const attivita = vive2(dataset, "ATT");
+    const aperte = attivita.filter(voce => voce.stato !== "Chiusa");
+    const progetti = vive2(dataset, "PRJ");
+    const rischi = vive2(dataset, "RIS").sort(perDataExecutive);
+    const fine = aggiungiGiorni(giorno, 30);
+    const nelPeriodo = voce => voce.data >= dal && voce.data <= giorno;
+    return {
+      aperte, progetti, attivita,
+      bloccate: aperte.filter(voce => voce.stato === "Bloccata"),
+      scadute: aperte.filter(voce => voce.scadenza && voce.scadenza < giorno)
+        .sort((prima, seconda) => prima.scadenza.localeCompare(seconda.scadenza)),
+      rischi, warning: rischi.filter(voce => voce.impatto === "Alto"),
+      decisioni: vive2(dataset, "DEC").filter(nelPeriodo).sort(perDataExecutive),
+      aggiornamenti: vive2(dataset, "AGG").filter(nelPeriodo).sort(perDataExecutive),
+      milestone: progetti.flatMap(progetto => (progetto.milestone ?? [])
+        .filter(voce => voce.data >= giorno && voce.data <= fine)
+        .map(voce => ({ ...voce, progetto })))
+        .sort((prima, seconda) => prima.data.localeCompare(seconda.data))
+    };
+  }
+  const perDataExecutive = (prima, seconda) => (seconda.data ?? "").localeCompare(prima.data ?? "");
+  let paginaExecutive = 0;
+  let focusExecutive = "";
+  const prefissoPasswordTeam = "collettore.team.password.v2:";
+  let teamSbloccati = false;
+  let teamSelezionato = 0;
+  const chiavePasswordTeam = nome => prefissoPasswordTeam + nome;
+  function leggiPasswordTeam(nome) {
+    try {
+      return JSON.parse(localStorage.getItem(chiavePasswordTeam(nome)));
+    } catch {
+      return null;
+    }
+  }
+  async function verificaPasswordTeam(password, salt) {
+    const chiave = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+    const bytes = await crypto.subtle.deriveBits({
+      name: "PBKDF2", hash: "SHA-256", iterations: 600000, salt: Uint8Array.from(salt)
+    }, chiave, 256);
+    return Array.from(new Uint8Array(bytes), valore => valore.toString(16).padStart(2, "0")).join("");
+  }
+  function streamCondivisiPMO(dataset, voce) {
+    const riferimento = voce.tipo === "AGG" ? viva(dataset, voce.rif) : voce;
+    return (voce.condivisionePMO ?? []).filter(nome =>
+      dataset.elenchi.stream.includes(nome) && streamDi(dataset, riferimento).includes(nome));
+  }
+  function condivisiPMO(dataset) {
+    return vive2(dataset).filter(voce => streamCondivisiPMO(dataset, voce).length > 0).sort(perCodice);
+  }
+  function datasetExecutive(dataset) {
+    const riservataAlTeam = voce => voce?.soloAreaTeam === true && !streamCondivisiPMO(dataset, voce).length;
+    return { ...dataset, voci: Object.fromEntries(Object.entries(dataset.voci).filter(([, voce]) =>
+      !riservataAlTeam(voce) && !(voce.tipo === "AGG" && riservataAlTeam(dataset.voci[voce.rif])))) };
+  }
+  const avvisiAttivitaVisti = new Set();
+  function avvisiAttivita(dataset, stream) {
+    return vive2(dataset, "ATT").filter(voce => voce.stato !== "Chiusa" &&
+      typeof voce.warningAttivita === "string" && voce.warningAttivita.trim() &&
+      (!stream || streamAttivita(voce).includes(stream))).sort(perCodice);
+  }
+  function avvisiVistaAttuale() {
+    if (stato.vista === "team" && teamSbloccati) {
+      const nome = stato.ds.elenchi.stream[teamSelezionato];
+      return nome ? avvisiAttivita(stato.ds, nome) : [];
+    }
+    return stato.vista === "executive" ? avvisiAttivita(datasetExecutive(stato.ds)) : [];
+  }
+  function listaAvvisiAttivita(voci) {
+    return `<ul class="voci pmo-avvisi">${voci.map(voce => `<li>${link(voce)}<p>${esc2(voce.warningAttivita)}</p></li>`).join("")}</ul>`;
+  }
+  function mostraAvvisiAttivita(voci) {
+    if (!voci.length) return;
+    apriFinestra(`<section class="pmo-panel pmo-warning"><h2>Warning sulle attività</h2>${listaAvvisiAttivita(voci)}
+      <div class="azioni-form"><button class="primario" data-chiudi>Chiudi avviso</button></div></section>`);
+  }
+  function controllaAvvisiAttivita() {
+    if ($("#finestra").open) return;
+    const ambito = stato.vista === "team" ? ["team", stato.ds.elenchi.stream[teamSelezionato]] : [stato.vista];
+    const nuovi = avvisiVistaAttuale().filter(voce => {
+      const chiave = JSON.stringify([...ambito, voce.uid, voce.warningAttivita]);
+      if (avvisiAttivitaVisti.has(chiave)) return false;
+      avvisiAttivitaVisti.add(chiave);
+      return true;
+    });
+    mostraAvvisiAttivita(nuovi);
+  }
+  function pulsanteAvvisiAttivita(voci) {
+    return voci.length ? `<button type="button" id="ex-alerts" class="pmo-alert-button">Warning attività (${voci.length})</button>` : "";
+  }
+  function aggiornaCondivisionePMO(uid) {
+    if (stato.vista !== "team" || !teamSbloccati) return;
+    const dataset = stato.ds;
+    const nome = dataset.elenchi.stream[teamSelezionato];
+    const voce = viva(dataset, uid);
+    const riferimento = voce?.tipo === "AGG" ? viva(dataset, voce.rif) : voce;
+    if (!nome || !voce || !streamDi(dataset, riferimento).includes(nome)) return;
+    const stream = new Set(streamCondivisiPMO(dataset, voce));
+    if (stream.has(nome)) stream.delete(nome);
+    else stream.add(nome);
+    dataset.voci[uid] = aggiornaVoce(voce, { condivisionePMO: [...stream] }, autore(), new Date());
+    segnaModificato();
+    Array.from(document.querySelectorAll("[data-ex-pmo]")).find(pulsante => pulsante.dataset.exPmo === uid)?.focus();
+  }
+  function htmlTeam() {
+    const dataset = stato.ds;
+    const stream = dataset.elenchi.stream;
+    const nome = stream[teamSelezionato];
+    const navigazione = `<nav class="pmo-deck" aria-label="Team">${stream.map((voce, indice) => `<button data-ex-team="${indice}" aria-current="${indice === teamSelezionato ? "page" : "false"}">${esc2(voce)}</button>`).join("")}</nav>`;
+    if (!nome) return '<div class="pmo"><section class="pmo-panel"><h1>Area Team</h1><p>Nessun team configurato.</p></section></div>';
+    if (!teamSbloccati) {
+      const configurata = Boolean(leggiPasswordTeam(nome));
+      return `<div class="pmo"><header class="pmo-hero"><div><p class="pmo-eyebrow">AREA TEAM</p><h1>${esc2(nome)}</h1></div></header>${navigazione}
+        <form class="pmo-panel pmo-accesso" id="ex-team-login"><h2>${configurata ? "Sblocca area Team" : "Imposta la password"}</h2>
+        <p>Usa una password dedicata a questo team. La password vale in questo browser. Le autorizzazioni alla cartella regolano l’accesso ai dati.</p>
+        <label>Password <input name="password" type="password" autocomplete="${configurata ? "current-password" : "new-password"}" ${configurata ? "" : 'minlength="10"'} required></label>
+        ${configurata ? "" : '<label>Conferma password <input name="conferma" type="password" autocomplete="new-password" required></label>'}
+        <button class="primario">${configurata ? "Sblocca" : "Imposta e accedi"}</button><p role="alert"></p></form></div>`;
+    }
+    const giorno = oggi();
+    const riguarda = voce => Boolean(nome) && streamDi(dataset, voce).includes(nome);
+    const dati = datiExecutive(dataset, giorno, stato.dal);
+    const note = dati.aggiornamenti.filter(voce => voce.notaStaff && riguarda(viva(dataset, voce.rif)));
+    const attivita = dati.attivita.filter(riguarda);
+    const pannello = (titolo, contenuto) => `<section class="pmo-panel"><h2>${titolo}</h2>${contenuto}</section>`;
+    const elenco = voci => voci.length ? `<ul class="voci pmo-team-voci">${voci.map(voce => {
+      const condivisa = streamCondivisiPMO(dataset, voce).includes(nome);
+      return `<li class="riga-voce"><div>${link(voce)} ${badgeStato(voce.stato)}
+        <span class="meta">${esc2(voce.owner || voce.autore || "")} ${dataIt(voce.scadenza ?? voce.data)}
+        ${voce.tipo === "AGG" ? link(viva(dataset, voce.rif)) : ""}</span></div>
+        <button type="button" data-ex-pmo="${esc2(voce.uid)}" aria-pressed="${condivisa}">${condivisa ? "Rimuovi dal PMO" : "Condividi con PMO"}</button></li>`;
+    }).join("")}</ul>` : '<p class="vuoto">Nessuna voce</p>';
+    const condivisePassate = condivisiPMO(dataset).filter(voce =>
+      streamCondivisiPMO(dataset, voce).includes(nome) &&
+      ((voce.tipo === "DEC" && !dati.decisioni.includes(voce)) || (voce.tipo === "AGG" && !note.includes(voce))));
+    return `<div class="pmo"><header class="pmo-hero"><div><p class="pmo-eyebrow">AREA TEAM</p><h1>${esc2(nome ?? "Team")}</h1></div>
+      <div class="pmo-controls"><button id="ex-team-new">Nuova attività</button>${pulsanteAvvisiAttivita(avvisiAttivita(dataset, nome))}${stato.modo !== "demo" && stato.modificato ? '<button id="ex-save">Salva archivio</button>' : ""}<button id="ex-team-lock">Blocca area</button></div></header>
+      ${navigazione}
+      <p class="pmo-panel">Scegli quali voci inserire in <strong>Condiviso dai team</strong>. Le selezioni si aggiornano subito in questo collettore. Salva l’archivio per renderle disponibili a chi lo usa.</p>
+      <div class="pmo-grid">${pannello("Attività aperte", elenco(attivita.filter(voce => voce.stato !== "Chiusa")))}
+      ${pannello("Attività chiuse", elenco(attivita.filter(voce => voce.stato === "Chiusa")))}
+      ${pannello("Temi del team", elenco(vive2(dataset, "TEM").filter(riguarda)))}
+      ${pannello("Warning", elenco(dati.warning.filter(riguarda)))}
+      ${pannello("Decisioni del periodo", elenco(dati.decisioni.filter(riguarda)))}
+      ${pannello("Note del periodo", elenco(note))}
+      ${condivisePassate.length ? pannello("Condivisioni fuori periodo", elenco(condivisePassate)) : ""}</div></div>`;
+  }
+  async function accediTeam(evento) {
+    const modulo = evento.target;
+    if (modulo.id !== "ex-team-login") return;
+    evento.preventDefault();
+    const errore = modulo.querySelector('[role="alert"]');
+    const pulsante = modulo.querySelector("button");
+    const password = modulo.elements.password.value;
+    const nome = stato.ds.elenchi.stream[teamSelezionato];
+    const salvata = leggiPasswordTeam(nome);
+    if (!salvata && password !== modulo.elements.conferma?.value) {
+      errore.textContent = "Le password non coincidono.";
+      return;
+    }
+    pulsante.disabled = true;
+    try {
+      const salt = salvata?.salt ?? Array.from(crypto.getRandomValues(new Uint8Array(16)));
+      const verifica = await verificaPasswordTeam(password, salt);
+      if (stato.vista !== "team" || !modulo.isConnected) return;
+      if (salvata && salvata.verifica !== verifica) {
+        errore.textContent = "Password errata.";
+        return;
+      }
+      if (!salvata) {
+        for (const altroTeam of stato.ds.elenchi.stream) {
+          if (altroTeam === nome) continue;
+          const altra = leggiPasswordTeam(altroTeam);
+          if (altra && await verificaPasswordTeam(password, altra.salt) === altra.verifica) {
+            errore.textContent = "Questa password è già in uso per un altro team.";
+            return;
+          }
+        }
+        if (stato.vista !== "team" || !modulo.isConnected) return;
+        localStorage.setItem(chiavePasswordTeam(nome), JSON.stringify({ salt, verifica }));
+      }
+      teamSbloccati = true;
+      mostraVista();
+    } catch {
+      errore.textContent = "Impossibile usare la password in questo browser.";
+    } finally {
+      pulsante.disabled = false;
+      modulo.reset();
+    }
+  }
+  const sezioniExecutive = ["Sintesi", "Condiviso dai team", "Warning", "Criticità", "Per stream", "Roadmap", "Aggiornamenti e decisioni", "Note"];
+  function htmlNoteStaff(dataset, note) {
+    return note.length ? `<ul class="voci">${note.map(voce =>
+      `<li class="riga-voce">${link(voce)} <span class="meta">${dataIt(voce.data)} · ${esc2(voce.autore || voce.creataDa || "")} · ${link(viva(dataset, voce.rif))}</span></li>`).join("")}</ul>` : '<p class="vuoto">Nessuna nota nel periodo selezionato.</p>';
+  }
+  function apriNotaStaff() {
+    const riferimenti = vive2(stato.ds).filter(voce => voce.tipo !== "AGG").sort(perCodice);
+    if (!riferimenti.length) return messaggio("Crea una scheda a cui collegare la nota.", "avviso");
+    const opzioni = riferimenti.map(voce => `<option value="${esc2(voce.uid)}">${esc2(voce.codice)} · ${esc2(voce.titolo ?? voce.nome ?? voce.testo ?? "")}</option>`).join("");
+    const dialogo = apriFinestra(`<form class="voce"><h2>Aggiungi nota</h2>
+      <div class="errori" role="alert"></div>
+      <div class="griglia-campi"><label>Scheda di riferimento <select name="rif" required><option value="">Seleziona una scheda</option>${opzioni}</select></label>
+      <label>Nota <textarea name="testo" required rows="5"></textarea></label></div>
+      <div class="azioni-form"><button type="submit" class="primario">Registra nota</button><button type="button" data-annulla>Annulla</button></div></form>`);
+    const modulo = $("form.voce", dialogo);
+    modulo.addEventListener("submit", evento => {
+      evento.preventDefault();
+      const campi = leggiForm(modulo, "AGG");
+      campi.rif = modulo.elements.rif.value;
+      campi.data = oggi();
+      campi.autore = autore();
+      campi.notaStaff = true;
+      const nota = creaVoce(stato.ds, "AGG", campi, campi.autore, new Date());
+      const errori = validaVoce(stato.ds, nota);
+      if (errori.length) return mostraErrori(modulo, errori);
+      stato.ds.voci[nota.uid] = nota;
+      chiudiFinestra();
+      segnaModificato();
+      messaggio("Nota registrata. Salva l’archivio per conservarla.");
+    });
+  }
+  function htmlExecutive(dataset, giorno) {
+    dataset = datasetExecutive(dataset);
+    const avvisi = avvisiAttivita(dataset);
+    const dati = datiExecutive(dataset, giorno, stato.dal);
+    const meeting = stato.vista === "meeting";
+    const elenco = voci => lista(dataset, voci, "Nessuna voce", { oggi: giorno });
+    const pannello = (titolo, corpo) => `<section class="pmo-panel"><h2>${titolo}</h2>${corpo}</section>`;
+    const kpi = (chiave, titolo, voci, classe = "") =>
+      `<button class="pmo-kpi ${classe}" data-ex-focus="${chiave}" aria-pressed="${focusExecutive === chiave}"><strong>${voci.length}</strong><span>${titolo}</span></button>`;
+    const titoli = { progetti: "Progetti in archivio", aperte: "Attività aperte", bloccate: "Attività bloccate", scadute: "Attività scadute" };
+    const indicatori = `<div class="pmo-kpis">${Object.entries(titoli).map(([chiave, titolo]) => kpi(chiave, titolo, dati[chiave], ["bloccate", "scadute"].includes(chiave) && dati[chiave].length ? "attenzione" : "")).join("")}</div>`;
+    const stream = dataset.elenchi.stream.map(nome => {
+      const voci = dati.attivita.filter(voce => streamAttivita(voce).includes(nome));
+      const chiuse = voci.filter(voce => voce.stato === "Chiusa").length;
+      return `<details class="pmo-stream"><summary><strong>${esc2(nome)}</strong><progress aria-label="Attività chiuse" value="${chiuse}" max="${voci.length || 1}"></progress><span>${chiuse}/${voci.length} chiuse</span></summary>${elenco(voci)}</details>`;
+    }).join("");
+    const roadmap = dati.milestone.length ? `<ol class="pmo-roadmap">${dati.milestone.map(voce =>
+      `<li><time datetime="${esc2(voce.data)}">${dataIt(voce.data)}</time><div><strong>${esc2(voce.nome)}</strong><div>${link(voce.progetto)}</div></div></li>`).join("")}</ol>` : '<p class="vuoto">Nessuna milestone pianificata nei prossimi 30 giorni.</p>';
+    const warning = `<section class="pmo-panel pmo-warning"><div class="pmo-warning-header">
+      <h2>Warning <span>${dati.warning.length}</span></h2>
+      <button type="button" data-nuovo="RIS" data-ex-warning>Aggiungi warning</button>
+      </div>${dati.warning.length ? `<ul class="pmo-warning-list">${dati.warning.map(voce =>
+        `<li>${link(voce)}<div class="meta">${esc2(voce.owner || "Responsabile da assegnare")} · ${dataIt(voce.data)}${voce.tema && dataset.voci[voce.tema] ? ` · ${link(dataset.voci[voce.tema])}` : ""}</div></li>`).join("")}</ul>` : '<p class="vuoto">Nessun warning registrato.</p>'}</section>`;
+    const note = dati.aggiornamenti.filter(voce => voce.notaStaff === true);
+    const perStream = dataset.elenchi.stream.map(nome => {
+      const appartiene = voce => streamDi(dataset, voce).includes(nome);
+      const attivita = dati.aperte.filter(appartiene);
+      const bloccate = dati.bloccate.filter(appartiene).length;
+      const scadute = dati.scadute.filter(appartiene).length;
+      const noteStream = note.filter(voce => appartiene(viva(dataset, voce.rif)));
+      return `<details class="pmo-panel pmo-stream-card"><summary><strong>${esc2(nome)}</strong><span>${attivita.length} aperte · ${bloccate} bloccate · ${scadute} scadute · ${noteStream.length} note</span></summary>
+      <h3>Attività aperte</h3>${elenco(attivita)}<h3>Note del periodo</h3>${htmlNoteStaff(dataset, noteStream)}</details>`;
+    }).join("");
+    const condivise = condivisiPMO(dataset);
+    const condivisioni = condivise.length ? `<ul class="voci">${condivise.map(voce =>
+      `<li class="riga-voce">${link(voce)} ${badgeStato(voce.stato)} <span class="meta">${esc2(streamCondivisiPMO(dataset, voce).join(" · "))}${voce.scadenza || voce.data ? ` · ${dataIt(voce.scadenza ?? voce.data)}` : ""}</span></li>`).join("")}</ul>`
+      : '<p class="vuoto">Nessuna voce condivisa dai team.</p>';
+    const contenuti = [
+      indicatori + (focusExecutive ? pannello(titoli[focusExecutive], elenco(dati[focusExecutive])) : "") + pannello("Attività chiuse per stream", stream || '<p class="vuoto">Nessuno stream configurato.</p>'),
+      pannello("Condiviso dai team", condivisioni),
+      warning + (avvisi.length ? pannello("Warning sulle attività", listaAvvisiAttivita(avvisi)) : ""),
+      `<div class="pmo-grid">${pannello("Attività bloccate", elenco(dati.bloccate))}${pannello("Attività scadute", elenco(dati.scadute))}${pannello("Rischi registrati", elenco(dati.rischi))}</div>`,
+      perStream ? `<div class="pmo-stream-grid">${perStream}</div>` : pannello("Stream", '<p class="vuoto">Nessuno stream configurato.</p>'),
+      pannello("Milestone nei prossimi 30 giorni", roadmap),
+      `<div class="pmo-grid">${pannello("Aggiornamenti del periodo", elenco(dati.aggiornamenti))}${pannello("Decisioni del periodo", elenco(dati.decisioni))}</div>`,
+      pannello("Note del periodo", htmlNoteStaff(dataset, note))
+    ];
+    return `<div class="pmo">
+      <header class="pmo-hero">
+        <div><p class="pmo-eyebrow">${meeting ? "STAFF MEETING SETTIMANALE" : "ENGINEERING CONTROL TOWER"}</p><h1>${meeting ? sezioniExecutive[paginaExecutive] : "Weekly Executive Review"}</h1>
+        <p>${dataIt(stato.dal)} – ${dataIt(giorno)}${stato.modo === "demo" ? " · Dati demo" : ""}</p></div>
+        <div class="pmo-controls">${meeting
+          ? `<button id="ex-full">Schermo intero</button><button id="ex-note">Aggiungi nota</button>${stato.modo !== "demo" && stato.modificato ? `<button id="ex-save">${stato.modo === "riserva" ? "Scarica JSON" : "Salva archivio"}</button>` : ""}<button data-vista="executive">Esci dal meeting</button>`
+          : `<label>Dal <input type="date" id="settimanale-dal" max="${giorno}" value="${esc2(stato.dal)}"></label>${pulsanteAvvisiAttivita(avvisi)}<button data-vista="meeting">Presenta allo Staff →</button>`}</div>
+      </header>
+      ${meeting ? `<nav class="pmo-deck" aria-label="Pagine del meeting">${sezioniExecutive.map((titolo, indice) => `<button data-ex-page="${indice}" aria-current="${indice === paginaExecutive ? "step" : "false"}">${titolo}</button>`).join("")}</nav>` : ""}
+      ${meeting ? contenuti[paginaExecutive] : contenuti.join("")}
+      ${meeting ? `<footer class="pmo-deck"><button data-ex-page="${paginaExecutive - 1}" ${paginaExecutive === 0 ? "disabled" : ""}>← Indietro</button><span>${paginaExecutive + 1} / ${sezioniExecutive.length}</span><button data-ex-page="${paginaExecutive + 1}" ${paginaExecutive === sezioniExecutive.length - 1 ? "disabled" : ""}>Avanti →</button></footer>` : ""}
+    </div>`;
+  }
+  function htmlGuidaExecutive() {
+    return `<div class="pmo">
+      <header class="pmo-hero"><div><p class="pmo-eyebrow">COLLETTORE INGEGNERIA</p><h1>Guida all’uso</h1></div>
+        <div class="pmo-controls"><button data-vista="executive">Vai a Executive →</button></div>
+      </header>
+      <div class="pmo-grid pmo-guida">
+        <section class="pmo-panel"><h2>Apri e aggiorna l’archivio</h2><p>All’avvio apri la cartella condivisa, carica il JSON se il browser lo prevede oppure prova i dati demo. Seleziona il tuo nome nella barra Utente prima di modificare una scheda.</p><p>In Executive scegli la data di inizio del periodo. La data filtra aggiornamenti e decisioni. KPI, warning e roadmap mostrano la situazione corrente. Seleziona un KPI per vedere le voci e usa il loro codice per aprire la scheda.</p></section>
+        <section class="pmo-panel"><h2>Segnala un warning</h2><p>Per segnalare un’attività, modifica la scheda e compila <strong>Warning</strong>. L’avviso appare in Area Team ed Executive quando l’attività è visibile in quelle viste. Puoi riaprirlo dal pulsante <strong>Warning attività</strong>. Per rimuoverlo, svuota il campo o chiudi l’attività.</p><p>Per segnalare un rischio di tema, usa <strong>Aggiungi warning</strong>. I rischi a impatto Alto appaiono nell’elenco dei warning. Salva l’archivio per conservare le modifiche.</p></section>
+        <section class="pmo-panel"><h2>Conduci lo Staff meeting</h2><p>Da Executive scegli <strong>Presenta allo Staff</strong>, poi <strong>Schermo intero</strong>. Usa i pulsanti o le frecce ← e → per cambiare vista. In <strong>Per stream</strong> espandi uno stream per vedere attività aperte e note collegate.</p><p>Usa <strong>Aggiungi nota</strong> da qualsiasi vista dello Staff e collegala a una scheda. La ritrovi in <strong>Note</strong> e negli aggiornamenti dell’archivio. Quando hai finito, salva l’archivio o scarica il JSON.</p></section>
+        <section class="pmo-panel"><h2>Salva e condividi</h2><p>Usa <strong>Salva</strong> per aggiornare l’archivio collegato o <strong>Scarica collettore.json</strong> per conservare il file aggiornato. <strong>Esporta Excel</strong> scarica una copia per consultazione. Le modifiche ai dati demo non vengono salvate.</p></section>
+        <section class="pmo-panel"><h2>Consulta il dettaglio di un team</h2><p>Apri <strong>Area Team</strong>, scegli uno stream e al primo accesso imposta una password di almeno 10 caratteri diversa da quelle degli altri team. L’area si blocca quando cambi team, esci dalla vista o scegli <strong>Blocca area</strong>.</p><p>Le password sono locali al browser. L’accesso all’archivio dipende dai permessi della cartella condivisa.</p></section>
+        <section class="pmo-panel"><h2>Attività tra più team</h2><p>In Area Team, scegli <strong>Nuova attività</strong>. Il team corrente è preselezionato. Puoi aggiungere altri team coinvolti. L’attività resta fuori da Executive e Staff finché un team non sceglie di condividerla. Una volta condivisa, conta una sola volta nei KPI complessivi.</p></section>
+        <section class="pmo-panel"><h2>Condividi una voce con il PMO</h2><p>Dalla zona del team, scegli <strong>Condividi con PMO</strong> su una voce. Comparirà in <strong>Condiviso dai team</strong>, su Executive e nello Staff, finché almeno un team la condivide. Salva l’archivio dopo ogni modifica. Le altre viste PMO continuano a seguire i loro filtri.</p></section>
+      </div>
+    </div>`;
+  }
+  function paginaMeeting(indice) {
+    if (indice < 0 || indice >= sezioniExecutive.length) return;
+    paginaExecutive = indice;
+    mostraVista();
+    window.scrollTo(0, 0);
+    document.querySelector('.pmo-deck [aria-current="step"]')?.focus({ preventScroll: true });
+  }
+  function collegaExecutive() {
+    $("#vista").addEventListener("submit", accediTeam);
+    $("#vista").addEventListener("click", evento => {
+      const pulsante = evento.target.closest("button");
+      if (!pulsante) return;
+      if (pulsante.id === "ex-alerts") {
+        mostraAvvisiAttivita(avvisiVistaAttuale());
+      } else if (pulsante.id === "ex-team-new" && stato.vista === "team" && teamSbloccati) {
+        const stream = stato.ds.elenchi.stream[teamSelezionato];
+        apriForm("ATT", { stream }, { rifissa: { soloAreaTeam: true } });
+      } else if (pulsante.dataset.exPmo !== undefined) {
+        aggiornaCondivisionePMO(pulsante.dataset.exPmo);
+      } else if (pulsante.id === "ex-team-lock") {
+        teamSbloccati = false;
+        mostraVista();
+      } else if (pulsante.dataset.exTeam !== undefined) {
+        const indice = Number(pulsante.dataset.exTeam);
+        if (indice === teamSelezionato) return;
+        teamSbloccati = false;
+        teamSelezionato = indice;
+        mostraVista();
+        document.querySelector('[data-ex-team][aria-current="page"]')?.focus();
+      } else if (pulsante.dataset.exFocus) {
+        const chiave = pulsante.dataset.exFocus;
+        focusExecutive = focusExecutive === chiave ? "" : chiave;
+        mostraVista();
+        document.querySelector(`[data-ex-focus="${chiave}"]`)?.focus();
+      } else if (pulsante.dataset.exPage !== undefined) {
+        paginaMeeting(Number(pulsante.dataset.exPage));
+      } else if (pulsante.id === "ex-note") {
+        apriNotaStaff();
+      } else if (pulsante.id === "ex-save") {
+        salva();
+      } else if (pulsante.id === "ex-full") {
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        else if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => messaggio("Schermo intero non disponibile.", "avviso"));
+        } else messaggio("Schermo intero non disponibile.", "avviso");
+      }
+    });
+    document.addEventListener("keydown", evento => {
+      if (stato.vista !== "meeting" || $("#finestra").open || evento.altKey || evento.ctrlKey || evento.metaKey) return;
+      if (evento.key === "ArrowRight" || evento.key === "ArrowLeft") {
+        evento.preventDefault();
+        paginaMeeting(paginaExecutive + (evento.key === "ArrowRight" ? 1 : -1));
+      }
+    });
+  }
+
+  var VISTE = [["executive", "Executive"], ["team", "Area Team"], ["guida", "Guida"], ["settimanale", "Settimanale"], ["prodotti", "Prodotti"], ["temi", "Temi"], ["progetti", "Progetti"], ["stream", "Stream"]];
+  var NUOVI = ["ATT", "TEM", "DEC", "RIS", "PRD", "PRJ"];
+  var stato = {
+    ds: null,
+    archivio: null,
+    // Archivio | null
+    modo: null,
+    // 'diretto' | 'riserva' | 'demo'
+    modificato: false,
+    conflitti: [],
+    vista: "executive",
+    prodotto: null,
+    filtro: {},
+    dal: null
+  };
+  var $ = (s, r = document) => r.querySelector(s);
+  var oggi = () => oggiRoma(/* @__PURE__ */ new Date());
+  var utente = () => {
+    try {
+      return localStorage.getItem(CHIAVE_UTENTE) || "";
+    } catch {
+      return "";
+    }
+  };
+  function messaggio(testo, tipo = "info") {
+    const box = $("#messaggi");
+    const n = document.createElement("div");
+    n.className = `messaggio ${tipo}`;
+    n.textContent = testo;
+    box.append(n);
+    setTimeout(() => n.remove(), tipo === "errore" ? 12e3 : 5e3);
+  }
+  async function schermataIniziale() {
+    const ricordato = supportaAccessoDiretto() ? await Archivio.ricorda({ leggiRif }).catch(() => null) : null;
+    $("#app").innerHTML = `<main class="iniziale">
+    <h1>Collettore Ingegneria</h1>
+    <p>Registro unico di prodotti, temi e attività. I dati stanno nel file <code>collettore.json</code> di una cartella SharePoint sincronizzata.</p>
+    <div class="scelte-iniziali">
+      ${ricordato ? `<button class="primario" data-avvio="riapri">Riapri «${esc2(ricordato.nome)}»</button>` : ""}
+      ${supportaAccessoDiretto() ? `<button data-avvio="apri">Apri cartella esistente</button>
+        <button data-avvio="crea">Crea nuova base dati</button>` : `<label class="bottone">Apri file collettore.json<input type="file" accept=".json,application/json" data-avvio="file" hidden></label>
+        <p class="meta">Questo browser non permette di salvare direttamente nella cartella: le modifiche si salvano scaricando il file.</p>`}
+      <button data-avvio="demo">Carica dati demo</button>
+    </div></main><div id="messaggi"></div>`;
+    $("#app").addEventListener("click", async (e) => {
+      const b = e.target.closest("button[data-avvio]");
+      if (!b) return;
+      try {
+        if (b.dataset.avvio === "demo") return avviaApp(traslaDate(demo_default, oggi()), null, "demo");
+        if (b.dataset.avvio === "riapri") {
+          if (await ricordato.permesso() !== "granted" && !await ricordato.chiediPermesso()) return messaggio("Permesso negato sulla cartella.", "errore");
+          return apriArchivio(ricordato);
+        }
+        const arc = await Archivio.scegli({ salvaRif });
+        if (b.dataset.avvio === "apri") return apriArchivio(arc);
+        return avviaApp(await arc.creaNuovo(), arc, "diretto");
+      } catch (err) {
+        if (err.name !== "AbortError") messaggio(err.message, "errore");
+      }
+    });
+    $("#app").addEventListener("change", async (e) => {
+      if (e.target.dataset.avvio !== "file" || !e.target.files[0]) return;
+      try {
+        avviaApp(await caricaDaFile(e.target.files[0]), null, "riserva");
+      } catch (err) {
+        messaggio(err.message, "errore");
+      }
+    });
+  }
+  async function apriArchivio(arc) {
+    try {
+      avviaApp(await arc.apri(), arc, "diretto");
+    } catch (err) {
+      if (!(err instanceof ErroreFileVuoto)) throw err;
+      if (confirm(`La cartella «${arc.nome}» non contiene ancora collettore.json. Creare una nuova base dati qui?`)) avviaApp(await arc.creaNuovo(), arc, "diretto");
+    }
+  }
+  function avviaApp(ds, archivio, modo) {
+    Object.assign(stato, { ds, archivio, modo, modificato: false, dal: aggiungiGiorni(oggi(), -7) });
+    $("#app").innerHTML = `<header class="barra">
+      <div class="marchio">Collettore</div>
+      <nav class="viste">${VISTE.map(([k, l]) => `<button type="button" data-vista="${k}">${l}</button>`).join("")}</nav>
+      <form id="form-cerca"><input id="cerca" type="search" placeholder="Cerca codice o testo"></form>
+      <div class="destra">
+        <span class="stato-salvataggio"></span>
+        <button type="button" id="conflitti" hidden></button>
+        <button type="button" id="salva" class="primario">Salva</button>
+        <button type="button" id="esporta">Esporta Excel</button>
+        <button type="button" id="impostazioni">Impostazioni</button>
+      </div>
+    </header>
+    <div class="sottobarra">
+      <span>Nuovo:</span>${NUOVI.map((t) => `<button type="button" data-nuovo="${t}">${NOMI_TIPO[t]}</button>`).join("")}
+      <label class="utente">Utente <select id="utente"></select></label>
+      <span class="fonte-dati"></span>
+    </div>
+    <main id="vista"></main>
+    <dialog id="finestra"></dialog>
+    <div id="messaggi"></div>`;
+    collegaEventi();
+    collegaExecutive();
+    aggiornaBarra();
+    mostraVista();
+    if (stato.archivio) controllaConflitti();
+  }
+  function aggiornaBarra() {
+    const s = $(".stato-salvataggio");
+    if (stato.modo === "demo") s.innerHTML = `<span class="avviso-demo">Dati demo, non salvati${stato.modificato ? " · modifiche non salvate" : ""}</span>`;
+    else s.textContent = stato.modificato ? "Modifiche non salvate" : "Salvato";
+    s.classList.toggle("sporco", stato.modificato);
+    $("#salva").disabled = stato.modo === "demo";
+    $("#salva").textContent = stato.modo === "riserva" ? "Scarica collettore.json" : "Salva";
+    const c = $("#conflitti");
+    c.hidden = !stato.conflitti.length;
+    c.textContent = `Conflitti: ${stato.conflitti.length}`;
+    $(".fonte-dati").textContent = stato.archivio ? `Cartella: ${stato.archivio.nome}` : stato.modo === "riserva" ? "File caricato a mano" : "";
+    const sel = $("#utente");
+    const u = utente();
+    sel.innerHTML = `<option value="">—</option>${stato.ds.elenchi.persone.map((p) => `<option${p === u ? " selected" : ""}>${esc2(p)}</option>`).join("")}`;
+    document.querySelectorAll("[data-vista]").forEach((b) => b.classList.toggle("attiva", b.dataset.vista === stato.vista));
+  }
+  function mostraVista() {
+    const o = { oggi: oggi() };
+    document.body.classList.toggle("pmo-meeting", stato.vista === "meeting");
+    const html = {
+      executive: () => htmlExecutive(stato.ds, o.oggi),
+      meeting: () => htmlExecutive(stato.ds, o.oggi),
+      team: htmlTeam,
+      guida: htmlGuidaExecutive,
+      settimanale: () => htmlSettimanale(stato.ds, { dal: stato.dal, oggi: o.oggi }),
+      prodotti: () => htmlProdotti(stato.ds, stato.prodotto, o),
+      temi: () => htmlTemi(stato.ds),
+      progetti: () => htmlProgetti(stato.ds, o),
+      stream: () => htmlStream(stato.ds, o),
+      ricerca: () => htmlRicerca(stato.ds, stato.filtro, o)
+    }[stato.vista]();
+    $("#vista").innerHTML = html;
+    aggiornaBarra();
+    controllaAvvisiAttivita();
+  }
+  function vai(vista) {
+    if (vista !== "team") teamSbloccati = false;
+    if (vista === "meeting") {
+      paginaExecutive = 0;
+      focusExecutive = "";
+      window.scrollTo(0, 0);
+    }
+    if (stato.vista === "meeting" && vista !== "meeting" && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+    stato.vista = vista;
+    mostraVista();
+  }
+  function segnaModificato() {
+    stato.modificato = true;
+    mostraVista();
+  }
+  function autore() {
+    const u = utente();
+    if (!u) messaggio("Scegli il tuo nome in «Utente»: serve a sapere chi ha modificato cosa.", "avviso");
+    return u || "Anonimo";
+  }
+  function apriFinestra(html) {
+    const d = $("#finestra");
+    d.innerHTML = html;
+    if (!d.open) d.showModal();
+    return d;
+  }
+  var chiudiFinestra = () => {
+    const d = $("#finestra");
+    d.close();
+    d.innerHTML = "";
+  };
+  function apriForm(tipo, voce = {}, { rifissa } = {}) {
+    const d = apriFinestra(htmlForm(stato.ds, tipo, voce));
+    const form = $("form.voce", d);
+    if (!voce.codice && tipo === "AGG") form.querySelector('[name="data"]').value = oggi();
+    if (!voce.codice && tipo === "ATT") {
+      form.querySelector('[name="stato"]').value = "Aperta";
+      form.querySelector('[name="fonte.data"]').value = oggi();
+    }
+    if (!voce.codice && tipo === "TEM") form.querySelector('[name="stato"]').value = "Aperta";
+    if (!voce.codice && (tipo === "DEC" || tipo === "RIS")) form.querySelector('[name="data"]').value = oggi();
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const campi = leggiForm(form, tipo);
+      if (rifissa) Object.assign(campi, rifissa);
+      const chi = autore();
+      const adesso = /* @__PURE__ */ new Date();
+      const candidata = voce.codice ? aggiornaVoce(voce, campi, chi, adesso) : creaVoce(stato.ds, tipo, campi, chi, adesso);
+      const errori = validaVoce(stato.ds, candidata);
+      if (errori.length) return mostraErrori(form, errori);
+      stato.ds.voci[candidata.uid] = candidata;
+      chiudiFinestra();
+      segnaModificato();
+      messaggio(`${candidata.codice} ${voce.codice ? "aggiornata" : "aggiunta"}. Ricordati di salvare.`);
+    });
+  }
+  function apriScheda(uid) {
+    apriFinestra(htmlScheda(stato.ds, uid));
+  }
+  function elimina(uid) {
+    const v = stato.ds.voci[uid];
+    const usata = Object.values(stato.ds.voci).some((x) => !x.eliminata && x.uid !== uid && (x.tema === uid || x.progetto === uid || x.rif === uid || (x.prodotti ?? []).includes(uid)));
+    if (usata && !confirm(`${v.codice} è collegata ad altre voci, che resteranno senza questo collegamento. Eliminare comunque?`)) return;
+    if (!usata && !confirm(`Eliminare ${v.codice}?`)) return;
+    stato.ds.voci[uid] = eliminaVoce(v, autore(), /* @__PURE__ */ new Date());
+    chiudiFinestra();
+    segnaModificato();
+  }
+  function apriImpostazioni() {
+    const d = apriFinestra(htmlImpostazioni(stato.ds));
+    $("form.impostazioni", d).addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      for (const k of ["persone", "stream", "famiglie", "fasi"]) {
+        stato.ds.elenchi[k] = [...new Set(String(fd.get(k)).split("\n").map((x) => x.trim()).filter(Boolean))];
+      }
+      stato.ds.elenchiModificatiIl = (/* @__PURE__ */ new Date()).toISOString();
+      chiudiFinestra();
+      segnaModificato();
+    });
+  }
+  function salvaRiserva() {
+    const d = apriFinestra(`<div class="riserva"><h2>Scarica collettore.json</h2>
+    <p>Per non cancellare le modifiche dei colleghi, scegli il <code>collettore.json</code> attuale dalla cartella condivisa: verrà unito al tuo prima di scaricarlo. Poi sostituisci il file nella cartella con quello scaricato.</p>
+    <label class="bottone">Scegli il collettore.json attuale<input type="file" accept=".json,application/json" data-attuale hidden></label>
+    <div class="azioni-form"><button type="button" data-annulla>Annulla</button></div></div>`);
+    $("input[data-attuale]", d).addEventListener("change", async (e) => {
+      try {
+        const attuale = await caricaDaFile(e.target.files[0]);
+        const { dataset, rinumerate } = unisci(stato.ds, attuale);
+        stato.ds = dataset;
+        scaricaJson(stato.ds);
+        stato.modificato = false;
+        chiudiFinestra();
+        mostraVista();
+        for (const r of rinumerate) messaggio(`Codice duplicato: ${r.da} è diventato ${r.a}.`, "avviso");
+      } catch (err) {
+        messaggio(err.message, "errore");
+      }
+    });
+  }
+  async function salva() {
+    if (stato.modo === "demo") return false;
+    if (stato.modo === "riserva") {
+      salvaRiserva();
+      return false;
+    }
+    try {
+      if (await stato.archivio.permesso() !== "granted" && !await stato.archivio.chiediPermesso()) {
+        messaggio("Permesso negato sulla cartella.", "errore");
+        return false;
+      }
+      const { dataset, rinumerate } = await stato.archivio.salva(stato.ds);
+      stato.ds = dataset;
+      stato.modificato = false;
+      mostraVista();
+      messaggio("Salvato.");
+      for (const r of rinumerate) messaggio(`Codice duplicato con un altro PC: ${r.da} è diventato ${r.a}.`, "avviso");
+      await controllaConflitti();
+      return true;
+    } catch (err) {
+      messaggio(err.message, "errore");
+      return false;
+    }
+  }
+  async function controllaConflitti() {
+    try {
+      stato.conflitti = await stato.archivio.cercaConflitti();
+    } catch {
+      stato.conflitti = [];
+    }
+    aggiornaBarra();
+  }
+  async function risolviConflitti() {
+    if (!confirm(`OneDrive ha creato ${stato.conflitti.length} copie in conflitto (${stato.conflitti.join(", ")}). Unirle al file principale?`)) return;
+    try {
+      const { dataset } = await stato.archivio.unisciConflitti(stato.ds);
+      stato.ds = dataset;
+      stato.modificato = false;
+      messaggio("Copie in conflitto unite e salvate.");
+      await controllaConflitti();
+      mostraVista();
+    } catch (err) {
+      messaggio(err.message, "errore");
+    }
+  }
+  function esporta() {
+    const blob = new Blob([creaXlsx(stato.ds)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = nomeFileExport(oggi());
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1e3);
+  }
+  function collegaEventi() {
+    document.addEventListener("click", (e) => {
+      const t = e.target.closest("button, [data-apri]");
+      if (!t) return;
+      const ds = t.dataset;
+      if (ds.vista) vai(ds.vista);
+      else if ("exWarning" in ds) apriForm("RIS", { impatto: "Alto", data: oggi() });
+      else if (ds.nuovo) apriForm(ds.nuovo);
+      else if (ds.apri) apriScheda(ds.apri);
+      else if (ds.prodotto) {
+        stato.prodotto = ds.prodotto;
+        mostraVista();
+      } else if (ds.modifica) apriForm(stato.ds.voci[ds.modifica].tipo, stato.ds.voci[ds.modifica]);
+      else if (ds.aggiorna) apriForm("AGG", {}, { rifissa: { rif: ds.aggiorna, autore: utente() || "Anonimo" } });
+      else if (ds.elimina) elimina(ds.elimina);
+      else if ("chiudi" in ds || "annulla" in ds) chiudiFinestra();
+      else if (t.id === "salva") salva();
+      else if (t.id === "esporta") esporta();
+      else if (t.id === "impostazioni") apriImpostazioni();
+      else if (t.id === "conflitti") risolviConflitti();
+    });
+    document.addEventListener("change", (e) => {
+      const t = e.target;
+      if (t.id === "utente") {
+        try {
+          localStorage.setItem(CHIAVE_UTENTE, t.value);
+        } catch {
+        }
+      } else if (t.id === "settimanale-dal") {
+        stato.dal = t.value || aggiungiGiorni(oggi(), -7);
+        mostraVista();
+      } else if (t.dataset.filtro) {
+        stato.filtro[t.dataset.filtro] = t.value || void 0;
+        mostraVista();
+      }
+    });
+    $("#form-cerca").addEventListener("submit", (e) => {
+      e.preventDefault();
+      stato.filtro = { ...stato.filtro, testo: $("#cerca").value };
+      vai("ricerca");
+    });
+    window.addEventListener("beforeunload", (e) => {
+      if (stato.modificato && stato.modo !== "demo") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    });
+  }
+  schermataIniziale();
+})();
+</script>
+</body>
+</html>
